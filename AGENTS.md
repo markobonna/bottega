@@ -17,4 +17,4 @@ Rules for any coding agent (Muse Code) working in this project. Prompt 32 adds t
 - Never put personal information (emails, real names, usernames, machine names) in code, files, commits, prompts or requests. Demo accounts are `maria@example.com` and `cole@example.com` only. They are templates: visitors get anonymous guest copies.
 - Apps are specs, not code: never generate or run arbitrary code for a user's app.
 - The Meta API key stays on the server.
-- Muse Spark and Muse Wonder use their `-contributor` ids where they exist. Every screen where someone adds a photo, recording or text for a model shows the DataNotice line: "Photos, voice and text you add may be used by Meta to improve its models."
+- If Muse Spark and Muse Wonder use their `-contributor` ids where they exist. Every screen where someone adds a photo, recording or text for a model should show the DataNotice line: "Photos, voice and text you add may be used by Meta to improve its models."
