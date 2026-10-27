@@ -1,0 +1,276 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f6f1e7;
+  --card: #fffdf8;
+  --ink: #221c15;
+  --muted: #6b5f50;
+  --line: #e2d8c6;
+  --accent: #b5532a;
+  --accent-ink: #fff;
+  --accent-soft: color-mix(in oklab, var(--accent) 14%, var(--card));
+  --ok: #2f7d4f;
+  --bad: #b4441c;
+  --brass: #a8812f;
+  --side-a: #0c8599;
+  --side-b: #c2255c;
+  --n1: #e03131;
+  --n2: #1c7ed6;
+  --n3: #2f9e44;
+  --n4: #f08c00;
+  --n5: #7048e8;
+  --n6: #0c8599;
+}
+
+:root[data-accent="terracotta"] {
+  --accent: #b5532a;
+}
+:root[data-accent="olive"] {
+  --accent: #5c7a2e;
+}
+:root[data-accent="indigo"] {
+  --accent: #4338ca;
+}
+:root[data-accent="teal"] {
+  --accent: #0b7285;
+}
+:root[data-accent="plum"] {
+  --accent: #862e9c;
+}
+:root[data-accent="ochre"] {
+  --accent: #a16207;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #16130f;
+    --card: #201c17;
+    --ink: #efe7da;
+    --muted: #a99c8a;
+    --line: #352f27;
+    --accent: #e8835a;
+    --accent-ink: #16130f;
+    --ok: #63c48d;
+    --bad: #f08a5d;
+    --brass: #d4ae62;
+    --side-a: #22b8cf;
+    --side-b: #f06595;
+    --n1: #ff6b6b;
+    --n2: #4dabf7;
+    --n3: #51cf66;
+    --n4: #ffc53d;
+    --n5: #9775fa;
+    --n6: #22b8cf;
+  }
+  :root:not([data-theme="light"])[data-accent="terracotta"] {
+    --accent: #e8835a;
+  }
+  :root:not([data-theme="light"])[data-accent="olive"] {
+    --accent: #9cc46a;
+  }
+  :root:not([data-theme="light"])[data-accent="indigo"] {
+    --accent: #8b85ff;
+  }
+  :root:not([data-theme="light"])[data-accent="teal"] {
+    --accent: #3bc9db;
+  }
+  :root:not([data-theme="light"])[data-accent="plum"] {
+    --accent: #da77f2;
+  }
+  :root:not([data-theme="light"])[data-accent="ochre"] {
+    --accent: #f2b84b;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #16130f;
+  --card: #201c17;
+  --ink: #efe7da;
+  --muted: #a99c8a;
+  --line: #352f27;
+  --accent: #e8835a;
+  --accent-ink: #16130f;
+  --ok: #63c48d;
+  --bad: #f08a5d;
+  --brass: #d4ae62;
+  --side-a: #22b8cf;
+  --side-b: #f06595;
+  --n1: #ff6b6b;
+  --n2: #4dabf7;
+  --n3: #51cf66;
+  --n4: #ffc53d;
+  --n5: #9775fa;
+  --n6: #22b8cf;
+}
+:root[data-theme="dark"][data-accent="terracotta"] {
+  --accent: #e8835a;
+}
+:root[data-theme="dark"][data-accent="olive"] {
+  --accent: #9cc46a;
+}
+:root[data-theme="dark"][data-accent="indigo"] {
+  --accent: #8b85ff;
+}
+:root[data-theme="dark"][data-accent="teal"] {
+  --accent: #3bc9db;
+}
+:root[data-theme="dark"][data-accent="plum"] {
+  --accent: #da77f2;
+}
+:root[data-theme="dark"][data-accent="ochre"] {
+  --accent: #f2b84b;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-bad: var(--bad);
+  --color-brass: var(--brass);
+  --color-side-a: var(--side-a);
+  --color-side-b: var(--side-b);
+  --font-sans:
+    var(--font-atkinson), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+}
+
+@utility gutter {
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+@layer base {
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    overflow-x: clip;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background-color: var(--paper);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .dial-in {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 24px;
+    background: transparent;
+  }
+  .dial-in::-webkit-slider-runnable-track {
+    height: 8px;
+    border-radius: 9999px;
+    background: linear-gradient(
+      to right,
+      var(--side-a),
+      var(--line),
+      var(--side-b)
+    );
+  }
+  .dial-in::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    margin-top: -8px;
+    border-radius: 9999px;
+    background: var(--card);
+    border: 3px solid var(--ink);
+  }
+  .dial-in::-moz-range-track {
+    height: 8px;
+    border-radius: 9999px;
+    background: linear-gradient(
+      to right,
+      var(--side-a),
+      var(--line),
+      var(--side-b)
+    );
+  }
+  .dial-in::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: var(--card);
+    border: 3px solid var(--ink);
+  }
+
+  .plain-in {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 24px;
+    background: transparent;
+  }
+  .plain-in::-webkit-slider-runnable-track {
+    height: 8px;
+    border-radius: 9999px;
+    background: var(--line);
+  }
+  .plain-in::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    margin-top: -8px;
+    border-radius: 9999px;
+    background: var(--card);
+    border: 3px solid var(--ink);
+  }
+  .plain-in::-moz-range-track {
+    height: 8px;
+    border-radius: 9999px;
+    background: var(--line);
+  }
+  .plain-in::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: var(--card);
+    border: 3px solid var(--ink);
+  }
+
+  .checker {
+    background-image:
+      linear-gradient(
+        45deg,
+        var(--line) 25%,
+        transparent 25%,
+        transparent 75%,
+        var(--line) 75%
+      ),
+      linear-gradient(
+        45deg,
+        var(--line) 25%,
+        transparent 25%,
+        transparent 75%,
+        var(--line) 75%
+      );
+    background-size: 16px 16px;
+    background-position:
+      0 0,
+      8px 8px;
+  }
+}
