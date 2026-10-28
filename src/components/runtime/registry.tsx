@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { AppSpec, Block, BlockType } from "@/lib/spec/schema";
 import type { DbRecord } from "@/lib/records";
 import Compare from "../blocks/Compare";
+import Draw from "../blocks/Draw";
 import Form from "../blocks/Form";
 import Hear from "../blocks/Hear";
 import List from "../blocks/List";
@@ -37,6 +38,6 @@ export const BlockComponents: Record<BlockType, ComponentType<BlockProps>> = {
   price: Price,
   compare: Compare,
   teach: Teach,
-  draw: UnknownBlock,
+  draw: Draw,
   make: UnknownBlock,
 };

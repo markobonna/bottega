@@ -187,3 +187,33 @@ export async function transcribe(
   }
   return body.transcript;
 }
+
+export async function image(
+  prompt: string,
+  timeoutMs = 55000,
+): Promise<Uint8Array> {
+  const cfg = config();
+  const res = await postJson(
+    '/images/generations',
+    {
+      model: cfg.image,
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      response_format: 'b64_json',
+    },
+    timeoutMs,
+  );
+  const body = (await res.json()) as {
+    data?: { b64_json?: unknown; url?: unknown }[];
+  };
+  const first = body.data?.[0];
+  if (typeof first?.b64_json === 'string' && first.b64_json !== '') {
+    return Uint8Array.from(Buffer.from(first.b64_json, 'base64'));
+  }
+  if (typeof first?.url === 'string' && first.url !== '') {
+    const dl = await request(first.url, {}, timeoutMs);
+    return new Uint8Array(await dl.arrayBuffer());
+  }
+  throw new ModelError(502, 'empty image');
+}
