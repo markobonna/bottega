@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { signedUrls } from "@/lib/media";
 import {
@@ -109,6 +110,48 @@ export async function saveBlockLines(
     if ("conflict" in result) return { ok: true, conflict: true };
     revalidatePath(`/apps/${appId}`);
     return { ok: true, conflict: false };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function getOrCreateShare(
+  appId: string,
+  recordId: string,
+): Promise<Ok<{ token: string }> | Fail> {
+  try {
+    const supabase = await createClient();
+    const { data: existing, error: findError } = await supabase
+      .from("shares")
+      .select("token")
+      .eq("app_id", appId)
+      .eq("record_id", recordId)
+      .eq("revoked", false)
+      .maybeSingle();
+    if (findError) throw new Error(findError.message);
+    if (existing) return { ok: true, token: existing.token };
+    const token = randomBytes(24).toString("base64url");
+    const { error: insertError } = await supabase
+      .from("shares")
+      .insert({ app_id: appId, record_id: recordId, token });
+    if (insertError) throw new Error(insertError.message);
+    return { ok: true, token };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function revokeShare(
+  token: string,
+): Promise<Ok<{ revoked: true }> | Fail> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("shares")
+      .update({ revoked: true })
+      .eq("token", token);
+    if (error) throw new Error(error.message);
+    return { ok: true, revoked: true };
   } catch (e) {
     return fail(e);
   }

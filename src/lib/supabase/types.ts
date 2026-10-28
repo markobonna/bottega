@@ -252,6 +252,51 @@ export type Database = {
           },
         ]
       }
+      shares: {
+        Row: {
+          app_id: string | null
+          created_at: string | null
+          id: string
+          owner: string
+          record_id: string | null
+          revoked: boolean
+          token: string
+        }
+        Insert: {
+          app_id?: string | null
+          created_at?: string | null
+          id?: string
+          owner?: string
+          record_id?: string | null
+          revoked?: boolean
+          token: string
+        }
+        Update: {
+          app_id?: string | null
+          created_at?: string | null
+          id?: string
+          owner?: string
+          record_id?: string | null
+          revoked?: boolean
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shares_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shares_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
