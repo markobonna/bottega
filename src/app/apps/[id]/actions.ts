@@ -9,7 +9,9 @@ import {
   updateRecord,
   type DbRecord,
 } from "@/lib/records";
+import type { Op } from "@/lib/spec/ops";
 import { createClient } from "@/lib/supabase/server";
+import { saveVersion } from "@/lib/versions";
 
 type Ok<T> = { ok: true } & T;
 type Fail = { ok: false; error: string };
@@ -85,6 +87,28 @@ export async function removeRecord(
     const gone = await deleteRecord(supabase, id);
     revalidatePath(`/apps/${appId}`);
     return { ok: true, ...gone };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function saveBlockLines(
+  appId: string,
+  baseVersion: number,
+  blockId: string,
+  lines: unknown,
+  summary: string,
+): Promise<Ok<{ conflict: boolean }> | Fail> {
+  try {
+    const supabase = await createClient();
+    const op: Op = { op: "updateBlock", id: blockId, set: { lines } };
+    const result = await saveVersion(supabase, appId, baseVersion, [op], {
+      source: "inline",
+      summary,
+    });
+    if ("conflict" in result) return { ok: true, conflict: true };
+    revalidatePath(`/apps/${appId}`);
+    return { ok: true, conflict: false };
   } catch (e) {
     return fail(e);
   }
