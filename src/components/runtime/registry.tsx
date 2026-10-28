@@ -1,6 +1,9 @@
 import type { ComponentType } from "react";
 import type { AppSpec, Block, BlockType } from "@/lib/spec/schema";
 import type { DbRecord } from "@/lib/records";
+import Form from "../blocks/Form";
+import List from "../blocks/List";
+import Stat from "../blocks/Stat";
 import UnknownBlock from "./UnknownBlock";
 
 export type RuntimeApp = { id: string; name: string; version: number };
@@ -21,9 +24,9 @@ export type BlockProps = {
 
 // Every block type renders UnknownBlock until its own prompt replaces it.
 export const BlockComponents: Record<BlockType, ComponentType<BlockProps>> = {
-  list: UnknownBlock,
-  form: UnknownBlock,
-  stat: UnknownBlock,
+  list: List,
+  form: Form,
+  stat: Stat,
   see: UnknownBlock,
   hear: UnknownBlock,
   price: UnknownBlock,

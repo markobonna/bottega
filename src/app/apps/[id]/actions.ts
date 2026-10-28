@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { signedUrls } from "@/lib/media";
 import {
   addRecord,
   deleteRecord,
@@ -58,6 +59,18 @@ export async function saveRecord(
     const row = await updateRecord(supabase, id, data);
     revalidatePath(`/apps/${appId}`);
     return { ok: true, row };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function signPhotoPaths(
+  paths: string[],
+): Promise<Ok<{ urls: Record<string, string> }> | Fail> {
+  try {
+    const supabase = await createClient();
+    const urls = await signedUrls(supabase, paths);
+    return { ok: true, urls };
   } catch (e) {
     return fail(e);
   }
