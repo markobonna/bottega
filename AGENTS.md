@@ -10,7 +10,7 @@ Rules for any coding agent (Muse Code) working in this project. Prompt 32 adds t
 - **A row is ✅ only** when its AI check passed and its human check (if necessary) was done by the human. Never mark ✅ because code exists.
 - **If something breaks in a new way,** add a check for it to that row.
 - **End of every session:** update Status, Decisions, Next up and the Check log. Log only checks actually run, with their real result.
-- **Finish a task:** run the Finish checklist in the file. Then move it to `task-archive/<short-name>.md`, leave `task-current/` empty, and stop. The human starts the next prompt.
+- **Finish a task:** run the Finish checklist in the file. Then move it to `task-archive/<task-name>.md`, leave `task-current/` empty, and stop. The human starts the next prompt.
 
 ## Hard rules
 

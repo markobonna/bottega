@@ -6,7 +6,7 @@
 >
 > 1. **Kickoff:** copy this file to `task-current/feature_building.md` and fill in "This task's goal" from Prompt given to you. Write no code yet.
 > 2. **Build:** work through building the fewatuers in th eprompt and keep Status, Decisions, Next up and the Check log current.
-> 3. **Finish:** when every row is ✅, run the Finish checklist, move the file to `task-archive/<short-name>.md`, and leave `task-current/` empty for the next prompt.
+> 3. **Finish:** when every row is ✅, run the Finish checklist, move the file to `task-archive/<task-name>.md`, and leave `task-current/` empty for the next prompt.
 >
 
 
@@ -62,4 +62,4 @@ Only checks actually run go here, with their real result.
 - [ ] The prompt's own **Check** from the build doc passed and is logged.
 - [ ] Anything a later prompt needs to know is in Decisions.
 - [ ] Committed (`git commit -m "Prompt: <short name>"`).
-- [ ] This file moved to `task-archive/prompt-<short-name>.md`, and `task-current/` is empty.
+- [ ] This file moved to `task-archive/prompt-<task-name>.md`, and `task-current/` is empty.

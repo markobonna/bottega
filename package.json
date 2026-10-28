@@ -13,7 +13,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --linked > src/lib/supabase/types.ts"
+    "db:types": "supabase gen types typescript --linked > src/lib/supabase/types.ts",
+    "login-link": "tsx --conditions=react-server --env-file=.env.local scripts/login-link.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
@@ -31,6 +32,7 @@
     "@types/react-dom": "19.3.0",
     "supabase": "2.122.0",
     "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vitest": "5.0.5"
   }
