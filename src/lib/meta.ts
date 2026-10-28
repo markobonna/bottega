@@ -83,7 +83,7 @@ export async function chat(
         model: model ?? cfg.spark,
         messages,
         max_tokens: maxTokens,
-        reasoning,
+        reasoning_effort: reasoning,
         ...(schema
           ? { response_format: { type: 'json_schema', json_schema: { name: 'reply', schema } } }
           : {}),
