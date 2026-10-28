@@ -17,7 +17,7 @@ export type FieldInputProps = {
   appId: string;
 };
 
-const inputCls =
+export const inputCls =
   "w-full rounded-[12px] border-[1.5px] border-line bg-card px-4 py-2.5 text-ink placeholder:text-muted";
 
 function PhotoInput({ field, value, onChange, id, appId }: FieldInputProps) {
