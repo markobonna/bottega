@@ -140,11 +140,46 @@ export async function postForm(
   form: FormData,
   timeoutMs = 30000,
   _opts: { private?: boolean } = {},
+  headers: Record<string, string> = {},
 ): Promise<Response> {
   const cfg = config();
   return request(
     `${cfg.base}${path}`,
-    { method: 'POST', headers: { Authorization: `Bearer ${cfg.key}` }, body: form },
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${cfg.key}`, ...headers },
+      body: form,
+    },
     timeoutMs,
   );
+}
+
+export async function transcribe(
+  wavBytes: Uint8Array<ArrayBuffer>,
+  timeoutMs = 30000,
+): Promise<string> {
+  const cfg = config();
+  const form = new FormData();
+  form.append(
+    'request',
+    new Blob(
+      [
+        JSON.stringify({
+          model: cfg.voice,
+          audioEncoding: 'WAV',
+          mode: 'PUSH_TO_TALK',
+        }),
+      ],
+      { type: 'application/json' },
+    ),
+  );
+  form.append('audio', new Blob([wavBytes], { type: 'audio/wav' }), 'audio.wav');
+  const res = await postForm('/asr/transcribe', form, timeoutMs, {}, {
+    Accept: 'application/json',
+  });
+  const body = (await res.json()) as { transcript?: unknown };
+  if (typeof body.transcript !== 'string' || body.transcript === '') {
+    throw new ModelError(502, 'empty transcript');
+  }
+  return body.transcript;
 }
