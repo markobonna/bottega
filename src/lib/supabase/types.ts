@@ -217,6 +217,30 @@ export type Database = {
           },
         ]
       }
+      photo_features: {
+        Row: {
+          created_at: string | null
+          owner: string
+          photo_path: string
+          source: string
+          x: number[]
+        }
+        Insert: {
+          created_at?: string | null
+          owner?: string
+          photo_path: string
+          source: string
+          x: number[]
+        }
+        Update: {
+          created_at?: string | null
+          owner?: string
+          photo_path?: string
+          source?: string
+          x?: number[]
+        }
+        Relationships: []
+      }
       records: {
         Row: {
           app_id: string | null
