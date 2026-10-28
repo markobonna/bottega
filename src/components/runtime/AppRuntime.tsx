@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { AppSpec } from "@/lib/spec/schema";
 import type { DbRecord } from "@/lib/records";
@@ -58,7 +59,13 @@ export default function AppRuntime({
 
   return (
     <div data-accent={spec.look.accent}>
-      <header className="flex items-start gap-3">
+      <Link
+        href="/"
+        className="text-muted text-sm underline-offset-4 hover:underline"
+      >
+        ← Workshop
+      </Link>
+      <header className="mt-2 flex items-start gap-3">
         <span aria-hidden="true" className="text-3xl">
           {spec.look.icon}
         </span>
