@@ -101,7 +101,8 @@ export async function POST(req: Request): Promise<Response> {
         { role: "user", content: transcript },
       ],
       z.object(shape),
-      {},
+      // Reasoning tokens count toward max_tokens; 800 starves the answer.
+      { maxTokens: 2000 },
     );
     const checked = checkValues(collection, values as Record<string, unknown>);
     return Response.json({ transcript, values: checked.data });
