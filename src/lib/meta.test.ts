@@ -57,6 +57,16 @@ describe('meta', () => {
     expect((err as ModelError).status).toBe(500);
   });
 
+  it('a 429 throws ModelError with the status', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 429, text: async () => 'slow down' })),
+    );
+    const err = await chat([{ role: 'user', content: 'hello' }]).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ModelError);
+    expect((err as ModelError).status).toBe(429);
+  });
+
   it('json() rejects content that fails the Zod schema', async () => {
     vi.stubGlobal('fetch', okFetch(JSON.stringify({ wrong: 'shape' })));
     const err = await json([{ role: 'user', content: 'x' }], z.object({ n: z.number() })).catch(

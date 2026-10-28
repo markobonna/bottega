@@ -5,6 +5,7 @@ import { btn, DataNotice, Label, Status } from "@/components/ui";
 import { inputCls } from "@/components/blocks/Form";
 import BuildReveal from "@/components/workshop/BuildReveal";
 import type { AppSpec } from "@/lib/spec/schema";
+import { useRecorder } from "@/lib/wav";
 import { createSample } from "../actions";
 
 type Phase = "idle" | "busy" | "done" | "off" | "invalid" | "failed";
@@ -17,6 +18,42 @@ export default function BuildForm() {
     null,
   );
   const [message, setMessage] = useState("");
+  const [micProblem, setMicProblem] = useState("");
+  const [micOff, setMicOff] = useState(false);
+
+  const mic = useRecorder({
+    onBlob: (blob) =>
+      void (async () => {
+        setMicProblem("");
+        try {
+          const form = new FormData();
+          form.append("audio", blob, "audio.wav");
+          const res = await fetch("/api/hear", { method: "POST", body: form });
+          if (res.ok) {
+            const data = (await res.json()) as { transcript: string };
+            setText((t) =>
+              (t === "" ? data.transcript : `${t} ${data.transcript}`).slice(
+                0,
+                1500,
+              ),
+            );
+          } else if (res.status === 503) {
+            setMicOff(true);
+          } else if (res.status === 429) {
+            setMicProblem("Too many voice requests at once. Try again in a moment.");
+          } else {
+            setMicProblem("The model didn't answer. Try again.");
+          }
+        } catch {
+          setMicProblem("The model didn't answer. Try again.");
+        }
+      })(),
+    onDenied: () =>
+      setMicProblem(
+        "Bottega can't hear you: allow the microphone in your browser settings.",
+      ),
+    onFailed: () => setMicProblem("Recording failed."),
+  });
 
   useEffect(() => {
     if (phase !== "busy") return;
@@ -90,9 +127,25 @@ export default function BuildForm() {
         >
           {busy ? "Designing…" : "Build my app"}
         </button>
-        {/* Prompt 19 adds the mic button here. */}
+        <button
+          type="button"
+          aria-label="Dictate"
+          aria-pressed={mic.recording}
+          disabled={busy || micOff}
+          {...mic.handlers}
+          className={`${btn.quiet} rounded-full! px-3!`}
+        >
+          🎙️
+        </button>
+        {mic.recording && (
+          <p className="text-muted text-sm">{mic.secs}s</p>
+        )}
       </div>
       {busy && <p className="text-muted text-sm">{elapsed}s</p>}
+      {micOff && (
+        <Status tone="muted">Voice is off right now (no model key).</Status>
+      )}
+      {micProblem !== "" && <Status tone="bad">{micProblem}</Status>}
       {phase === "off" && (
         <div className="flex flex-col gap-2">
           <Status tone="muted">

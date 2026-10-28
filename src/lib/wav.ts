@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 export function downmix(channels: Float32Array[]): Float32Array<ArrayBuffer> {
   if (channels.length === 0) return new Float32Array(0);
   const out = new Float32Array(channels[0].length);
@@ -100,6 +102,95 @@ export async function recordWav(): Promise<{ stop: () => Promise<Blob> }> {
         if (rec.state !== "inactive") rec.stop();
       }
       return done;
+    },
+  };
+}
+
+// Hold-to-talk (pointer) with click-to-toggle (keyboard/switch). Spread
+// `handlers` onto the button and set aria-pressed={recording}.
+export function useRecorder(callbacks: {
+  onBlob: (blob: Blob) => void;
+  onDenied: () => void;
+  onFailed: () => void;
+}) {
+  const recRef = useRef<{ stop: () => Promise<Blob> } | null>(null);
+  const startingRef = useRef(false);
+  const stopRequestedRef = useRef(false);
+  const finishedRef = useRef(false);
+  const cbRef = useRef(callbacks);
+  cbRef.current = callbacks;
+  const [recording, setRecording] = useState(false);
+  const [secs, setSecs] = useState(0);
+
+  useEffect(() => {
+    if (!recording) return;
+    const t = setInterval(() => setSecs((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [recording]);
+
+  async function start() {
+    if (recRef.current || startingRef.current) return;
+    startingRef.current = true;
+    try {
+      const rec = await recordWav();
+      recRef.current = rec;
+      setSecs(0);
+      setRecording(true);
+      if (stopRequestedRef.current) {
+        stopRequestedRef.current = false;
+        await finish();
+      }
+    } catch (e) {
+      if (
+        e instanceof Error &&
+        (e.name === "NotAllowedError" ||
+          e.name === "SecurityError" ||
+          e.name === "NotFoundError")
+      ) {
+        cbRef.current.onDenied();
+      } else {
+        cbRef.current.onFailed();
+      }
+    } finally {
+      startingRef.current = false;
+    }
+  }
+
+  async function finish() {
+    stopRequestedRef.current = true;
+    const rec = recRef.current;
+    if (!rec) return;
+    recRef.current = null;
+    setRecording(false);
+    stopRequestedRef.current = false;
+    finishedRef.current = true;
+    setTimeout(() => {
+      finishedRef.current = false;
+    }, 500);
+    try {
+      cbRef.current.onBlob(await rec.stop());
+    } catch {
+      cbRef.current.onFailed();
+    }
+  }
+
+  return {
+    recording,
+    secs,
+    handlers: {
+      onPointerDown: () => void start(),
+      onPointerUp: () => void finish(),
+      onPointerLeave: () => void finish(),
+      onPointerCancel: () => void finish(),
+      onClick: () => {
+        if (finishedRef.current) {
+          finishedRef.current = false;
+        } else if (recording) {
+          void finish();
+        } else {
+          void start();
+        }
+      },
     },
   };
 }

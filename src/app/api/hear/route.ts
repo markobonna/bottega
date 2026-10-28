@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { fail, requireUser } from "@/lib/api";
-import { json, transcribe } from "@/lib/meta";
+import { json, ModelError, transcribe } from "@/lib/meta";
 import { parseSpec } from "@/lib/spec/schema";
 import { checkValues } from "@/lib/values";
 
@@ -106,6 +106,10 @@ export async function POST(req: Request): Promise<Response> {
     const checked = checkValues(collection, values as Record<string, unknown>);
     return Response.json({ transcript, values: checked.data });
   } catch (e) {
+    if (e instanceof ModelError && e.status === 429) {
+      console.error(e.message);
+      return Response.json({ error: "Too many voice requests." }, { status: 429 });
+    }
     return fail(e);
   }
 }
