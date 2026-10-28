@@ -8,6 +8,7 @@ import List from "../blocks/List";
 import Price from "../blocks/Price";
 import See from "../blocks/See";
 import Stat from "../blocks/Stat";
+import Teach from "../blocks/teach/Teach";
 import UnknownBlock from "./UnknownBlock";
 
 export type RuntimeApp = { id: string; name: string; version: number };
@@ -35,7 +36,7 @@ export const BlockComponents: Record<BlockType, ComponentType<BlockProps>> = {
   hear: Hear,
   price: Price,
   compare: Compare,
-  teach: UnknownBlock,
+  teach: Teach,
   draw: UnknownBlock,
   make: UnknownBlock,
 };

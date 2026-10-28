@@ -5,6 +5,8 @@
 
 export type ColorShares = [number, number, number, number];
 
+export const COLOR_DIM_NAMES = ["Red", "Yellow", "Green", "Blue"];
+
 // Classify one pixel (0..255 channels) into a color bucket by opponent
 // scores. Ties go to the lowest index.
 export function bucket(r: number, g: number, b: number): number {

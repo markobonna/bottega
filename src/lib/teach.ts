@@ -145,6 +145,15 @@ export async function setLabel(
   if (error) throw new Error(`set label: ${error.message}`);
 }
 
+export async function setFeatures(
+  client: Client,
+  id: string,
+  x: number[],
+): Promise<void> {
+  const { error } = await client.from("examples").update({ x }).eq("id", id);
+  if (error) throw new Error(`set features: ${error.message}`);
+}
+
 export async function saveModel(
   client: Client,
   modelId: string,

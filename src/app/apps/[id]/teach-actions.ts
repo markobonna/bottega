@@ -8,6 +8,7 @@ import {
   removeExample,
   resetModel,
   saveModel,
+  setFeatures,
   setLabel,
   type DbExample,
   type DbModel,
@@ -81,6 +82,19 @@ export async function setLabelAction(
   try {
     const supabase = await createClient();
     await setLabel(supabase, id, y);
+    return { ok: true, done: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function setFeaturesAction(
+  id: string,
+  x: number[],
+): Promise<Ok<{ done: true }> | Fail> {
+  try {
+    const supabase = await createClient();
+    await setFeatures(supabase, id, x);
     return { ok: true, done: true };
   } catch (e) {
     return fail(e);
