@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "name": "Maria's Bakery",
+  "tagline": "Custom cakes and fresh loaves, ordered by voice.",
+  "look": { "accent": "terracotta", "icon": "🥖" },
+  "collections": [
+    {
+      "id": "orders",
+      "name": "Orders",
+      "fields": [
+        { "id": "customer", "name": "Customer", "type": "text" },
+        { "id": "item", "name": "Item", "type": "text" },
+        { "id": "quantity", "name": "Quantity", "type": "number" },
+        { "id": "due", "name": "Due", "type": "date" },
+        { "id": "notes", "name": "Notes", "type": "text" },
+        {
+          "id": "status",
+          "name": "Status",
+          "type": "choice",
+          "options": ["new", "baking", "ready", "picked up"]
+        }
+      ]
+    },
+    {
+      "id": "pantry",
+      "name": "Pantry",
+      "fields": [
+        { "id": "photo", "name": "Photo", "type": "photo" },
+        { "id": "jars", "name": "Jars", "type": "number" },
+        { "id": "bags", "name": "Bags", "type": "number" },
+        { "id": "notes", "name": "Notes", "type": "text" }
+      ]
+    },
+    {
+      "id": "specials",
+      "name": "Specials",
+      "fields": [
+        { "id": "name", "name": "Name", "type": "text" },
+        { "id": "description", "name": "Description", "type": "text" },
+        { "id": "price", "name": "Price", "type": "number" },
+        { "id": "picture", "name": "Picture", "type": "photo" }
+      ]
+    }
+  ],
+  "screens": [
+    {
+      "id": "orders",
+      "title": "Orders",
+      "icon": "🧾",
+      "blocks": [
+        {
+          "id": "orders_hear",
+          "title": "Take an order",
+          "type": "hear",
+          "collection": "orders",
+          "fields": ["customer", "item", "quantity", "due", "notes"],
+          "hint": "Say the customer's name, the item, how many, and when it's due."
+        },
+        {
+          "id": "orders_list",
+          "title": "Open orders",
+          "type": "list",
+          "collection": "orders",
+          "show": ["customer", "item", "due", "status"],
+          "sort": { "field": "due", "dir": "asc" }
+        }
+      ]
+    },
+    {
+      "id": "pantry",
+      "title": "Pantry",
+      "icon": "🫙",
+      "blocks": [
+        {
+          "id": "pantry_see",
+          "title": "Count the shelves",
+          "type": "see",
+          "nouns": ["jar", "flour bag"],
+          "saveTo": {
+            "collection": "pantry",
+            "counts": { "jar": "jars", "flour bag": "bags" },
+            "photo": "photo"
+          }
+        },
+        {
+          "id": "pantry_stat",
+          "title": "Jars on hand",
+          "type": "stat",
+          "collection": "pantry",
+          "field": "jars",
+          "agg": "latest",
+          "chart": "line"
+        }
+      ]
+    },
+    {
+      "id": "specials",
+      "title": "Specials",
+      "icon": "✨",
+      "blocks": [
+        {
+          "id": "specials_form",
+          "title": "New special",
+          "type": "form",
+          "collection": "specials",
+          "fields": ["name", "description", "price"],
+          "submitLabel": "Add special"
+        },
+        {
+          "id": "specials_draw",
+          "title": "Board picture",
+          "type": "draw",
+          "collection": "specials",
+          "titleField": "name",
+          "imageField": "picture",
+          "promptTemplate": "a bakery display photo of {name}: {description}, warm light"
+        }
+      ]
+    },
+    {
+      "id": "loaves",
+      "title": "Loaves",
+      "icon": "🍞",
+      "blocks": [
+        {
+          "id": "loaves_teach",
+          "title": "Loaf checker",
+          "type": "teach",
+          "question": "Would I sell this loaf?",
+          "labels": ["Don't sell", "Sell"],
+          "dims": [
+            { "name": "Crust color", "hint": "Deep gold all over, no pale spots." },
+            { "name": "Rise", "hint": "Tall and domed, not flat." },
+            { "name": "Even shape", "hint": "Symmetrical, no lopsided bulges." },
+            { "name": "Scoring", "hint": "Clean cuts that opened in the oven." }
+          ]
+        }
+      ]
+    }
+  ]
+}

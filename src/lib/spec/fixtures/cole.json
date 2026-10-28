@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "name": "Cole's Restoration Bench",
+  "tagline": "Brought back to life, one piece at a time.",
+  "look": { "accent": "olive", "icon": "🪑" },
+  "collections": [
+    {
+      "id": "pieces",
+      "name": "Pieces",
+      "fields": [
+        { "id": "name", "name": "Name", "type": "text" },
+        { "id": "client", "name": "Client", "type": "text" },
+        { "id": "before", "name": "Before", "type": "photo" },
+        { "id": "after", "name": "After", "type": "photo" },
+        { "id": "scratches", "name": "Scratches", "type": "number" },
+        { "id": "chips", "name": "Chips", "type": "number" },
+        { "id": "missing_veneer", "name": "Missing veneer", "type": "number" },
+        { "id": "notes", "name": "Notes", "type": "text" },
+        {
+          "id": "status",
+          "name": "Status",
+          "type": "choice",
+          "options": ["assessing", "quoted", "in progress", "done"]
+        }
+      ]
+    }
+  ],
+  "screens": [
+    {
+      "id": "pieces",
+      "title": "Pieces",
+      "icon": "🪑",
+      "blocks": [
+        {
+          "id": "pieces_form",
+          "title": "Log a piece",
+          "type": "form",
+          "collection": "pieces",
+          "fields": ["name", "client", "notes", "status"],
+          "submitLabel": "Save piece"
+        },
+        {
+          "id": "pieces_list",
+          "title": "On the bench",
+          "type": "list",
+          "collection": "pieces",
+          "show": ["name", "client", "status"]
+        }
+      ]
+    },
+    {
+      "id": "damage",
+      "title": "Damage",
+      "icon": "🔍",
+      "blocks": [
+        {
+          "id": "damage_see",
+          "title": "Map the damage",
+          "type": "see",
+          "nouns": ["scratch", "chip", "missing veneer"],
+          "saveTo": {
+            "collection": "pieces",
+            "counts": {
+              "scratch": "scratches",
+              "chip": "chips",
+              "missing veneer": "missing_veneer"
+            },
+            "photo": "before"
+          }
+        }
+      ]
+    },
+    {
+      "id": "quote",
+      "title": "Quote",
+      "icon": "🧮",
+      "blocks": [
+        {
+          "id": "quote_price",
+          "title": "Build a quote",
+          "type": "price",
+          "collection": "pieces",
+          "lines": [
+            { "field": "scratches", "label": "Scratch repair", "rate": 25, "unit": "each" },
+            { "field": "chips", "label": "Chip fill", "rate": 40, "unit": "each" },
+            { "field": "missing_veneer", "label": "Veneer patch", "rate": 90, "unit": "each" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "before_after",
+      "title": "Before & after",
+      "icon": "📸",
+      "blocks": [
+        {
+          "id": "reveal_compare",
+          "title": "Client reveal",
+          "type": "compare",
+          "collection": "pieces",
+          "before": "before",
+          "after": "after",
+          "caption": "name"
+        }
+      ]
+    }
+  ]
+}

@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --linked > src/lib/supabase/types.ts",
-    "login-link": "tsx --conditions=react-server --env-file=.env.local scripts/login-link.ts"
+    "login-link": "tsx --conditions=react-server --env-file=.env.local scripts/login-link.ts",
+    "check:isolation": "tsx --conditions=react-server --env-file=.env.local scripts/check-isolation.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

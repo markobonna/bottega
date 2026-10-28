@@ -1,5 +1,10 @@
 // Local only: mint a magic link for a demo account without sending email.
 // Usage: pnpm run login-link -- maria@example.com [baseUrl]
+// Prints Supabase's action link, which verifies and redirects to our
+// /auth/confirm with the session in the URL fragment (admin links don't use
+// PKCE codes, so the server callback can't catch them). Requires
+// http://localhost:3000/** in Auth → Redirect URLs (else Supabase falls back
+// to the production Site URL).
 // Needs the real SUPABASE_SECRET_KEY in .env.local (vercel env pull redacts
 // it, so paste it in by hand; never commit it).
 
@@ -30,15 +35,15 @@ async function main(): Promise<void> {
   const { data, error } = await supabase.auth.admin.generateLink({
     type: "magiclink",
     email,
-    options: { redirectTo: `${baseUrl}/auth/callback` },
+    options: { redirectTo: `${baseUrl}/auth/confirm` },
   });
 
-  const link = data?.properties?.action_link;
-  if (error || !link) {
+  const actionLink = data?.properties?.action_link;
+  if (error || !actionLink) {
     console.error(`login-link failed: ${error?.message ?? "no link returned"}`);
     process.exit(1);
   }
-  console.log(link);
+  console.log(actionLink);
 }
 
 main().catch((err: unknown) => {
