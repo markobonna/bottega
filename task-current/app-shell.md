@@ -52,7 +52,7 @@ Status: ⬜ to start · 🟡 in progress · ✅ AI check passed **and** human ch
 
 ## Next up
 
-PARKED per human "move on" (2026-10-27). Untested: src/app/auth/confirm/page.tsx (fragment-absorbing client page for admin demo links; login-link redirectTo now points there). Human directive 19:31: build blind — no more login debugging until the human says so. Unpark: fresh dev + fresh login-link → sign in → verify rows 4–5 → Finish → archive.
+PARKED per human "move on" (2026-10-27). Untested: src/app/auth/confirm/page.tsx (fragment-absorbing client page for admin demo links; login-link redirectTo now points there). Human directive 19:31: build blind — no more login debugging until the human says so. Unpark: fresh dev + fresh login-link → sign in → verify rows 4–5 → Finish → archive. Note 20:0x: check:isolation PROVED generateLink → verifyOtp sign-in works, so the reverted token_hash callback path was likely fine too (its failures were probably stale dev, never the token format).
 
 ## Check log
 

@@ -2,7 +2,7 @@
 
 # Feature Building: Prompt: 7-records-and-isolation-check
 
-Started: 2026-10-27 · Status: 🟡 building / ✅ finished
+Started: 2026-10-27 · Status: ✅ finished
 
 ## Bottega's goal (the same in every task)
 
@@ -31,7 +31,7 @@ Status: ⬜ to start · 🟡 in progress · ✅ AI check passed **and** human ch
 | ---- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------- | ------ |
 | 1 | src/lib/records.ts (server-only, client-first CRUD) + checkValues in src/lib/values.ts (pure, testable) + src/app/apps/[id]/actions.ts. Muse Code. | `pnpm run typecheck` passes; no admin import in records.ts | — | ✅ |
 | 2 | src/lib/records.test.ts for checkValues. Muse Code + Vitest. | `pnpm test` all green | — | ✅ |
-| 3 | scripts/check-isolation.ts + `check:isolation` script. Muse Code + Supabase Auth/Storage. | `typecheck` covers the script | Run `pnpm run check:isolation`: all lines PASS | 🟡 |
+| 3 | scripts/check-isolation.ts + `check:isolation` script. Muse Code + Supabase Auth/Storage. | `typecheck` covers the script | Run `pnpm run check:isolation`: all lines PASS | ✅ |
 
 ## Decisions
 
@@ -43,7 +43,7 @@ Status: ⬜ to start · 🟡 in progress · ✅ AI check passed **and** human ch
 
 ## Next up
 
-Row 3 human run: `pnpm run check:isolation` (needs the real secret in the human shell/env). Then mark ✅, Finish, archive.
+Done. Archived 2026-10-27.
 
 ## Check log
 
@@ -54,13 +54,14 @@ Only checks actually run go here, with their real result.
 | 2026-10-27 | 1,2 | `pnpm test` | Pass | 36/36 (incl. 7 checkValues tests; one caught a real RangeError on invalid dates, fixed). |
 | 2026-10-27 | 1,3 | `pnpm run typecheck` | Pass (exit 0) | Covers records.ts, values.ts, actions, check-isolation.ts. |
 | 2026-10-27 | 1 | `next build --webpack` | Pass (exit 0) | Turbopack stand-in, as before. |
+| 2026-10-27 | 3 | Human ran `pnpm run check:isolation` | Pass | 6/6 PASS (first attempt wrapped in backticks swallowed the output; rerun clean). Also proves generateLink → verifyOtp sign-in works. |
 
 ## Finish
 
-- [ ] Every Build row is ✅.
-- [ ] The automated gate passed: `pnpm test`, `pnpm run typecheck` and `pnpm run build`, whichever exist so far. Logged above.
-- [ ] Every human check was done by the human, not assumed.
-- [ ] The prompt's own **Check** from the build doc passed and is logged.
-- [ ] Anything a later prompt needs to know is in Decisions.
-- [ ] Committed (`git commit -m "Prompt: <short name>"`).
-- [ ] This file moved to `task-archive/prompt-<short-name>.md`, and `task-current/` is empty.
+- [x] Every Build row is ✅.
+- [x] The automated gate passed: `pnpm test`, `pnpm run typecheck`, `next build --webpack` (Turbopack stand-in). Logged above.
+- [x] Every human check was done by the human, not assumed.
+- [x] The prompt's own **Check** from the build doc passed and is logged.
+- [x] Anything a later prompt needs to know is in Decisions.
+- [ ] Committed (`git commit -m "Prompt: <short name>"`) — not requested, left uncommitted.
+- [x] This file moved to `task-archive/7-records-and-isolation-check.md`. (task-current/ still holds parked app-shell.md.)
