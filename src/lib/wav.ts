@@ -141,6 +141,9 @@ export function useRecorder(callbacks: {
         await finish();
       }
     } catch (e) {
+      // A failed start can't consume a latched stop; clear it so the
+      // next press isn't poisoned.
+      stopRequestedRef.current = false;
       if (
         e instanceof Error &&
         (e.name === "NotAllowedError" ||
@@ -159,9 +162,13 @@ export function useRecorder(callbacks: {
   }
 
   async function finish() {
-    stopRequestedRef.current = true;
     const rec = recRef.current;
-    if (!rec) return;
+    if (!rec) {
+      // Latch a stop only if a start is still acquiring; otherwise
+      // nothing will consume it and the next press would instant-stop.
+      if (startingRef.current) stopRequestedRef.current = true;
+      return;
+    }
     recRef.current = null;
     setRecording(false);
     stopRequestedRef.current = false;
