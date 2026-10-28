@@ -3,6 +3,7 @@ import type { AppSpec, Block, BlockType } from "@/lib/spec/schema";
 import type { DbRecord } from "@/lib/records";
 import Form from "../blocks/Form";
 import List from "../blocks/List";
+import See from "../blocks/See";
 import Stat from "../blocks/Stat";
 import UnknownBlock from "./UnknownBlock";
 
@@ -27,7 +28,7 @@ export const BlockComponents: Record<BlockType, ComponentType<BlockProps>> = {
   list: List,
   form: Form,
   stat: Stat,
-  see: UnknownBlock,
+  see: See,
   hear: UnknownBlock,
   price: UnknownBlock,
   compare: UnknownBlock,
