@@ -16,12 +16,15 @@
     "db:types": "supabase gen types typescript --linked > src/lib/supabase/types.ts",
     "login-link": "tsx --conditions=react-server --env-file=.env.local scripts/login-link.ts",
     "check:isolation": "tsx --conditions=react-server --env-file=.env.local scripts/check-isolation.ts",
-    "try-build": "tsx --conditions=react-server --env-file=.env.local scripts/try-build.ts"
+    "try-build": "tsx --conditions=react-server --env-file=.env.local scripts/try-build.ts",
+    "try-see": "tsx --conditions=react-server --env-file=.env.local scripts/try-see.ts"
   },
   "dependencies": {
+    "@meta-sam/parser": "0.1.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.118.0",
     "next": "16.4.3",
+    "openai": "7.45.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "server-only": "0.0.1",
