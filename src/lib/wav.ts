@@ -145,8 +145,10 @@ export function useRecorder(callbacks: {
         e instanceof Error &&
         (e.name === "NotAllowedError" ||
           e.name === "SecurityError" ||
-          e.name === "NotFoundError")
+          e.name === "NotFoundError" ||
+          e.name === "NotSupportedError")
       ) {
+        // NotSupportedError: no usable mic, or the browser refused capture.
         cbRef.current.onDenied();
       } else {
         cbRef.current.onFailed();
