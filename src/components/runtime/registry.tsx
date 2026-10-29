@@ -6,6 +6,7 @@ import Draw from "../blocks/Draw";
 import Form from "../blocks/Form";
 import Hear from "../blocks/Hear";
 import List from "../blocks/List";
+import Make from "../blocks/Make";
 import Price from "../blocks/Price";
 import See from "../blocks/See";
 import Stat from "../blocks/Stat";
@@ -44,5 +45,5 @@ export const BlockComponents: Record<BlockType, ComponentType<BlockProps>> = {
   compare: Compare,
   teach: Teach,
   draw: Draw,
-  make: UnknownBlock,
+  make: Make,
 };

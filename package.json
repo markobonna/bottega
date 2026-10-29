@@ -19,7 +19,8 @@
     "try-build": "tsx --conditions=react-server --env-file=.env.local scripts/try-build.ts",
     "try-see": "tsx --conditions=react-server --env-file=.env.local scripts/try-see.ts",
     "try-draw": "tsx --conditions=react-server --env-file=.env.local scripts/try-draw.ts",
-    "try-open": "tsx --conditions=react-server --env-file=.env.local scripts/try-open.ts"
+    "try-open": "tsx --conditions=react-server --env-file=.env.local scripts/try-open.ts",
+    "seed:demo": "tsx --conditions=react-server --env-file=.env.local scripts/seed-demo.ts"
   },
   "dependencies": {
     "@meta-sam/parser": "0.1.0",

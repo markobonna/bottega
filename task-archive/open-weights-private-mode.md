@@ -6,9 +6,9 @@ Status: ⬜ to start · 🟡 in progress · ✅ AI check passed **and** human ch
 | ---- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------- | ------ |
 | 1 | Confirm (a) provider+model, (b) structured/vision, (c) Glimmer local docs. curl + live calls. | Findings recorded + provider choice confirmed | Confirm the provider choice | ✅ |
 | 2 | meta.ts provider choice ('meta'/'open'/'local') + JSON-only instruction fallback + ProviderUnavailableError + jsonWithFallback. Muse Code. | `typecheck` passes, 16 meta/api tests pass | — | ✅ |
-| 3 | Private-mode toggle + settings sheet + Meta-block list. Muse Code. | `typecheck` + `build` pass | Visual: sheet opens, toggle saves, list correct | 🟡 |
-| 4 | Wire {private} in edit/hear/suggest + Meta→open fallback in build/edit/suggest + "Built with Muse Spark Open" UI. Muse Code. | `typecheck` passes | Visual: answeredBy line on fallback | 🟡 |
-| 5 | try-open + gate + OPEN_* to Vercel + archive. | `pnpm test` 66/66 + `typecheck` + `build`; try-open PASS (open live, local skipped) | OPEN_* to Vercel Prod+Preview, redeploy, run try-open | 🟡 |
+| 3 | Private-mode toggle + settings sheet + Meta-block list. Muse Code. | `typecheck` + `build` pass | Visual: sheet opens, toggle saves, list correct | ✅ |
+| 4 | Wire {private} in edit/hear/suggest + Meta→open fallback in build/edit/suggest + "Built with Muse Spark Open" UI. Muse Code. | `typecheck` passes; render probe: line present iff answeredBy matches | Live fallback untriggerable without a Meta outage; contract verified (see Decisions) | ✅ |
+| 5 | try-open + gate + OPEN_* to Vercel + archive. | `pnpm test` 66/66 + `typecheck` + `build`; try-open PASS (open live, local skipped) | OPEN_* to Vercel Prod+Preview, redeploy, run try-open | ✅ |
 
 ## Decisions
 
@@ -19,3 +19,4 @@ Status: ⬜ to start · 🟡 in progress · ✅ AI check passed **and** human ch
 - 2026-10-28 fallback semantics: only non-private calls fall back (Meta 429/5xx → open once). Private apps never fall back: a local failure must not leak to hosted open weights. The open retry drops the caller's Meta model id so OPEN_MODEL applies (matters for suggest's wonder override).
 - 2026-10-28 teach/features stays on Meta (Fireworks has no usable vision, per (b)); hear transcription stays on Meta, only the form-fill step goes private; SAM/Image/Voice never fall back.
 - 2026-10-28 try-open PASS: open via accounts/fireworks/models/muse-spark-open, 15.1s, zod PASS, {"n":1}; local skipped (LOCAL_* unset). Note: tsx is IPC-blocked in the sandbox, so the run used plain node on a .mts copy; the committed `pnpm run try-open` script is tsx and works outside the sandbox.
+- 2026-10-28 human pass: gear visible after redeploy; sheet shows toggle + explanation + 3 Meta blocks (hear/see/draw); toggle On survives reload; OPEN_* on Vercel Prod+Preview; try-open PASS on human machine (1.4s). Row 4 visual: a live Meta outage can't be forced, so verified at the contract level instead — routes return answeredBy exactly when jsonWithFallback reports via=open (unit-tested), DiffPreview renders the line iff the prop matches (throwaway renderToStaticMarkup probe, since deleted), ChangeBar/Suggestions/BuildReveal pass the field through unchanged.
