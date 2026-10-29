@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createRecord } from "@/app/apps/[id]/actions";
+import { createRecord, logEvent } from "@/app/apps/[id]/actions";
 import { btn, DataNotice, Status } from "@/components/ui";
 import { resizeToJpeg, uploadPhoto } from "@/lib/media";
 import type { BlockProps } from "../runtime/registry";
@@ -107,6 +107,7 @@ export default function See({ block, ctx }: BlockProps) {
         setProblem(result.error);
       } else {
         setSaved(true);
+        void logEvent(ctx.appId, "see_saved", { nouns: seeNouns, counts });
         ctx.refresh();
       }
     } catch (e) {

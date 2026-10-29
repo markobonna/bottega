@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   getOrCreateShare,
+  logEvent,
   revokeShare,
   saveRecord,
   signPhotoPaths,
@@ -92,11 +93,13 @@ export default function Compare({ block, records, ctx }: BlockProps) {
     try {
       const r = await getOrCreateShare(ctx.appId, row.id);
       if (!r.ok) setProblem(r.error);
-      else
+      else {
         setShare({
           token: r.token,
           url: `${window.location.origin}/s/${r.token}`,
         });
+        void logEvent(ctx.appId, "shared", {});
+      }
     } catch (e) {
       setProblem(e instanceof Error ? e.message : "Sharing failed.");
     } finally {

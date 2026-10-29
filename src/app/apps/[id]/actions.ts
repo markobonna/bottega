@@ -12,7 +12,9 @@ import {
 } from "@/lib/records";
 import type { Op } from "@/lib/spec/ops";
 import { createClient } from "@/lib/supabase/server";
+import type { Json } from "@/lib/supabase/types";
 import { listVersions, saveVersion, type VersionRow } from "@/lib/versions";
+import { logEvent as writeEvent } from "@/lib/events";
 
 type Ok<T> = { ok: true } & T;
 type Fail = { ok: false; error: string };
@@ -166,5 +168,18 @@ export async function getVersions(
     return { ok: true, versions };
   } catch (e) {
     return fail(e);
+  }
+}
+
+export async function logEvent(
+  appId: string,
+  kind: string,
+  detail: Json,
+): Promise<void> {
+  try {
+    const supabase = await createClient();
+    await writeEvent(supabase, appId, kind, detail);
+  } catch {
+    // Fire and forget: usage logging must never break the UI.
   }
 }

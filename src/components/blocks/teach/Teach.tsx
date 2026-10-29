@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { signPhotoPaths } from "@/app/apps/[id]/actions";
+import { logEvent, signPhotoPaths } from "@/app/apps/[id]/actions";
 import {
   addExampleAction,
   getOrCreateModelAction,
@@ -341,6 +341,7 @@ export default function Teach({ block, ctx }: BlockProps) {
     const finish = async () => {
       const r = await saveModelAction(modelId, snapshot(br));
       if (!r.ok) setProblem(r.error);
+      else void logEvent(ctx.appId, "teach_trained", { n: br.train.length });
       setPracticing(false);
       setTick((t) => t + 1);
     };
@@ -444,6 +445,11 @@ export default function Teach({ block, ctx }: BlockProps) {
       const after = answer(br, selected.x);
       const saved = await saveModelAction(modelId, snapshot(br));
       if (!saved.ok) setProblem(saved.error);
+      else
+        void logEvent(ctx.appId, "teach_corrected", {
+          from: before.label,
+          to: labels[other],
+        });
       setCorrection(
         `Was ${pct(before.conf)} ${before.label}. Now ${pct(after.conf)} ${after.label}.`,
       );

@@ -8,6 +8,7 @@ import BlockFrame from "./BlockFrame";
 import { BlockComponents, type RuntimeApp } from "./registry";
 import UnknownBlock from "./UnknownBlock";
 import ChangeBar from "../workshop/ChangeBar";
+import Suggestions from "../workshop/Suggestions";
 import VersionChip from "../workshop/VersionHistory";
 
 export default function AppRuntime({
@@ -93,6 +94,10 @@ export default function AppRuntime({
         {active == null && (
           <p className="text-muted">No screens yet.</p>
         )}
+        {active !== null &&
+          spec.screens.findIndex((s) => s.id === active.id) === 0 && (
+            <Suggestions appId={app.id} version={app.version} />
+          )}
         {active?.blocks.map((block) => {
           const collectionId =
             "collection" in block ? block.collection : null;

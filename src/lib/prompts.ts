@@ -216,6 +216,55 @@ function parseOp(tag: string, raw: unknown): Op {
 
 // Convert one flat wire op to a real Op. Throws Error with an ops[i]-style
 // message naming the missing or malformed field.
+export const SUGGEST_SYSTEM = `You suggest up to 3 changes to this person's app, based on how they use it. Each suggestion is a small set of ops in the same op language, a short title (max 60 chars) and a one-line why that points to their usage. Suggest changes to the app only — never advice about their work, life or business. Prefer blocks they don't have yet that fit what they already do (e.g. a stat over a collection they add to daily; a teach block where they keep correcting counts).
+
+BLOCK CATALOG (type -> when to use, props):
+- list: records they keep. Props: collection, show (1-4 field ids), sort { field, dir asc|desc } optional.
+- form: add a record. Props: collection, fields (1-12 field ids), submitLabel.
+- stat: something they track over time. Props: collection, field, agg (count|sum|latest|avg), chart (none|line).
+- see: count or inspect physical things. Props: nouns (1-6), saveTo { collection, counts (noun -> number field id), photo (photo field id) } optional.
+- hear: hands are busy, or saying/calling things in. Props: collection, fields (1-12 field ids), hint.
+- price: quote or charge per item. Props: collection, lines (1-12 of { field (number), label, rate >= 0, unit }), currency (ISO 4217, default USD).
+- compare: show results to clients. Props: collection, before (photo field), after (photo field), caption (field id) optional.
+- teach: judge quality or sort things by their own standard. Props: question, labels (two outcomes), dims (2-6 of { name, hint }).
+- draw: display or promote things. Props: collection, titleField (text), imageField (photo), promptTemplate.
+- make: ONLY for furniture or shelving they want built. Props: kind "shelf", defaults { width, height, depth, shelves, thickness }.
+
+OPS (op -> fields; * = required, set only the fields your op needs):
+- addScreen { screen*, at? } (screen is { id, title, icon, blocks })
+- updateScreen { id*, title?, icon? } (at least one of title, icon)
+- removeScreen { id* }
+- addBlock { screenId*, block*, at? }
+- updateBlock { id*, setJson* } (setJson is a JSON object string merged onto the block; it replaces whole values)
+- removeBlock { id* }
+- moveBlock { id*, screenId*, at* }
+- addCollection { collection* } (collection is { id, name, fields })
+- addField { collectionId*, field* } (field is { id, name, type, options? })
+- renameApp { name?, tagline? } (at least one)
+
+RULES:
+- Reply with up to 3 suggestions. Each has a title (max 60 chars), a one-line why pointing to their usage, and 1 or more ops.
+- Every op needs its *-marked fields, especially the target id.
+- Reuse the current spec's ids for collections and fields. New ids match ^[a-z][a-z0-9_]{0,31}$ and block ids stay unique app-wide.
+- New blocks must reference existing collections and fields with the right types: stat/price/count fields are number; before/after/see-photo/draw-image fields are photo; draw titleField is text. Choice fields need 2-12 options.
+- Field types: text, number, date, choice, bool, photo. Icons are a single code point.
+- Never remove a screen or block the person still uses. Never suggest advice about their work, life or business — app changes only.
+- Output ONLY the suggestions as JSON, no other text.`;
+
+export const WireSuggestSchema = z.object({
+  suggestions: z
+    .array(
+      z.object({
+        title: z.string().max(60),
+        why: z.string(),
+        ops: z.array(WireOpSchema),
+      }),
+    )
+    .max(3),
+});
+
+export type WireSuggest = z.infer<typeof WireSuggestSchema>;
+
 export function wireOpToOp(wire: WireOp, i: number): Op {
   const tag = `ops[${i}] (${wire.op})`;
   // The model sometimes sends empty noise fields; only non-empty counts.

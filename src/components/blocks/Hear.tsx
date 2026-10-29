@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createRecord } from "@/app/apps/[id]/actions";
+import { createRecord, logEvent } from "@/app/apps/[id]/actions";
 import { btn, DataNotice, Status } from "@/components/ui";
 import { FieldInput, type FieldValue } from "./Form";
 import type { BlockProps } from "../runtime/registry";
@@ -87,6 +87,7 @@ export default function Hear({ block, spec, ctx }: BlockProps) {
         setValues({});
         setTranscript(null);
         setStatus({ tone: "ok", message: "Logged." });
+        void logEvent(ctx.appId, "record_added", { collection: block.collection });
         ctx.refresh();
       }
     } catch (e) {

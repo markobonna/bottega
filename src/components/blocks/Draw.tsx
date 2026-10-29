@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signPhotoPaths } from "@/app/apps/[id]/actions";
+import { logEvent, signPhotoPaths } from "@/app/apps/[id]/actions";
 import { btn, DataNotice, Status } from "@/components/ui";
 import type { BlockProps } from "../runtime/registry";
 
@@ -72,6 +72,7 @@ export default function Draw({ block, records, ctx }: BlockProps) {
       return;
     }
     const data = (await res.json()) as { imagePath: string };
+    void logEvent(ctx.appId, "drawn", {});
     setFresh((f) => ({ ...f, [recordId]: data.imagePath }));
     const signed = await signPhotoPaths([data.imagePath]);
     if (signed.ok) setUrls((u) => ({ ...u, ...signed.urls }));

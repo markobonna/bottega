@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { saveBlockLines } from "@/app/apps/[id]/actions";
+import { logEvent, saveBlockLines } from "@/app/apps/[id]/actions";
 import { btn, Label, Status } from "@/components/ui";
 import { formatMoney, quote } from "@/lib/price";
 import type { BlockProps } from "../runtime/registry";
@@ -86,6 +86,7 @@ export default function Price({ block, spec, records, ctx }: BlockProps) {
         setNotice("Your app changed elsewhere; rates reloaded.");
         ctx.refresh();
       } else {
+        void logEvent(ctx.appId, "rate_changed", {});
         ctx.refresh();
       }
     } catch (e) {

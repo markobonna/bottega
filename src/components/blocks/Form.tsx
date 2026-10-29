@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createRecord } from "@/app/apps/[id]/actions";
+import { createRecord, logEvent } from "@/app/apps/[id]/actions";
 import { resizeToJpeg, uploadPhoto } from "@/lib/media";
 import type { Field } from "@/lib/spec/schema";
 import { DataNotice, Label, Status, btn } from "../ui";
@@ -193,6 +193,7 @@ export default function Form({ block, spec, ctx }: BlockProps) {
       }
       setValues({});
       setStatus({ tone: "ok", message: "Saved." });
+      void logEvent(ctx.appId, "record_added", { collection: block.collection });
       ctx.refresh();
     } finally {
       setBusy(false);
