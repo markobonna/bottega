@@ -58,10 +58,10 @@ export async function POST(req: Request): Promise<Response> {
     .select("spec, private")
     .eq("id", body.appId)
     .maybeSingle();
-  if (!app) return Response.json({ error: "No such app." }, { status: 404 });
+  if (!app) return Response.json({ error: "No such project." }, { status: 404 });
   const parsed = parseSpec(app.spec);
   if (!parsed.ok)
-    return Response.json({ error: "Bad app spec." }, { status: 404 });
+    return Response.json({ error: "Bad project spec." }, { status: 404 });
   const { data: events } = await auth.supabase
     .from("events")
     .select("kind, detail")

@@ -20,7 +20,7 @@ export async function POST(req: Request): Promise<Response> {
   if (body instanceof Response) return body;
   if (!body.photoPath.startsWith(`${auth.user.id}/${body.appId}/`)) {
     return Response.json(
-      { error: "That photo doesn't belong to this app." },
+      { error: "That photo doesn't belong to this project." },
       { status: 403 },
     );
   }
@@ -29,10 +29,10 @@ export async function POST(req: Request): Promise<Response> {
     .select("spec")
     .eq("id", body.appId)
     .maybeSingle();
-  if (!app) return Response.json({ error: "No such app." }, { status: 404 });
+  if (!app) return Response.json({ error: "No such project." }, { status: 404 });
   const parsed = parseSpec(app.spec);
   if (!parsed.ok)
-    return Response.json({ error: "Bad app spec." }, { status: 404 });
+    return Response.json({ error: "Bad project spec." }, { status: 404 });
   const teach = parsed.spec.screens
     .flatMap((s) => s.blocks)
     .find((b) => b.type === "teach" && b.id === body.blockId);

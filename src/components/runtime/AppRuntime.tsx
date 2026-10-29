@@ -64,10 +64,10 @@ export default function AppRuntime({
   return (
     <div data-accent={spec.look.accent}>
       <Link
-        href="/"
+        href={app.workshop ? `/workshops/${app.workshop.id}` : "/"}
         className="text-muted text-sm underline-offset-4 hover:underline"
       >
-        ← Workshop
+        ← {app.workshop ? app.workshop.name : "Workshops"}
       </Link>
       <header className="mt-2 flex items-start gap-3">
         <span aria-hidden="true" className="text-3xl">

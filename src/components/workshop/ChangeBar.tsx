@@ -103,7 +103,7 @@ export default function ChangeBar({ appId }: { appId: string }) {
       return;
     }
     if (res.status === 409) {
-      setProblem("Your app changed while you were asking. Try again.");
+      setProblem("Project changed while you were asking. Try again.");
       setEdit(null);
       setPhase("idle");
       setAccepting(false);
@@ -201,7 +201,7 @@ export default function ChangeBar({ appId }: { appId: string }) {
           >
             <input
               type="text"
-              aria-label="Ask Bottega to change this app"
+              aria-label="Ask Bottega to change this project"
               placeholder="Ask for a change…"
               value={text}
               disabled={phase !== "idle"}

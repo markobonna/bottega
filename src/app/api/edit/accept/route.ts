@@ -24,7 +24,7 @@ export async function POST(req: Request): Promise<Response> {
     .select("id")
     .eq("id", body.appId)
     .maybeSingle();
-  if (!app) return Response.json({ error: "No such app." }, { status: 404 });
+  if (!app) return Response.json({ error: "No such project." }, { status: 404 });
   try {
     const saved = await saveVersion(
       auth.supabase,

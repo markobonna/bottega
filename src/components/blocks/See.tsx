@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createRecord, logEvent } from "@/app/apps/[id]/actions";
+import { createRecord, logEvent } from "@/app/projects/[id]/actions";
 import { btn, DataNotice, Status } from "@/components/ui";
 import { resizeToJpeg, uploadPhoto } from "@/lib/media";
 import type { BlockProps } from "../runtime/registry";

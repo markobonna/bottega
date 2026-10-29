@@ -79,8 +79,25 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   try {
+    const { data: workshops, error: wError } = await admin
+      .from("workshops")
+      .select("*")
+      .eq("owner", templateUid);
+    if (wError) throw new Error(`load workshops: ${wError.message}`);
+    const workshopMap = new Map<string, string>();
+    for (const w of workshops) {
+      const { data, error } = await admin
+        .from("workshops")
+        .insert({ owner: guestUid, name: w.name })
+        .select("id")
+        .single();
+      if (error || !data) throw new Error(`copy workshop: ${error?.message}`);
+      workshopMap.set(w.id, data.id);
+    }
     const appMap = new Map<string, string>();
     for (const app of apps) {
+      const workshopId = workshopMap.get(app.workshop_id);
+      if (!workshopId) throw new Error("copy app: workshop missing");
       const { data, error } = await admin
         .from("apps")
         .insert({
@@ -89,6 +106,7 @@ export async function POST(req: Request): Promise<Response> {
           spec: app.spec,
           version: app.version,
           private: app.private,
+          workshop_id: workshopId,
         })
         .select("id")
         .single();

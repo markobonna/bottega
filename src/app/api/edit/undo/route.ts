@@ -1,11 +1,14 @@
 import { z } from "zod";
 
 import { readJson, requireUser } from "@/lib/api";
-import { restorePrevious } from "@/lib/versions";
+import { restorePrevious, restoreVersion } from "@/lib/versions";
 
 export const runtime = "nodejs";
 
-const BodySchema = z.object({ appId: z.string().min(1) });
+const BodySchema = z.object({
+  appId: z.string().min(1),
+  version: z.number().int().min(1).optional(),
+});
 
 export async function POST(req: Request): Promise<Response> {
   const auth = await requireUser();
@@ -17,12 +20,15 @@ export async function POST(req: Request): Promise<Response> {
     .select("version")
     .eq("id", body.appId)
     .maybeSingle();
-  if (!app) return Response.json({ error: "No such app." }, { status: 404 });
+  if (!app) return Response.json({ error: "No such project." }, { status: 404 });
   if (app.version <= 1) {
     return Response.json({ error: "Nothing to undo yet." }, { status: 400 });
   }
   try {
-    const { version } = await restorePrevious(auth.supabase, body.appId);
+    const { version } =
+      body.version === undefined
+        ? await restorePrevious(auth.supabase, body.appId)
+        : await restoreVersion(auth.supabase, body.appId, body.version);
     return Response.json({ version });
   } catch (e) {
     return Response.json(

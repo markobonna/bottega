@@ -85,8 +85,8 @@ export default function BuildReveal({
       )}
       {visible > ctaIdx && (
         <div className="mt-2 flex flex-col items-stretch gap-2">
-          <Link href={`/apps/${appId}`} className={btn.primary}>
-            Open my app
+          <Link href={`/projects/${appId}`} className={btn.primary}>
+            Open my project
           </Link>
           <p className="text-muted text-center text-sm">
             {answeredBy === "muse-spark-open"

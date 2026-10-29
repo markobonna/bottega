@@ -117,7 +117,7 @@ export default function Suggestions({
         }),
       });
       if (res.status === 409) {
-        setProblem("Your app changed; these ideas are stale.");
+        setProblem("Project changed; these ideas are stale.");
         return;
       }
       if (!res.ok) {
@@ -136,8 +136,8 @@ export default function Suggestions({
   const current = open !== null ? items[open] : undefined;
 
   return (
-    <section aria-label="Ideas for your app" className="flex flex-col gap-2">
-      <Label>Ideas for your app</Label>
+    <section aria-label="Ideas for your project" className="flex flex-col gap-2">
+      <Label>Ideas for your project</Label>
       <div className="flex flex-col gap-2">
         {items.map((s, i) => (
           <button

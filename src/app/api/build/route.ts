@@ -9,13 +9,23 @@ import { createApp } from "@/lib/versions";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const BodySchema = z.object({ description: z.string().min(10).max(1500) });
+const BodySchema = z.object({
+  description: z.string().min(10).max(1500),
+  workshopId: z.string().min(1),
+});
 
 export async function POST(req: Request): Promise<Response> {
   const auth = await requireUser();
   if (auth instanceof Response) return auth;
   const body = await readJson(req, BodySchema);
   if (body instanceof Response) return body;
+  const { data: workshop } = await auth.supabase
+    .from("workshops")
+    .select("id")
+    .eq("id", body.workshopId)
+    .maybeSingle();
+  if (!workshop)
+    return Response.json({ error: "No such workshop." }, { status: 404 });
   try {
     let viaOpen = false;
     const first = await jsonWithFallback(
@@ -58,6 +68,7 @@ export async function POST(req: Request): Promise<Response> {
     const appId = await createApp(auth.supabase, parsed.spec, {
       source: "build",
       summary: "Built from your description",
+      workshopId: body.workshopId,
     });
     return Response.json({
       appId,

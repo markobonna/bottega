@@ -47,7 +47,7 @@ export async function createRecord(
   try {
     const supabase = await createClient();
     const row = await addRecord(supabase, appId, collection, data);
-    revalidatePath(`/apps/${appId}`);
+    revalidatePath(`/projects/${appId}`);
     return { ok: true, row };
   } catch (e) {
     return fail(e);
@@ -62,7 +62,7 @@ export async function saveRecord(
   try {
     const supabase = await createClient();
     const row = await updateRecord(supabase, id, data);
-    revalidatePath(`/apps/${appId}`);
+    revalidatePath(`/projects/${appId}`);
     return { ok: true, row };
   } catch (e) {
     return fail(e);
@@ -88,7 +88,7 @@ export async function removeRecord(
   try {
     const supabase = await createClient();
     const gone = await deleteRecord(supabase, id);
-    revalidatePath(`/apps/${appId}`);
+    revalidatePath(`/projects/${appId}`);
     return { ok: true, ...gone };
   } catch (e) {
     return fail(e);
@@ -110,7 +110,7 @@ export async function saveBlockLines(
       summary,
     });
     if ("conflict" in result) return { ok: true, conflict: true };
-    revalidatePath(`/apps/${appId}`);
+    revalidatePath(`/projects/${appId}`);
     return { ok: true, conflict: false };
   } catch (e) {
     return fail(e);
@@ -195,7 +195,7 @@ export async function setPrivate(
       .update({ private: priv })
       .eq("id", appId);
     if (error) throw new Error(error.message);
-    revalidatePath(`/apps/${appId}`);
+    revalidatePath(`/projects/${appId}`);
     return { ok: true, priv };
   } catch (e) {
     return fail(e);

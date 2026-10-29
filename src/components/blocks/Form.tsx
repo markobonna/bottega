@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createRecord, logEvent } from "@/app/apps/[id]/actions";
+import { createRecord, logEvent } from "@/app/projects/[id]/actions";
 import { resizeToJpeg, uploadPhoto } from "@/lib/media";
 import type { Field } from "@/lib/spec/schema";
 import { DataNotice, Label, Status, btn } from "../ui";

@@ -10,7 +10,7 @@ import { createSample } from "../actions";
 
 type Phase = "idle" | "busy" | "done" | "off" | "invalid" | "failed";
 
-export default function BuildForm() {
+export default function BuildForm({ workshopId }: { workshopId: string }) {
   const [text, setText] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsed, setElapsed] = useState(0);
@@ -71,7 +71,7 @@ export default function BuildForm() {
       res = await fetch("/api/build", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: text }),
+        body: JSON.stringify({ description: text, workshopId }),
       });
     } catch {
       setPhase("failed");
@@ -139,7 +139,7 @@ export default function BuildForm() {
           onClick={() => void build()}
           className={btn.primary}
         >
-          {busy ? "Designing…" : "Build my app"}
+          {busy ? "Designing…" : "Build my project"}
         </button>
         <button
           type="button"
@@ -167,12 +167,12 @@ export default function BuildForm() {
             sample instead.
           </Status>
           <div className="flex flex-wrap gap-2">
-            <form action={createSample.bind(null, "maria")}>
+            <form action={createSample.bind(null, "maria", workshopId)}>
               <button type="submit" className={btn.quiet}>
                 A bakery
               </button>
             </form>
-            <form action={createSample.bind(null, "cole")}>
+            <form action={createSample.bind(null, "cole", workshopId)}>
               <button type="submit" className={btn.quiet}>
                 A furniture restorer
               </button>

@@ -7,7 +7,7 @@ import {
   revokeShare,
   saveRecord,
   signPhotoPaths,
-} from "@/app/apps/[id]/actions";
+} from "@/app/projects/[id]/actions";
 import { btn, Confirm, Label, Status } from "@/components/ui";
 import { resizeToJpeg, uploadPhoto } from "@/lib/media";
 import type { BlockProps } from "../runtime/registry";

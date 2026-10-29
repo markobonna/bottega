@@ -15,10 +15,13 @@ export default async function AppPage({
   const supabase = await createClient();
   const { data: app, error } = await supabase
     .from("apps")
-    .select("id, name, version, spec, private")
+    .select("id, name, version, spec, private, workshop_id, workshops ( name )")
     .eq("id", id)
     .single();
   if (error || !app) notFound();
+  const workshop = Array.isArray(app.workshops)
+    ? app.workshops[0]
+    : app.workshops;
 
   const parsed = parseSpec(app.spec);
   if (!parsed.ok) {
@@ -52,6 +55,9 @@ export default async function AppPage({
           name: app.name,
           version: app.version,
           private: app.private ?? false,
+          workshop: workshop
+            ? { id: app.workshop_id, name: workshop.name }
+            : null,
         }}
         spec={spec}
         records={records}

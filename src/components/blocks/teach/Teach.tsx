@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { logEvent, signPhotoPaths } from "@/app/apps/[id]/actions";
+import { logEvent, signPhotoPaths } from "@/app/projects/[id]/actions";
 import {
   addExampleAction,
   getOrCreateModelAction,
@@ -10,7 +10,7 @@ import {
   saveModelAction,
   setFeaturesAction,
   setLabelAction,
-} from "@/app/apps/[id]/teach-actions";
+} from "@/app/projects/[id]/teach-actions";
 import { btn, Confirm, DataNotice, Label, Status } from "@/components/ui";
 import {
   answer,
@@ -273,7 +273,7 @@ export default function Teach({ block, ctx }: BlockProps) {
   async function labelPending(y: 0 | 1) {
     if (!pending || !modelId || !brain) return;
     if (pending.x.length !== brain.w.length) {
-      setProblem("Your app changed elsewhere; reload and try again.");
+      setProblem("Project changed elsewhere; reload and try again.");
       setPending(null);
       return;
     }
@@ -411,7 +411,7 @@ export default function Teach({ block, ctx }: BlockProps) {
         x = [...(await colorFeatures(small))];
       }
       if (x.length !== brain.w.length) {
-        setProblem("Your app changed elsewhere; reload and try again.");
+        setProblem("Project changed elsewhere; reload and try again.");
         return;
       }
       const entry = { path, x, preview };

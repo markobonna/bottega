@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { logEvent, signPhotoPaths } from "@/app/apps/[id]/actions";
+import { logEvent, signPhotoPaths } from "@/app/projects/[id]/actions";
 import { btn, DataNotice, Status } from "@/components/ui";
 import type { BlockProps } from "../runtime/registry";
 

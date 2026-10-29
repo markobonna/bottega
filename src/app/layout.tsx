@@ -18,7 +18,7 @@ const atkinson = Atkinson_Hyperlegible_Next({
 
 export const metadata: Metadata = {
   title: "Bottega",
-  description: "A workshop that builds your app with you.",
+  description: "A workshop that builds your projects with you.",
 };
 
 export const viewport: Viewport = {

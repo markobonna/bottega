@@ -101,10 +101,25 @@ function dayAgo(n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+async function makeWorkshop(
+  client: Client,
+  name: string,
+): Promise<string> {
+  const { data, error } = await client
+    .from("workshops")
+    .insert({ name })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`workshop ${name}: ${error?.message}`);
+  return data.id;
+}
+
 async function seedMaria(client: Client, uid: string): Promise<string> {
+  const workshopId = await makeWorkshop(client, "Bakery");
   const appId = await createApp(client, mariaFixture, {
     source: "build",
     summary: "Demo seed",
+    workshopId,
   });
   const spec = mariaFixture as AppSpec;
   const see = spec.screens
@@ -239,9 +254,11 @@ async function seedMariaTeach(
 }
 
 async function seedCole(client: Client, uid: string): Promise<string> {
+  const workshopId = await makeWorkshop(client, "Restoration Bench");
   const appId = await createApp(client, coleFixture, {
     source: "build",
     summary: "Demo seed",
+    workshopId,
   });
   const spec = coleFixture as AppSpec;
   const see = spec.screens
@@ -311,10 +328,10 @@ async function main(): Promise<void> {
         throw new Error(`create ${email}: ${mk.error?.message ?? "none"}`);
     }
     const { client, uid } = await signInAs(admin, url, anonKey, email);
-    await client.from("apps").delete().eq("owner", uid);
+    await client.from("workshops").delete().eq("owner", uid);
     const appId = await seed(client, uid);
     ids[who] = uid;
-    console.log(`${who}: app ${appId}`);
+    console.log(`${who} project ${appId}`);
     if (who === "maria") {
       mariaClient = client;
       mariaApp = appId;

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getVersions } from "@/app/apps/[id]/actions";
-import { card } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { getVersions } from "@/app/projects/[id]/actions";
+import { btn, card } from "@/components/ui";
 import type { VersionRow } from "@/lib/versions";
 
 // Same shape as the workshop home's timeAgo; that module is a server
@@ -32,8 +33,10 @@ export default function VersionChip({
   appId: string;
   version: number;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<VersionRow[] | null>(null);
+  const [restoring, setRestoring] = useState<number | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,6 +66,25 @@ export default function VersionChip({
     }
   }
 
+  async function goBack(target: number) {
+    if (restoring !== null) return;
+    setRestoring(target);
+    try {
+      const res = await fetch("/api/edit/undo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId, version: target }),
+      });
+      if (res.ok) {
+        setOpen(false);
+        setRows(null);
+        router.refresh();
+      }
+    } finally {
+      setRestoring(null);
+    }
+  }
+
   return (
     <div ref={boxRef} className="relative shrink-0">
       <button
@@ -83,10 +105,27 @@ export default function VersionChip({
           ) : (
             <ul className="flex flex-col">
               {rows.map((r) => (
-                <li key={r.version} className="px-2 py-1 text-sm">
-                  <span className="font-semibold">v{r.version}</span>{" "}
-                  {r.summary ?? "—"}{" "}
-                  <span className="text-muted">{timeAgo(r.created_at)}</span>
+                <li
+                  key={r.version}
+                  className="flex items-baseline justify-between gap-2 px-2 py-1 text-sm"
+                >
+                  <span className="min-w-0">
+                    <span className="font-semibold">v{r.version}</span>{" "}
+                    {r.summary ?? "—"}{" "}
+                    <span className="text-muted">{timeAgo(r.created_at)}</span>
+                  </span>
+                  {r.version === version ? (
+                    <span className="text-muted shrink-0 text-xs">current</span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={restoring !== null}
+                      onClick={() => void goBack(r.version)}
+                      className={`${btn.quiet} ${btn.small} shrink-0`}
+                    >
+                      {restoring === r.version ? "…" : "Go back to here"}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

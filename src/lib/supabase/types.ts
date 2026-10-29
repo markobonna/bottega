@@ -68,6 +68,7 @@ export type Database = {
           spec: Json
           updated_at: string | null
           version: number
+          workshop_id: string
         }
         Insert: {
           created_at?: string | null
@@ -78,6 +79,7 @@ export type Database = {
           spec: Json
           updated_at?: string | null
           version?: number
+          workshop_id: string
         }
         Update: {
           created_at?: string | null
@@ -88,8 +90,17 @@ export type Database = {
           spec?: Json
           updated_at?: string | null
           version?: number
+          workshop_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "apps_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       events: {
         Row: {
@@ -320,6 +331,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workshops: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          owner: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          owner?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          owner?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

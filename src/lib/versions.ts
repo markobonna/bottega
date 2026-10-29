@@ -18,7 +18,7 @@ type WithOwner = { owner?: string };
 export async function createApp(
   client: Client,
   spec: unknown,
-  opts: { source: VersionSource; summary: string } & WithOwner,
+  opts: { source: VersionSource; summary: string; workshopId: string } & WithOwner,
 ): Promise<string> {
   const parsed = parseSpec(spec);
   if (!parsed.ok) {
@@ -28,7 +28,13 @@ export async function createApp(
   const owned = opts.owner !== undefined ? { owner: opts.owner } : {};
   const { data: app, error: appError } = await client
     .from("apps")
-    .insert({ name: clean.name, spec: clean, version: 1, ...owned })
+    .insert({
+      name: clean.name,
+      spec: clean,
+      version: 1,
+      workshop_id: opts.workshopId,
+      ...owned,
+    })
     .select("id")
     .single();
   if (appError || !app) throw new Error(appError?.message ?? "insert failed");
@@ -121,6 +127,48 @@ export async function restorePrevious(
     app_id: appId,
     version,
     spec: previous.spec,
+    ops: [],
+    summary,
+    source: "edit",
+  });
+  if (verError) throw new Error(verError.message);
+  return { version };
+}
+
+export async function restoreVersion(
+  client: Client,
+  appId: string,
+  target: number,
+): Promise<{ version: number }> {
+  const { data: app, error } = await client
+    .from("apps")
+    .select("id, version")
+    .eq("id", appId)
+    .single();
+  if (error || !app) throw new Error(`no app '${appId}'`);
+  if (target === app.version) throw new Error("already on that version");
+  const { data: row, error: rowError } = await client
+    .from("app_versions")
+    .select("spec, summary")
+    .eq("app_id", appId)
+    .eq("version", target)
+    .maybeSingle();
+  if (rowError || !row) throw new Error(`no version ${target}`);
+  const version = app.version + 1;
+  const summary = `Went back to v${target}: ${row.summary ?? "earlier version"}`;
+  const { error: upError } = await client
+    .from("apps")
+    .update({
+      spec: row.spec,
+      version,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", appId);
+  if (upError) throw new Error(upError.message);
+  const { error: verError } = await client.from("app_versions").insert({
+    app_id: appId,
+    version,
+    spec: row.spec,
     ops: [],
     summary,
     source: "edit",

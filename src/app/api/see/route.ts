@@ -20,7 +20,7 @@ export async function POST(req: Request): Promise<Response> {
   if (body instanceof Response) return body;
   if (!body.photoPath.startsWith(`${auth.user.id}/${body.appId}/`)) {
     return Response.json(
-      { error: "That photo doesn't belong to this app." },
+      { error: "That photo doesn't belong to this project." },
       { status: 403 },
     );
   }

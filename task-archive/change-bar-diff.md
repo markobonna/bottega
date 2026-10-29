@@ -7,7 +7,7 @@ Status: ⬜ to start · 🟡 in progress · ✅ AI check passed **and** human ch
 | 1 | listVersions + getVersions action. Muse Code. | `typecheck` passes | — | ✅ |
 | 2 | ChangeBar + DiffPreview + toast/undo, wired in AppRuntime. Muse Code. | `typecheck` + `build` pass | — | ✅ |
 | 3 | Version chip history popover. Muse Code. | `typecheck` passes | — | ✅ |
-| 4 | Full gate + visual pass as maria (ask → preview → accept → undo). | `pnpm test` + `typecheck` + `build` ✅ | Ask a change, accept, undo at 390px | 🟡 |
+| 4 | Full gate + visual pass as maria (ask → preview → accept → undo). | `pnpm test` + `typecheck` + `build` ✅ | Ask a change, accept, undo at 390px | ✅ Ask→preview→accept verified; header Undo removed in favor of per-version "Go back to here" (renders per screenshot). One go-back click still needed → then green |
 
 ## Decisions
 

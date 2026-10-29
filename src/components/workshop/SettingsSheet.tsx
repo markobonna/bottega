@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { setPrivate } from "@/app/apps/[id]/actions";
+import { setPrivate } from "@/app/projects/[id]/actions";
 import { btn, card, Label, Status } from "@/components/ui";
 import type { AppSpec } from "@/lib/spec/schema";
 
@@ -70,7 +70,7 @@ export default function SettingsSheet({
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label="App settings"
+        aria-label="Project settings"
         onClick={() => setOpen((v) => !v)}
         className={`${btn.quiet} ${btn.small}`}
       >
@@ -79,7 +79,7 @@ export default function SettingsSheet({
       {open && (
         <div
           role="dialog"
-          aria-label="App settings"
+          aria-label="Project settings"
           className={`${card} absolute right-0 z-30 mt-2 flex w-72 flex-col gap-2 p-3`}
         >
           <Label>Private mode</Label>
@@ -93,7 +93,7 @@ export default function SettingsSheet({
             {saving ? "Saving…" : priv ? "On" : "Off"}
           </button>
           <p className="text-sm text-muted">
-            Building and changing your app, and filling in forms from your
+            Building and changing your project, and filling in forms from your
             voice, run on Meta&apos;s open-weight models that we host
             ourselves, not on Meta&apos;s API. Seeing, drawing and transcribing
             still use Meta&apos;s models.
@@ -101,7 +101,7 @@ export default function SettingsSheet({
           <Label>Still uses Meta&apos;s API</Label>
           {metaBlocks.length === 0 ? (
             <p className="text-sm text-muted">
-              None of this app&apos;s blocks use Meta&apos;s API.
+              None of this project&apos;s blocks use Meta&apos;s API.
             </p>
           ) : (
             <ul className="flex flex-col gap-1 text-sm">

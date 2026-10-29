@@ -48,7 +48,7 @@ export default function TryAs() {
         return;
       }
       const { appId } = (await res.json()) as { appId: string };
-      router.push(`/apps/${appId}`);
+      router.push(`/projects/${appId}`);
     } catch {
       setProblem("Couldn't set up the demo. Try again.");
       setBusy(null);

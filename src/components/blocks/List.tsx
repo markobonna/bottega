@@ -5,7 +5,7 @@ import {
   removeRecord,
   saveRecord,
   signPhotoPaths,
-} from "@/app/apps/[id]/actions";
+} from "@/app/projects/[id]/actions";
 import type { DbRecord } from "@/lib/records";
 import type { Collection, Field } from "@/lib/spec/schema";
 import { Confirm, Label, Status, btn, card } from "../ui";

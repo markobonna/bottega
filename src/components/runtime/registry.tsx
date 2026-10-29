@@ -18,6 +18,7 @@ export type RuntimeApp = {
   name: string;
   version: number;
   private: boolean;
+  workshop: { id: string; name: string } | null;
 };
 
 export type BlockContext = {
