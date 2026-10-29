@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ACCENTS } from "./accents";
+import { OpSchema, type Op } from "./spec/ops";
 
 export const BUILDER_SYSTEM = `You design small, working apps for one person's real work. You output an app spec, never code.
 
@@ -127,3 +128,187 @@ export const WireSpecSchema = z.object({
 });
 
 export type WireSpec = z.infer<typeof WireSpecSchema>;
+
+export const EDITOR_SYSTEM = `You change an existing app spec by returning ops. Make the smallest change that does what the person asked. Keep ids stable. Never remove data (there is no removeCollection/removeField). If the request asks for something outside the block catalog, do the closest thing the catalog allows and say so in the summary.
+
+BLOCK CATALOG (type -> when to use, props):
+- list: records they keep. Props: collection, show (1-4 field ids), sort { field, dir asc|desc } optional.
+- form: add a record. Props: collection, fields (1-12 field ids), submitLabel.
+- stat: something they track over time. Props: collection, field, agg (count|sum|latest|avg), chart (none|line).
+- see: count or inspect physical things. Props: nouns (1-6), saveTo { collection, counts (noun -> number field id), photo (photo field id) } optional.
+- hear: hands are busy, or saying/calling things in. Props: collection, fields (1-12 field ids), hint.
+- price: quote or charge per item. Props: collection, lines (1-12 of { field (number), label, rate >= 0, unit }), currency (ISO 4217, default USD).
+- compare: show results to clients. Props: collection, before (photo field), after (photo field), caption (field id) optional.
+- teach: judge quality or sort things by their own standard. Props: question, labels (two outcomes), dims (2-6 of { name, hint }).
+- draw: display or promote things. Props: collection, titleField (text), imageField (photo), promptTemplate.
+- make: ONLY for furniture or shelving they want built. Props: kind "shelf", defaults { width, height, depth, shelves, thickness }.
+
+OPS (op -> fields; * = required, set only the fields your op needs):
+- addScreen { screen*, at? } (screen is { id, title, icon, blocks })
+- updateScreen { id*, title?, icon? } (at least one of title, icon)
+- removeScreen { id* }
+- addBlock { screenId*, block*, at? }
+- updateBlock { id*, setJson* } (setJson is a JSON object string merged onto the block; it replaces whole values, so to change one rate send the block's full lines array)
+- removeBlock { id* }
+- moveBlock { id*, screenId*, at* }
+- addCollection { collection* } (collection is { id, name, fields })
+- addField { collectionId*, field* } (field is { id, name, type, options? })
+- renameApp { name?, tagline? } (at least one)
+
+RULES:
+- Reply with a summary (one sentence, plain words) and 1 or more ops.
+- Every op needs its *-marked fields, especially the target id. Never send title, icon, name or tagline unless your op uses them.
+- Reuse the current spec's ids for collections and fields. New ids match ^[a-z][a-z0-9_]{0,31}$ and block ids stay unique app-wide.
+- New blocks must reference existing collections and fields with the right types: stat/price/count fields are number; before/after/see-photo/draw-image fields are photo; draw titleField is text. Choice fields need 2-12 options.
+- Field types: text, number, date, choice, bool, photo. Icons are a single code point.
+- Prefer editing over replacing; never remove a screen or block the person still uses.
+- Output ONLY the summary and ops as JSON, no other text.`;
+
+// Flat wire schema for the edit call: same oneOf problem as the builder, so
+// ops go over the wire flat and wireOpToOp converts each one back to an Op.
+// applyOps is the real check; this schema only guarantees a traversable shape.
+const WireOpSchema = z.object({
+  op: z.enum([
+    "addScreen",
+    "updateScreen",
+    "removeScreen",
+    "addBlock",
+    "updateBlock",
+    "removeBlock",
+    "moveBlock",
+    "addCollection",
+    "addField",
+    "renameApp",
+  ]),
+  screen: WireScreenSchema.optional(),
+  block: WireBlockSchema.optional(),
+  collection: WireCollectionSchema.optional(),
+  field: WireFieldSchema.optional(),
+  screenId: z.string().optional(),
+  collectionId: z.string().optional(),
+  id: z.string().optional(),
+  title: z.string().optional(),
+  icon: z.string().optional(),
+  name: z.string().optional(),
+  tagline: z.string().optional(),
+  at: z.number().int().min(0).optional(),
+  setJson: z.string().optional(),
+});
+
+export const WireEditSchema = z.object({
+  summary: z.string(),
+  ops: z.array(WireOpSchema),
+});
+
+export type WireEdit = z.infer<typeof WireEditSchema>;
+export type WireOp = z.infer<typeof WireOpSchema>;
+
+function parseOp(tag: string, raw: unknown): Op {
+  const result = OpSchema.safeParse(raw);
+  if (!result.success) {
+    const first = result.error.issues[0];
+    throw new Error(
+      `${tag}: ${first ? `${String(first.path.join("."))}: ${first.message}` : "invalid op"}`,
+    );
+  }
+  return result.data;
+}
+
+// Convert one flat wire op to a real Op. Throws Error with an ops[i]-style
+// message naming the missing or malformed field.
+export function wireOpToOp(wire: WireOp, i: number): Op {
+  const tag = `ops[${i}] (${wire.op})`;
+  // The model sometimes sends empty noise fields; only non-empty counts.
+  const text = (v: string | undefined): string | undefined =>
+    v === undefined || v === "" ? undefined : v;
+  wire = {
+    ...wire,
+    title: text(wire.title),
+    icon: text(wire.icon),
+    name: text(wire.name),
+    tagline: text(wire.tagline),
+  };
+  const need = (v: unknown, field: string): string => {
+    if (typeof v !== "string" || v === "") {
+      throw new Error(`${tag}: missing '${field}'`);
+    }
+    return v;
+  };
+  switch (wire.op) {
+    case "addScreen":
+      if (!wire.screen) throw new Error(`${tag}: missing 'screen'`);
+      return parseOp(tag, {
+        op: wire.op,
+        screen: wire.screen,
+        ...(wire.at !== undefined ? { at: wire.at } : {}),
+      });
+    case "updateScreen": {
+      if (wire.title === undefined && wire.icon === undefined) {
+        throw new Error(`${tag}: needs 'title' or 'icon'`);
+      }
+      return parseOp(tag, {
+        op: wire.op,
+        id: need(wire.id, "id"),
+        set: {
+          ...(wire.title !== undefined ? { title: wire.title } : {}),
+          ...(wire.icon !== undefined ? { icon: wire.icon } : {}),
+        },
+      });
+    }
+    case "removeScreen":
+      return parseOp(tag, { op: wire.op, id: need(wire.id, "id") });
+    case "addBlock":
+      if (!wire.block) throw new Error(`${tag}: missing 'block'`);
+      return parseOp(tag, {
+        op: wire.op,
+        screen: need(wire.screenId, "screenId"),
+        block: wire.block,
+        ...(wire.at !== undefined ? { at: wire.at } : {}),
+      });
+    case "updateBlock": {
+      if (wire.setJson === undefined) {
+        throw new Error(`${tag}: missing 'setJson'`);
+      }
+      let set: unknown;
+      try {
+        set = JSON.parse(wire.setJson) as unknown;
+      } catch {
+        throw new Error(`${tag}: 'setJson' is not valid JSON`);
+      }
+      if (typeof set !== "object" || set === null || Array.isArray(set)) {
+        throw new Error(`${tag}: 'setJson' must be a JSON object`);
+      }
+      return parseOp(tag, { op: wire.op, id: need(wire.id, "id"), set });
+    }
+    case "removeBlock":
+      return parseOp(tag, { op: wire.op, id: need(wire.id, "id") });
+    case "moveBlock":
+      if (wire.at === undefined) throw new Error(`${tag}: missing 'at'`);
+      return parseOp(tag, {
+        op: wire.op,
+        id: need(wire.id, "id"),
+        screen: need(wire.screenId, "screenId"),
+        at: wire.at,
+      });
+    case "addCollection":
+      if (!wire.collection) throw new Error(`${tag}: missing 'collection'`);
+      return parseOp(tag, { op: wire.op, collection: wire.collection });
+    case "addField":
+      if (!wire.field) throw new Error(`${tag}: missing 'field'`);
+      return parseOp(tag, {
+        op: wire.op,
+        collection: need(wire.collectionId, "collectionId"),
+        field: wire.field,
+      });
+    case "renameApp": {
+      if (wire.name === undefined && wire.tagline === undefined) {
+        throw new Error(`${tag}: needs 'name' or 'tagline'`);
+      }
+      return parseOp(tag, {
+        op: wire.op,
+        ...(wire.name !== undefined ? { name: wire.name } : {}),
+        ...(wire.tagline !== undefined ? { tagline: wire.tagline } : {}),
+      });
+    }
+  }
+}

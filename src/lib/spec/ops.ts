@@ -15,7 +15,7 @@ import {
 
 const atIndex = z.number().int().min(0).optional();
 
-const OpSchema = z.discriminatedUnion("op", [
+export const OpSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("addScreen"), screen: ScreenSchema, at: atIndex }),
   z.object({
     op: z.literal("updateScreen"),
