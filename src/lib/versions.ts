@@ -128,3 +128,28 @@ export async function restorePrevious(
   if (verError) throw new Error(verError.message);
   return { version };
 }
+
+export interface VersionRow {
+  version: number;
+  summary: string | null;
+  created_at: string | null;
+}
+
+export async function listVersions(
+  client: Client,
+  appId: string,
+  limit = 5,
+): Promise<VersionRow[]> {
+  const { data, error } = await client
+    .from("app_versions")
+    .select("version, summary, created_at")
+    .eq("app_id", appId)
+    .order("version", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    version: r.version ?? 0,
+    summary: r.summary,
+    created_at: r.created_at,
+  }));
+}

@@ -7,6 +7,8 @@ import type { DbRecord } from "@/lib/records";
 import BlockFrame from "./BlockFrame";
 import { BlockComponents, type RuntimeApp } from "./registry";
 import UnknownBlock from "./UnknownBlock";
+import ChangeBar from "../workshop/ChangeBar";
+import VersionChip from "../workshop/VersionHistory";
 
 export default function AppRuntime({
   app,
@@ -72,9 +74,7 @@ export default function AppRuntime({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h1 className="font-display truncate text-2xl">{app.name}</h1>
-            <span className="shrink-0 rounded-full border border-line px-2 py-0.5 text-xs text-muted">
-              v{app.version}
-            </span>
+            <VersionChip appId={app.id} version={app.version} />
           </div>
           <p className="text-muted truncate text-sm">{spec.tagline}</p>
         </div>
@@ -110,6 +110,9 @@ export default function AppRuntime({
           );
         })}
       </div>
+
+      <div aria-hidden="true" className="h-24 sm:h-16" />
+      <ChangeBar appId={app.id} />
 
       {spec.screens.length > 0 && (
         <nav

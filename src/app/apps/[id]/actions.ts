@@ -12,7 +12,7 @@ import {
 } from "@/lib/records";
 import type { Op } from "@/lib/spec/ops";
 import { createClient } from "@/lib/supabase/server";
-import { saveVersion } from "@/lib/versions";
+import { listVersions, saveVersion, type VersionRow } from "@/lib/versions";
 
 type Ok<T> = { ok: true } & T;
 type Fail = { ok: false; error: string };
@@ -152,6 +152,18 @@ export async function revokeShare(
       .eq("token", token);
     if (error) throw new Error(error.message);
     return { ok: true, revoked: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function getVersions(
+  appId: string,
+): Promise<Ok<{ versions: VersionRow[] }> | Fail> {
+  try {
+    const supabase = await createClient();
+    const versions = await listVersions(supabase, appId);
+    return { ok: true, versions };
   } catch (e) {
     return fail(e);
   }
