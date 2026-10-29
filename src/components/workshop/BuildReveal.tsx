@@ -21,9 +21,11 @@ const BLOCK_ICON: Record<BlockType, string> = {
 export default function BuildReveal({
   appId,
   spec,
+  answeredBy,
 }: {
   appId: string;
   spec: AppSpec;
+  answeredBy?: string;
 }) {
   const total =
     1 + spec.screens.reduce((n, s) => n + 1 + s.blocks.length, 0) + 1;
@@ -87,7 +89,9 @@ export default function BuildReveal({
             Open my app
           </Link>
           <p className="text-muted text-center text-sm">
-            Built with Muse Spark from your words.
+            {answeredBy === "muse-spark-open"
+              ? "Built with Muse Spark Open from your words."
+              : "Built with Muse Spark from your words."}
           </p>
         </div>
       )}

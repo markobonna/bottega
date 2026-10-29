@@ -14,6 +14,7 @@ interface EditReply {
   ops: Op[];
   baseVersion: number;
   preview: PreviewDiff;
+  answeredBy?: string;
 }
 
 async function readError(res: Response, fallback: string): Promise<string> {
@@ -178,6 +179,7 @@ export default function ChangeBar({ appId }: { appId: string }) {
             summary={edit.summary}
             preview={edit.preview}
             busy={accepting}
+            answeredBy={edit.answeredBy}
             onAccept={() => void accept()}
             onDiscard={() => {
               setEdit(null);

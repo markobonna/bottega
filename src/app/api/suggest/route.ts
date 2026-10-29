@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { fail, readJson, requireUser } from "@/lib/api";
-import { config, json } from "@/lib/meta";
+import { config, json, jsonWithFallback } from "@/lib/meta";
 import { SUGGEST_SYSTEM, WireSuggestSchema, wireOpToOp } from "@/lib/prompts";
 import { applyOps } from "@/lib/spec/ops";
 import { diffSpecs } from "@/lib/spec/diff";
@@ -55,7 +55,7 @@ export async function POST(req: Request): Promise<Response> {
   if (body instanceof Response) return body;
   const { data: app } = await auth.supabase
     .from("apps")
-    .select("spec")
+    .select("spec, private")
     .eq("id", body.appId)
     .maybeSingle();
   if (!app) return Response.json({ error: "No such app." }, { status: 404 });
@@ -69,23 +69,35 @@ export async function POST(req: Request): Promise<Response> {
     .order("created_at", { ascending: false })
     .limit(200);
   try {
-    const draft = await json(
-      [
-        { role: "system", content: SUGGEST_SYSTEM },
-        {
-          role: "user",
-          content:
-            `Current spec:\n${JSON.stringify(parsed.spec)}\n\n${summarize((events ?? []) as UsageEvent[])}`,
-        },
-      ],
-      WireSuggestSchema,
+    const messages = [
+      { role: "system", content: SUGGEST_SYSTEM },
       {
+        role: "user",
+        content:
+          `Current spec:\n${JSON.stringify(parsed.spec)}\n\n${summarize((events ?? []) as UsageEvent[])}`,
+      },
+    ] as const;
+    // Private apps use local/open with their own model and never fall back.
+    const priv = app.private ?? false;
+    let draft;
+    let viaOpen = false;
+    if (priv) {
+      draft = await json([...messages], WireSuggestSchema, {
+        reasoning: "medium",
+        maxTokens: 4000,
+        timeoutMs: 55000,
+        private: true,
+      });
+    } else {
+      const r = await jsonWithFallback([...messages], WireSuggestSchema, {
         model: config().wonder,
         reasoning: "medium",
         maxTokens: 4000,
         timeoutMs: 55000,
-      },
-    );
+      });
+      draft = r.data;
+      viaOpen = r.via === "open";
+    }
     const suggestions = [];
     for (const s of draft.suggestions.slice(0, 3)) {
       try {
@@ -102,7 +114,10 @@ export async function POST(req: Request): Promise<Response> {
         continue;
       }
     }
-    return Response.json({ suggestions });
+    return Response.json({
+      suggestions,
+      ...(viaOpen ? { answeredBy: "muse-spark-open" } : {}),
+    });
   } catch (e) {
     return fail(e);
   }

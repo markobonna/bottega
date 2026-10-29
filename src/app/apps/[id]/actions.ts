@@ -183,3 +183,21 @@ export async function logEvent(
     // Fire and forget: usage logging must never break the UI.
   }
 }
+
+export async function setPrivate(
+  appId: string,
+  priv: boolean,
+): Promise<Ok<{ priv: boolean }> | Fail> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("apps")
+      .update({ private: priv })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/apps/${appId}`);
+    return { ok: true, priv };
+  } catch (e) {
+    return fail(e);
+  }
+}

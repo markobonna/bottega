@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { fail, readJson, requireUser } from "@/lib/api";
-import { json } from "@/lib/meta";
+import { json, jsonWithFallback, type MetaMessage } from "@/lib/meta";
 import { EDITOR_SYSTEM, WireEditSchema, wireOpToOp, type WireEdit } from "@/lib/prompts";
 import { applyOps } from "@/lib/spec/ops";
 import { diffSpecs } from "@/lib/spec/diff";
@@ -37,7 +37,7 @@ export async function POST(req: Request): Promise<Response> {
   if (body instanceof Response) return body;
   const { data: app } = await auth.supabase
     .from("apps")
-    .select("spec, version")
+    .select("spec, version, private")
     .eq("id", body.appId)
     .maybeSingle();
   if (!app) return Response.json({ error: "No such app." }, { status: 404 });
@@ -45,18 +45,33 @@ export async function POST(req: Request): Promise<Response> {
   if (!parsed.ok)
     return Response.json({ error: "Bad app spec." }, { status: 404 });
   const base = JSON.stringify(parsed.spec);
+  // Private apps stay on local/open and never fall back (a local failure must
+  // not leak the request to hosted open weights, nor open to itself).
+  const priv = app.private ?? false;
+  let viaOpen = false;
+  async function ask(messages: MetaMessage[]): Promise<WireEdit> {
+    if (priv) {
+      return json(messages, WireEditSchema, {
+        reasoning: "medium",
+        maxTokens: 4000,
+        private: true,
+      });
+    }
+    const r = await jsonWithFallback(messages, WireEditSchema, {
+      reasoning: "medium",
+      maxTokens: 4000,
+    });
+    viaOpen = viaOpen || r.via === "open";
+    return r.data;
+  }
   try {
-    let draft = await json(
-      [
-        { role: "system", content: EDITOR_SYSTEM },
-        { role: "user", content: `Current spec:\n${base}\n\nRequest: ${body.request}` },
-      ],
-      WireEditSchema,
-      { reasoning: "medium", maxTokens: 4000 },
-    );
+    let draft = await ask([
+      { role: "system", content: EDITOR_SYSTEM },
+      { role: "user", content: `Current spec:\n${base}\n\nRequest: ${body.request}` },
+    ]);
     let tried = attempt(parsed.spec, draft);
     if (!tried.ok) {
-      draft = await json(
+      draft = await ask(
         [
           { role: "system", content: EDITOR_SYSTEM },
           {
@@ -65,8 +80,6 @@ export async function POST(req: Request): Promise<Response> {
               `Current spec:\n${base}\n\nRequest: ${body.request}\n\nPrevious reply:\n${JSON.stringify(draft)}\n\nIssues:\n${tried.issues.join("\n")}\n\nFix only these problems.`,
           },
         ],
-        WireEditSchema,
-        { reasoning: "medium", maxTokens: 4000 },
       );
       tried = attempt(parsed.spec, draft);
     }
@@ -85,6 +98,7 @@ export async function POST(req: Request): Promise<Response> {
       ops: tried.ops,
       baseVersion: app.version,
       preview: diffSpecs(parsed.spec, tried.spec),
+      ...(viaOpen ? { answeredBy: "muse-spark-open" } : {}),
     });
   } catch (e) {
     return fail(e);

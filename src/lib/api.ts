@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { MissingKeyError, ModelError } from '@/lib/meta';
+import { MissingKeyError, ModelError, ProviderUnavailableError } from '@/lib/meta';
 import { createClient } from '@/lib/supabase/server';
 
 export async function requireUser() {
@@ -14,6 +14,8 @@ export async function requireUser() {
 
 export function fail(e: unknown): Response {
   if (e instanceof MissingKeyError) return Response.json({ error: 'off' }, { status: 503 });
+  if (e instanceof ProviderUnavailableError)
+    return Response.json({ error: 'provider-off' }, { status: 503 });
   console.error(e instanceof ModelError ? e.message : e);
   return Response.json({ error: "The model didn't answer. Try again." }, { status: 502 });
 }

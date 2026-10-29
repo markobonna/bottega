@@ -15,7 +15,7 @@ export default async function AppPage({
   const supabase = await createClient();
   const { data: app, error } = await supabase
     .from("apps")
-    .select("id, name, version, spec")
+    .select("id, name, version, spec, private")
     .eq("id", id)
     .single();
   if (error || !app) notFound();
@@ -47,7 +47,12 @@ export default async function AppPage({
   return (
     <Suspense fallback={<p className="text-muted">Loading…</p>}>
       <AppRuntime
-        app={{ id: app.id, name: app.name, version: app.version }}
+        app={{
+          id: app.id,
+          name: app.name,
+          version: app.version,
+          private: app.private ?? false,
+        }}
         spec={spec}
         records={records}
       />

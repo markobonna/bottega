@@ -12,12 +12,14 @@ export default function DiffPreview({
   summary,
   preview,
   busy,
+  answeredBy,
   onAccept,
   onDiscard,
 }: {
   summary: string;
   preview: PreviewDiff;
   busy: boolean;
+  answeredBy?: string;
   onAccept: () => void;
   onDiscard: () => void;
 }) {
@@ -28,6 +30,9 @@ export default function DiffPreview({
   return (
     <div className={`${card} w-full p-3`}>
       <p className="font-medium">{summary}</p>
+      {answeredBy === "muse-spark-open" && (
+        <p className="mt-1 text-sm text-muted">Built with Muse Spark Open.</p>
+      )}
       {empty ? (
         <p className="mt-1 text-sm text-muted">No visible changes.</p>
       ) : (

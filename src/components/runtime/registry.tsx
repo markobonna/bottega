@@ -12,7 +12,12 @@ import Stat from "../blocks/Stat";
 import Teach from "../blocks/teach/Teach";
 import UnknownBlock from "./UnknownBlock";
 
-export type RuntimeApp = { id: string; name: string; version: number };
+export type RuntimeApp = {
+  id: string;
+  name: string;
+  version: number;
+  private: boolean;
+};
 
 export type BlockContext = {
   appId: string;

@@ -14,9 +14,11 @@ export default function BuildForm() {
   const [text, setText] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsed, setElapsed] = useState(0);
-  const [result, setResult] = useState<{ appId: string; spec: AppSpec } | null>(
-    null,
-  );
+  const [result, setResult] = useState<{
+    appId: string;
+    spec: AppSpec;
+    answeredBy?: string;
+  } | null>(null);
   const [message, setMessage] = useState("");
   const [micProblem, setMicProblem] = useState("");
   const [micOff, setMicOff] = useState(false);
@@ -76,7 +78,13 @@ export default function BuildForm() {
       return;
     }
     if (res.ok) {
-      setResult((await res.json()) as { appId: string; spec: AppSpec });
+      setResult(
+        (await res.json()) as {
+          appId: string;
+          spec: AppSpec;
+          answeredBy?: string;
+        },
+      );
       setPhase("done");
     } else if (res.status === 503) {
       setPhase("off");
@@ -92,7 +100,13 @@ export default function BuildForm() {
   }
 
   if (phase === "done" && result) {
-    return <BuildReveal appId={result.appId} spec={result.spec} />;
+    return (
+      <BuildReveal
+        appId={result.appId}
+        spec={result.spec}
+        answeredBy={result.answeredBy}
+      />
+    );
   }
 
   const busy = phase === "busy";

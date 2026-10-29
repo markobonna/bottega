@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { fail, readJson, requireUser } from "@/lib/api";
-import { json } from "@/lib/meta";
+import { jsonWithFallback } from "@/lib/meta";
 import { BUILDER_SYSTEM, WireSpecSchema } from "@/lib/prompts";
 import { parseSpec } from "@/lib/spec/schema";
 import { createApp } from "@/lib/versions";
@@ -17,7 +17,8 @@ export async function POST(req: Request): Promise<Response> {
   const body = await readJson(req, BodySchema);
   if (body instanceof Response) return body;
   try {
-    let draft = await json(
+    let viaOpen = false;
+    const first = await jsonWithFallback(
       [
         { role: "system", content: BUILDER_SYSTEM },
         { role: "user", content: body.description },
@@ -25,9 +26,11 @@ export async function POST(req: Request): Promise<Response> {
       WireSpecSchema,
       { reasoning: "medium", maxTokens: 4000 },
     );
+    viaOpen = viaOpen || first.via === "open";
+    let draft = first.data;
     let parsed = parseSpec(draft);
     if (!parsed.ok) {
-      draft = await json(
+      const second = await jsonWithFallback(
         [
           { role: "system", content: BUILDER_SYSTEM },
           {
@@ -38,6 +41,8 @@ export async function POST(req: Request): Promise<Response> {
         WireSpecSchema,
         { reasoning: "medium", maxTokens: 4000 },
       );
+      viaOpen = viaOpen || second.via === "open";
+      draft = second.data;
       parsed = parseSpec(draft);
     }
     if (!parsed.ok) {
@@ -54,7 +59,11 @@ export async function POST(req: Request): Promise<Response> {
       source: "build",
       summary: "Built from your description",
     });
-    return Response.json({ appId, spec: parsed.spec });
+    return Response.json({
+      appId,
+      spec: parsed.spec,
+      ...(viaOpen ? { answeredBy: "muse-spark-open" } : {}),
+    });
   } catch (e) {
     return fail(e);
   }

@@ -13,22 +13,35 @@ interface Suggestion {
   preview: PreviewDiff;
 }
 
-function readCache(key: string): Suggestion[] | null {
+function readCache(key: string): {
+  suggestions: Suggestion[];
+  answeredBy?: string;
+} | null {
   try {
     const raw = sessionStorage.getItem(key);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { suggestions?: unknown };
-    return Array.isArray(parsed.suggestions)
-      ? (parsed.suggestions as Suggestion[])
-      : null;
+    const parsed = JSON.parse(raw) as {
+      suggestions?: unknown;
+      answeredBy?: unknown;
+    };
+    if (!Array.isArray(parsed.suggestions)) return null;
+    return {
+      suggestions: parsed.suggestions as Suggestion[],
+      answeredBy:
+        typeof parsed.answeredBy === "string" ? parsed.answeredBy : undefined,
+    };
   } catch {
     return null;
   }
 }
 
-function writeCache(key: string, suggestions: Suggestion[]) {
+function writeCache(
+  key: string,
+  suggestions: Suggestion[],
+  answeredBy?: string,
+) {
   try {
-    sessionStorage.setItem(key, JSON.stringify({ suggestions }));
+    sessionStorage.setItem(key, JSON.stringify({ suggestions, answeredBy }));
   } catch {
     // Private mode: fetch fresh on each mount instead.
   }
@@ -43,6 +56,7 @@ export default function Suggestions({
 }) {
   const router = useRouter();
   const [items, setItems] = useState<Suggestion[] | null>(null);
+  const [answeredBy, setAnsweredBy] = useState<string | undefined>(undefined);
   const [open, setOpen] = useState<number | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [problem, setProblem] = useState("");
@@ -52,7 +66,8 @@ export default function Suggestions({
     const key = `suggest:${appId}:${version}`;
     const cached = readCache(key);
     if (cached) {
-      setItems(cached);
+      setItems(cached.suggestions);
+      setAnsweredBy(cached.answeredBy);
       return;
     }
     (async () => {
@@ -71,10 +86,14 @@ export default function Suggestions({
         if (live) setItems([]);
         return;
       }
-      const data = (await res.json()) as { suggestions: Suggestion[] };
+      const data = (await res.json()) as {
+        suggestions: Suggestion[];
+        answeredBy?: string;
+      };
       if (!live) return;
       setItems(data.suggestions);
-      writeCache(key, data.suggestions);
+      setAnsweredBy(data.answeredBy);
+      writeCache(key, data.suggestions, data.answeredBy);
     })();
     return () => {
       live = false;
@@ -143,6 +162,7 @@ export default function Suggestions({
           summary={current.title}
           preview={current.preview}
           busy={accepting}
+          answeredBy={answeredBy}
           onAccept={() => void accept(current)}
           onDiscard={() => setOpen(null)}
         />

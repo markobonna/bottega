@@ -8,6 +8,7 @@ import BlockFrame from "./BlockFrame";
 import { BlockComponents, type RuntimeApp } from "./registry";
 import UnknownBlock from "./UnknownBlock";
 import ChangeBar from "../workshop/ChangeBar";
+import SettingsSheet from "../workshop/SettingsSheet";
 import Suggestions from "../workshop/Suggestions";
 import VersionChip from "../workshop/VersionHistory";
 
@@ -79,6 +80,7 @@ export default function AppRuntime({
           </div>
           <p className="text-muted truncate text-sm">{spec.tagline}</p>
         </div>
+        <SettingsSheet appId={app.id} initialPriv={app.private} spec={spec} />
       </header>
 
       {spec.screens.length > 0 && (

@@ -9,6 +9,17 @@ export class MissingKeyError extends Error {
   }
 }
 
+export type Provider = 'meta' | 'open' | 'local';
+
+export class ProviderUnavailableError extends Error {
+  provider: Provider;
+  constructor(provider: Provider) {
+    super(`provider '${provider}' is not configured`);
+    this.name = 'ProviderUnavailableError';
+    this.provider = provider;
+  }
+}
+
 export class ModelError extends Error {
   status: number;
   constructor(status: number, detail: string) {
@@ -57,7 +68,52 @@ export interface CallOpts {
   schema?: Record<string, unknown>;
   reasoning?: string;
   timeoutMs?: number;
+  provider?: Provider;
   private?: boolean;
+}
+
+interface ChatTarget {
+  provider: Provider;
+  base: string;
+  key: string | null;
+  model: string;
+}
+
+// Explicit provider wins; otherwise { private: true } uses 'local' when a
+// local endpoint is set, else 'open'. Anything else is 'meta'.
+function resolveTarget(opts: {
+  provider?: Provider;
+  private?: boolean;
+  model?: string;
+}): ChatTarget {
+  const localBase = process.env.LOCAL_BASE_URL || '';
+  const name: Provider =
+    opts.provider ??
+    (opts.private === true ? (localBase ? 'local' : 'open') : 'meta');
+  if (name === 'open') {
+    const base = process.env.OPEN_BASE_URL || '';
+    const key = process.env.OPEN_API_KEY || '';
+    const model = opts.model || process.env.OPEN_MODEL || '';
+    if (!base || !key || !model) throw new ProviderUnavailableError('open');
+    return { provider: name, base: base.replace(/\/+$/, ''), key, model };
+  }
+  if (name === 'local') {
+    const model = opts.model || process.env.LOCAL_MODEL || '';
+    if (!localBase || !model) throw new ProviderUnavailableError('local');
+    return {
+      provider: name,
+      base: localBase.replace(/\/+$/, ''),
+      key: null,
+      model,
+    };
+  }
+  const cfg = config();
+  return {
+    provider: name,
+    base: cfg.base,
+    key: cfg.key,
+    model: opts.model ?? cfg.spark,
+  };
 }
 
 async function request(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
@@ -72,23 +128,47 @@ async function request(url: string, init: RequestInit, timeoutMs: number): Promi
   return res;
 }
 
+const JSON_ONLY = 'Reply with only JSON, no other text.';
+
+// Open-weight endpoints take no json_schema (proven 400 on Fireworks), so a
+// schema there becomes a plain instruction. Zod stays the real gate.
+function withJsonInstruction(messages: MetaMessage[]): MetaMessage[] {
+  const [first, ...rest] = messages;
+  if (first && first.role === 'system' && typeof first.content === 'string') {
+    return [{ ...first, content: `${first.content}\n\n${JSON_ONLY}` }, ...rest];
+  }
+  return [{ role: 'system', content: JSON_ONLY }, ...messages];
+}
+
 export async function chat(
   messages: MetaMessage[],
-  { model, maxTokens = 800, schema, reasoning = 'low', timeoutMs = 30000 }: CallOpts = {},
+  {
+    model,
+    maxTokens = 800,
+    schema,
+    reasoning = 'low',
+    timeoutMs = 30000,
+    provider,
+    private: priv,
+  }: CallOpts = {},
 ): Promise<string> {
-  const cfg = config();
+  const target = resolveTarget({ provider, private: priv, model });
   if (schema && schema.type !== 'object') throw new Error('schema root must be an object');
+  const useSchema = schema && target.provider === 'meta';
   const res = await request(
-    `${cfg.base}/chat/completions`,
+    `${target.base}/chat/completions`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.key}` },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(target.key ? { Authorization: `Bearer ${target.key}` } : {}),
+      },
       body: JSON.stringify({
-        model: model ?? cfg.spark,
-        messages,
+        model: target.model,
+        messages: schema && !useSchema ? withJsonInstruction(messages) : messages,
         max_tokens: maxTokens,
         reasoning_effort: reasoning,
-        ...(schema
+        ...(useSchema
           ? { response_format: { type: 'json_schema', json_schema: { name: 'reply', schema } } }
           : {}),
       }),
@@ -98,6 +178,7 @@ export async function chat(
   const json = (await res.json()) as { choices?: { message?: { content?: unknown } }[] };
   const content = json.choices?.[0]?.message?.content;
   if (typeof content !== 'string' || !content) throw new ModelError(502, 'empty reply');
+  console.log(`[bottega] chat via ${target.provider} (${target.model})`);
   return content;
 }
 
@@ -119,6 +200,38 @@ export async function json<T>(
   const result = zodSchema.safeParse(parsed);
   if (!result.success) throw new ModelError(502, 'bad json');
   return result.data;
+}
+
+export function isOpenConfigured(): boolean {
+  return Boolean(
+    process.env.OPEN_BASE_URL &&
+      process.env.OPEN_API_KEY &&
+      process.env.OPEN_MODEL,
+  );
+}
+
+// Try Meta, then retry once on 'open' for 429/5xx (never 400, never a missing
+// key). Reports which provider answered.
+export async function jsonWithFallback<T>(
+  messages: MetaMessage[],
+  zodSchema: z.ZodType<T>,
+  opts: CallOpts = {},
+): Promise<{ data: T; via: 'meta' | 'open' }> {
+  try {
+    return { data: await json(messages, zodSchema, opts), via: 'meta' };
+  } catch (e) {
+    if (
+      e instanceof ModelError &&
+      (e.status === 429 || e.status >= 500) &&
+      isOpenConfigured()
+    ) {
+      // The caller's model id is Meta's; drop it so OPEN_MODEL applies.
+      const { model: _ignored, ...openOpts } = opts;
+      const data = await json(messages, zodSchema, { ...openOpts, provider: 'open' });
+      return { data, via: 'open' };
+    }
+    throw e;
+  }
 }
 
 export async function postJson(

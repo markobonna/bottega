@@ -44,7 +44,7 @@ export async function POST(req: Request): Promise<Response> {
     }
     const { data: app } = await auth.supabase
       .from("apps")
-      .select("spec")
+      .select("spec, private")
       .eq("id", appId)
       .maybeSingle();
     if (!app) return Response.json({ error: "No such app." }, { status: 404 });
@@ -103,7 +103,8 @@ export async function POST(req: Request): Promise<Response> {
       z.object(shape),
       // Trivial extraction: shortest reasoning pass. Reasoning tokens count
       // toward max_tokens and 'low' varies wildly (800-2000 observed).
-      { reasoning: "minimal", maxTokens: 4000 },
+      // Transcription above stays on Meta; only this fill step goes private.
+      { reasoning: "minimal", maxTokens: 4000, private: app.private ?? false },
     );
     const checked = checkValues(collection, values as Record<string, unknown>);
     return Response.json({ transcript, values: checked.data });
