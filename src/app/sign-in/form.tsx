@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { DataNotice, Label, Status, btn } from "@/components/ui";
 import { requestLink, type LinkState } from "./actions";
+import TryAs from "./try-as";
 
 export function SignInForm({ initialError }: { initialError: string }) {
   const [state, action, pending] = useActionState<LinkState, FormData>(
@@ -33,6 +34,7 @@ export function SignInForm({ initialError }: { initialError: string }) {
           {pending ? "Sending…" : "Email me a sign-in link"}
         </button>
       </form>
+      <TryAs />
       <div className="mt-4 flex flex-col gap-2">
         <Status tone={state.ok ? "ok" : "bad"}>{state.message}</Status>
         <DataNotice />
