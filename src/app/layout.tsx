@@ -42,7 +42,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${fraunces.variable} ${atkinson.variable}`}>
       <body className="font-sans">
-        {user?.email && <TopBar email={user.email} />}
+        {user && <TopBar email={user.email ?? null} />}
         <main className="gutter mx-auto max-w-[720px] pt-5 pb-24">
           {children}
         </main>

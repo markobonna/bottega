@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/auth/actions";
 import { btn, card } from "./ui";
 
-export default function TopBar({ email }: { email: string }) {
+export default function TopBar({ email }: { email: string | null }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -45,30 +45,43 @@ export default function TopBar({ email }: { email: string }) {
           </svg>
           <span className="font-display text-xl">Bottega</span>
         </Link>
-        <div ref={menuRef} className="relative">
-          <button
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className={`${btn.quiet} ${btn.small}`}
-          >
-            {email.charAt(0).toUpperCase()}
-          </button>
-          {open && (
-            <div role="menu" className={`${card} absolute right-0 z-30 mt-2 flex min-w-52 flex-col gap-2 p-3`}>
-              <p className="truncate text-sm text-muted">{email}</p>
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  className={`${btn.quiet} ${btn.small} w-full`}
-                >
-                  Sign out
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
+        {email ? (
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+              className={`${btn.quiet} ${btn.small}`}
+            >
+              {email.charAt(0).toUpperCase()}
+            </button>
+            {open && (
+              <div role="menu" className={`${card} absolute right-0 z-30 mt-2 flex min-w-52 flex-col gap-2 p-3`}>
+                <p className="truncate text-sm text-muted">{email}</p>
+                <form action={signOut}>
+                  <button
+                    type="submit"
+                    className={`${btn.quiet} ${btn.small} w-full`}
+                  >
+                    Sign out
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        ) : (
+          <form action={signOut}>
+            <button
+              type="submit"
+              aria-label="Sign out"
+              title="Sign out"
+              className={`${btn.quiet} ${btn.small}`}
+            >
+              🚪
+            </button>
+          </form>
+        )}
       </div>
     </header>
   );

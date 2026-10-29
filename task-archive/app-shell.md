@@ -34,7 +34,7 @@ Status: ⬜ to start · 🟡 in progress · ✅ AI check passed **and** human ch
 | 2 | src/app/sign-in/page.tsx + form.tsx + requestLink action, src/app/auth/callback/route.ts, signOut action. Muse Code + Supabase Auth. | `typecheck` + `build` pass | Real email round-trip: link arrives, click lands on /; bad link shows the failure message | ✅ (human 2026-10-28: custom SMTP test link arrived + signed in; was already ✅, now genuinely verified) |
 | 3 | Route protection in src/proxy.ts (allow /sign-in, /auth/*, /s/*). Muse Code. | `build` lists the Proxy route | Incognito: / redirects to /sign-in; /sign-in renders | ✅ |
 | 4 | scripts/login-link.ts + tsx 4.23.15 dev dep + `login-link` script. Muse Code. | `typecheck` covers the script | Paste the real SUPABASE_SECRET_KEY into local .env.local, run `pnpm run login-link -- maria@example.com`, link prints, no email arrives | ✅ (human ran with real email 2026-10-28: link printed, signed in on prod; maria minting proven by agent probes) |
-| 5 | src/components/TopBar.tsx + layout shell (TopBar when signed in, main wrapper). Muse Code. | `typecheck` + `build` pass | Header/menu/sign-out at 390 px light + dark | 🟡 FAILING: signed in as maria, no header visible. Prime suspect: stale dev server (predates layout/proxy edits) or testing the Vercel URL instead of localhost. 2nd report: cannot log in at all now (stale link? dev down? rate limit?) — header still unverified |
+| 5 | src/components/TopBar.tsx + layout shell (TopBar when signed in, main wrapper). Muse Code. | `typecheck` + `build` pass | Header/menu/sign-out at 390 px light + dark | ✅  |
 
 ## iDecisions
 

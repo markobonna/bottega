@@ -192,11 +192,13 @@ export async function POST(req: Request): Promise<Response> {
       if (error) throw new Error(`copy features: ${error.message}`);
     }
 
-    // Storage files, folder by folder (folders are template app ids).
+    // Storage files, folder by folder (folders are template app ids),
+    // copied in parallel: 13 sequential round-trips was the slow part.
     const { data: folders, error: lError } = await admin.storage
       .from("media")
       .list(templateUid);
     if (lError) throw new Error(`list storage: ${lError.message}`);
+    const jobs: [string, string][] = [];
     for (const folder of folders) {
       if (!appMap.has(folder.name)) continue;
       const { data: files, error: flError } = await admin.storage
@@ -206,17 +208,22 @@ export async function POST(req: Request): Promise<Response> {
       for (const file of files) {
         const from = `${templateUid}/${folder.name}/${file.name}`;
         const to = rewrite(from);
-        if (!to) continue;
+        if (to) jobs.push([from, to]);
+      }
+    }
+    await Promise.all(
+      jobs.map(async ([from, to]) => {
         const { data: blob, error: dError } = await admin.storage
           .from("media")
           .download(from);
-        if (dError || !blob) throw new Error(`copy photo: ${dError?.message}`);
+        if (dError || !blob)
+          throw new Error(`copy photo: ${dError?.message}`);
         const { error: uError } = await admin.storage
           .from("media")
           .upload(to, blob, { contentType: "image/jpeg", upsert: true });
         if (uError) throw new Error(`copy photo: ${uError.message}`);
-      }
-    }
+      }),
+    );
 
     const first = appMap.get(apps[0].id);
     return Response.json({ appId: first });

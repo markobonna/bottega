@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { btn, Status } from "@/components/ui";
 import { createClient } from "@/lib/supabase/browser";
@@ -8,7 +8,15 @@ import { createClient } from "@/lib/supabase/browser";
 export default function TryAs() {
   const router = useRouter();
   const [busy, setBusy] = useState<"maria" | "cole" | null>(null);
+  const [elapsed, setElapsed] = useState(0);
   const [problem, setProblem] = useState("");
+
+  useEffect(() => {
+    if (!busy) return;
+    setElapsed(0);
+    const t = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [busy]);
 
   async function go(who: "maria" | "cole") {
     if (busy) return;
@@ -65,6 +73,13 @@ export default function TryAs() {
       >
         {busy === "cole" ? "Setting up…" : "Try as Cole"}
       </button>
+      {busy !== null && (
+        <Status tone="muted">
+          {elapsed < 15
+            ? `Setting up your copy… ${15 - elapsed}s`
+            : "Almost there…"}
+        </Status>
+      )}
       {problem !== "" && <Status tone="bad">{problem}</Status>}
     </div>
   );
