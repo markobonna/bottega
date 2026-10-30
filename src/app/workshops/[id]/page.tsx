@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { btn, card } from "@/components/ui";
+import WorkshopScreen from "@/components/design/WorkshopScreen";
 import ZoomMount from "@/components/design/ZoomMount";
 import ProjectBuildButton from "@/components/workshop/ProjectBuildButton";
+import { mediumForKind, stageForVersion } from "@/lib/design/project-art";
 import { parseSpec } from "@/lib/spec/schema";
 import { createClient } from "@/lib/supabase/server";
 import DeleteWorkshopButton from "../../DeleteWorkshopButton";
@@ -36,7 +38,7 @@ export default async function WorkshopPage({
   const supabase = await createClient();
   const { data: workshop } = await supabase
     .from("workshops")
-    .select("id, name")
+    .select("id, name, type")
     .eq("id", id)
     .maybeSingle();
   if (!workshop) notFound();
@@ -52,16 +54,31 @@ export default async function WorkshopPage({
   const signed = await signPhotoPaths(artPaths);
   const urls = signed.ok ? signed.urls : {};
 
+  const roomProjects = (apps ?? []).map((a) => {
+    const parsed = parseSpec(a.spec);
+    return {
+      id: a.id,
+      name: a.name,
+      medium: mediumForKind(a.kind ?? "software"),
+      stage: stageForVersion(a.version),
+      tagline: parsed.ok ? parsed.spec.tagline : "",
+    };
+  });
+  const sceneVersion = `${workshop.id}:${(apps ?? []).map((a) => `${a.id}@${a.version}`).join(",")}`;
+
   return (
     <ZoomMount depth={2}>
-      <Link
-        href="/"
-        className="text-muted text-sm underline-offset-4 hover:underline"
-      >
-        ← Workshops
-      </Link>
-      <h1 className="font-display mt-2 truncate text-3xl">{workshop.name}</h1>
+      <WorkshopScreen
+        workshop={{
+          id: workshop.id,
+          name: workshop.name,
+          type: workshop.type ?? "other",
+        }}
+        projects={roomProjects}
+        version={sceneVersion}
+      />
 
+      <h2 className="font-display mt-4 text-xl">Manage projects</h2>
       <div className="mt-4 flex flex-col gap-3">
         {(apps ?? []).length === 0 && (
           <p className="text-muted">

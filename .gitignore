@@ -38,3 +38,7 @@ next-env.d.ts
 # demo photos (local only, never committed)
 scripts/demo-photos/
 .env*
+
+#other
+docs/design/
+/docs/design/

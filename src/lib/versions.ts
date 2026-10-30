@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DesignMedium } from "./design/project-art";
 import { applyOps, type Op } from "./spec/ops";
 import { parseSpec, type AppSpec } from "./spec/schema";
 import type { Database } from "./supabase/types";
@@ -18,7 +19,12 @@ type WithOwner = { owner?: string };
 export async function createApp(
   client: Client,
   spec: unknown,
-  opts: { source: VersionSource; summary: string; workshopId: string } & WithOwner,
+  opts: {
+    source: VersionSource;
+    summary: string;
+    workshopId: string;
+    kind?: DesignMedium;
+  } & WithOwner,
 ): Promise<string> {
   const parsed = parseSpec(spec);
   if (!parsed.ok) {
@@ -33,6 +39,7 @@ export async function createApp(
       spec: clean,
       version: 1,
       workshop_id: opts.workshopId,
+      ...(opts.kind ? { kind: opts.kind } : {}),
       ...owned,
     })
     .select("id")

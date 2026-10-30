@@ -4,14 +4,38 @@ import { useEffect, useState } from "react";
 import { btn, DataNotice, Label, Status } from "@/components/ui";
 import { inputCls } from "@/components/blocks/Form";
 import BuildReveal from "@/components/workshop/BuildReveal";
+import {
+  detectMedium,
+  MEDIUM_IDS,
+  type DesignMedium,
+} from "@/lib/design/project-art";
 import type { AppSpec } from "@/lib/spec/schema";
 import { useRecorder } from "@/lib/wav";
 import { createSample } from "../actions";
 
 type Phase = "idle" | "busy" | "done" | "off" | "invalid" | "failed";
 
-export default function BuildForm({ workshopId }: { workshopId: string }) {
-  const [text, setText] = useState("");
+export default function BuildForm({
+  workshopId,
+  initialText = "",
+}: {
+  workshopId: string;
+  initialText?: string;
+}) {
+  const [text, setText] = useState(initialText);
+  const [kind, setKind] = useState<DesignMedium>(() =>
+    initialText.trim() ? detectMedium(initialText) : "software",
+  );
+  const [kindTouched, setKindTouched] = useState(false);
+
+  function onText(value: string) {
+    setText(value);
+    if (!kindTouched) setKind(detectMedium(value));
+  }
+  function pickKind(next: DesignMedium) {
+    setKind(next);
+    setKindTouched(true);
+  }
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<{
@@ -71,7 +95,7 @@ export default function BuildForm({ workshopId }: { workshopId: string }) {
       res = await fetch("/api/build", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: text, workshopId }),
+        body: JSON.stringify({ description: text, workshopId, kind }),
       });
     } catch {
       setPhase("failed");
@@ -124,12 +148,30 @@ export default function BuildForm({ workshopId }: { workshopId: string }) {
           disabled={busy}
           aria-describedby="describe-count"
           placeholder="I bake for cafés and take custom cake orders…"
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => onText(e.target.value)}
           className={inputCls}
         />
         <p id="describe-count" className="text-muted text-sm">
           {text.length} / 1500
         </p>
+        <div
+          role="group"
+          aria-label="What kind of project is this?"
+          className="flex flex-wrap gap-2"
+        >
+          {MEDIUM_IDS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              aria-pressed={kind === k}
+              disabled={busy}
+              onClick={() => pickKind(k)}
+              className={`${btn.quiet} ${btn.small} capitalize`}
+            >
+              {k}
+            </button>
+          ))}
+        </div>
         <DataNotice />
       </div>
       <div className="flex items-center gap-2">

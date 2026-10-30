@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { fail, readJson, requireUser } from "@/lib/api";
+import { detectMedium } from "@/lib/design/project-art";
 import { jsonWithFallback } from "@/lib/meta";
 import { BUILDER_SYSTEM, WireSpecSchema } from "@/lib/prompts";
 import { parseSpec } from "@/lib/spec/schema";
@@ -12,6 +13,17 @@ export const maxDuration = 60;
 const BodySchema = z.object({
   description: z.string().min(10).max(1500),
   workshopId: z.string().min(1),
+  kind: z
+    .enum([
+      "hardware",
+      "software",
+      "music",
+      "dance",
+      "print",
+      "recipe",
+      "space",
+    ])
+    .optional(),
 });
 
 export async function POST(req: Request): Promise<Response> {
@@ -69,6 +81,8 @@ export async function POST(req: Request): Promise<Response> {
       source: "build",
       summary: "Built from your description",
       workshopId: body.workshopId,
+      kind:
+        body.kind ?? detectMedium(`${parsed.spec.name} ${body.description}`),
     });
     return Response.json({
       appId,

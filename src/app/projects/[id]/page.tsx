@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import BoardPanel, { type BoardDraft } from "@/components/design/BoardPanel";
 import ZoomMount from "@/components/design/ZoomMount";
 import AppRuntime from "@/components/runtime/AppRuntime";
 import { card } from "@/components/ui";
+import { mediumForKind, stageForVersion } from "@/lib/design/project-art";
 import { listRecords, type DbRecord } from "@/lib/records";
 import { parseSpec } from "@/lib/spec/schema";
 import { createClient } from "@/lib/supabase/server";
@@ -47,9 +49,34 @@ export default async function AppPage({
     ),
   );
   const records: Record<string, DbRecord[]> = Object.fromEntries(entries);
+  const { data: versions } = await supabase
+    .from("app_versions")
+    .select("version, summary")
+    .eq("app_id", id)
+    .order("version", { ascending: true });
+  const drafts: BoardDraft[] = (versions ?? []).map((v) => ({
+    n: v.version,
+    label: v.summary ?? `Version ${v.version}`,
+    stage: stageForVersion(v.version),
+  }));
+  const medium = mediumForKind(app.kind ?? "software");
 
   return (
     <ZoomMount depth={3}>
+      {workshop && app.workshop_id && (
+        <BoardPanel
+          project={{
+            name: app.name,
+            medium,
+            stage: stageForVersion(app.version),
+          }}
+          drafts={drafts}
+          tagline={spec.tagline}
+          backTo={{ id: app.workshop_id, name: workshop.name }}
+          newIn={app.workshop_id}
+          version={`${app.id}@${app.version}`}
+        />
+      )}
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <AppRuntime
           app={{
@@ -57,7 +84,7 @@ export default async function AppPage({
             name: app.name,
             version: app.version,
             private: app.private ?? false,
-            kind: app.kind === "hardware" ? "hardware" : "software",
+            kind: mediumForKind(app.kind ?? "software"),
             workshop: workshop
               ? { id: app.workshop_id, name: workshop.name }
               : null,

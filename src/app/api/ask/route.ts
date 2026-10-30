@@ -12,8 +12,8 @@ export const maxDuration = 30;
 
 const ASK_SYSTEM = `You are Bottega's helper. Act on one person's spoken or typed request.
 You know their workshops (id and name), the page they are on, and their open project if any.
-You can: create a workshop (needs a name), open a workshop or project by name, or build a project (needs a workshop and a description of the work).
-Do the smallest thing that satisfies the request. If a slot is missing, ask exactly one short question and name the options (for example the workshop names). Never invent ids. Never small talk. Keep say to one or two short sentences.
+You can: create a workshop (needs a name), open a workshop or project by name, or build a project (needs a workshop, a description of the work, and the kind: hardware, software, music, dance, print, recipe, or space).
+Do the smallest thing that satisfies the request. If a slot is missing, ask exactly one short question and name the options (for example the workshop names, or "what kind — hardware, software, music, dance, print, recipe, or space?"). Always confirm the kind before building, unless the person already said which. Never invent ids. Never small talk. Keep say to one or two short sentences.
 If they ask for anything else (edits, records, advice), say what you can do instead and set action_type to none.`;
 
 const BodySchema = z.object({
@@ -43,6 +43,18 @@ const ReplySchema = z.object({
   workshop_id: z.string().nullable().default(null),
   project_id: z.string().nullable().default(null),
   description: z.string().nullable().default(null),
+  kind: z
+    .enum([
+      "hardware",
+      "software",
+      "music",
+      "dance",
+      "print",
+      "recipe",
+      "space",
+    ])
+    .nullable()
+    .default(null),
 });
 
 export async function POST(req: Request): Promise<Response> {
@@ -125,7 +137,12 @@ export async function POST(req: Request): Promise<Response> {
         navigate: `/projects/${reply.project_id}`,
       });
     }
-    if (type === "build_project" && reply.workshop_id && reply.description) {
+    if (
+      type === "build_project" &&
+      reply.workshop_id &&
+      reply.description &&
+      reply.kind
+    ) {
       const ok = (workshops ?? []).some((w) => w.id === reply.workshop_id);
       if (!ok) return Response.json({ say: "I couldn't find that workshop." });
       return Response.json({
@@ -133,6 +150,7 @@ export async function POST(req: Request): Promise<Response> {
         build: {
           workshopId: reply.workshop_id,
           description: reply.description.slice(0, 1500),
+          kind: reply.kind,
         },
       });
     }

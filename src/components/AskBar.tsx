@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { card, Status } from "@/components/ui";
+import type { DesignMedium } from "@/lib/design/project-art";
 import { useRecorder } from "@/lib/wav";
 
 interface Turn {
@@ -13,7 +14,11 @@ interface Turn {
 interface AskReply {
   say?: string;
   navigate?: string;
-  build?: { workshopId: string; description: string };
+  build?: {
+    workshopId: string;
+    description: string;
+    kind: DesignMedium;
+  };
   error?: string;
 }
 
@@ -103,6 +108,7 @@ export default function AskBar() {
           body: JSON.stringify({
             description: data.build.description,
             workshopId: data.build.workshopId,
+            kind: data.build.kind,
           }),
         });
         const built = (await b.json()) as {

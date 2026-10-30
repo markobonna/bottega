@@ -6,9 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 export default async function NewAppPage({
   searchParams,
 }: {
-  searchParams: Promise<{ workshop?: string }>;
+  searchParams: Promise<{ workshop?: string; idea?: string }>;
 }) {
-  const { workshop } = await searchParams;
+  const { workshop, idea } = await searchParams;
   if (!workshop) redirect("/");
   const supabase = await createClient();
   const { data } = await supabase
@@ -20,7 +20,10 @@ export default async function NewAppPage({
   return (
     <ZoomMount depth={2}>
       <h1 className="font-display">Tell Bottega about your work.</h1>
-      <BuildForm workshopId={workshop} />
+      <BuildForm
+        workshopId={workshop}
+        initialText={(idea ?? "").slice(0, 1500)}
+      />
     </ZoomMount>
   );
 }

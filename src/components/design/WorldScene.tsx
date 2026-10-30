@@ -71,7 +71,7 @@ export default function WorldScene({
               className="btn btn-primary lot-btn"
               style={{ left: art.lot.x, top: art.lot.y }}
             >
-              Build on this lot
+              Build a Workshop
             </a>
           )}
         </div>

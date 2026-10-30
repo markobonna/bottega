@@ -477,6 +477,586 @@
   }
 }
 
+.b-scope .btn-dark {
+  background: var(--ink);
+  color: var(--card);
+  border-color: var(--ink);
+}
+.b-scope .btn-dark:hover {
+  background: #4a3828;
+  color: var(--card);
+}
+.b-scope .btn-lg {
+  min-height: 50px;
+  padding: 0 24px;
+  font-size: 16px;
+}
+.b-scope .btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.b-scope .link-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+}
+.b-scope .seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--card);
+}
+.b-scope .seg button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: 600 14px var(--body);
+  cursor: pointer;
+}
+.b-scope .seg button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--card);
+}
+.b-scope .intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px 32px;
+  padding-top: 24px;
+  padding-bottom: 16px;
+}
+.b-scope .intro .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.b-scope .eyebrow {
+  margin: 0 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  font-weight: 700;
+}
+.b-scope .title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(34px, 4.6vw, 54px);
+  line-height: 1.05;
+  color: var(--ink);
+}
+.b-scope .lede {
+  margin: 10px 0 0;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink2);
+  max-width: 720px;
+}
+.b-scope h2.h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.b-scope .hand {
+  font-family: var(--hand);
+}
+.b-scope .small {
+  font-size: 13px;
+  color: var(--ink2);
+}
+.b-scope .pan-hint {
+  display: none;
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--ink2);
+}
+@media (max-width: 940px) {
+  .b-scope .pan-hint {
+    display: block;
+  }
+}
+.b-scope .tag.is-hot {
+  border: 2px solid var(--red);
+  box-shadow: 3px 3px 0 rgba(162, 62, 37, 0.25);
+}
+.b-scope .tag.is-new {
+  animation: pop 0.5s ease both;
+}
+.b-scope .tag .hand {
+  font-size: 18px;
+  line-height: 1.1;
+  color: var(--red);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.b-scope .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 1.5px solid var(--ink);
+  flex: none;
+}
+.b-scope .dot.ink {
+  border-color: var(--red);
+}
+.b-scope .dot.half {
+  background: linear-gradient(90deg, var(--verd) 50%, transparent 50%);
+}
+.b-scope .dot.full {
+  background: var(--brass);
+}
+.b-scope .dot.sent {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--brass) 0 2px,
+    transparent 2px 4px
+  );
+}
+.b-scope .spot-btn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+.b-scope .spot-link {
+  position: absolute;
+  z-index: 1;
+  border-radius: 6px;
+}
+.b-scope .spot-link:focus-visible {
+  outline: 2.5px solid var(--red);
+  outline-offset: 2px;
+  background: rgba(162, 62, 37, 0.08);
+}
+.b-scope .door-btn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  background: var(--card);
+  font-size: 13px;
+  padding: 0 12px;
+}
+.b-scope .scene-note {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  max-width: 420px;
+  text-align: center;
+  padding: 20px 24px;
+}
+.b-scope .more-chip {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -80%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+}
+.b-scope .apprentice-float {
+  animation: bob 3s ease-in-out infinite;
+}
+@keyframes bob {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.b-scope .progress-bar {
+  transform-origin: left;
+  animation: grow 2.4s ease-in-out infinite alternate;
+  transform-box: fill-box;
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0.1);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.b-scope .card {
+  background: var(--card);
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 rgba(51, 38, 26, 0.15);
+  color: var(--ink);
+}
+.b-scope .card.dashed {
+  border-style: dashed;
+  box-shadow: none;
+  background: transparent;
+}
+.b-scope .below {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding-top: 28px;
+  padding-bottom: 40px;
+}
+.b-scope .below > .main {
+  flex: 999 1 520px;
+  min-width: 0;
+}
+.b-scope .below > .side {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+.b-scope .apprentice-card {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 22px 24px;
+}
+.b-scope .apprentice-card .said {
+  margin: 4px 0 10px;
+  font-family: var(--hand);
+  font-size: 28px;
+  line-height: 1.2;
+}
+.b-scope .key {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.b-scope .key ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 15px;
+}
+.b-scope .key li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.b-scope .grid-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+.b-scope .grid-cards > li > * {
+  width: 100%;
+  height: 100%;
+}
+.b-scope .pcard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 160px;
+  padding: 20px 22px;
+  text-decoration: none;
+  color: var(--ink);
+  text-align: left;
+  font-family: var(--body);
+  cursor: pointer;
+}
+.b-scope .pcard:hover {
+  color: var(--ink);
+  background: var(--white);
+}
+.b-scope .pcard .name {
+  font-family: var(--display);
+  font-size: 25px;
+  line-height: 1.1;
+}
+.b-scope .pcard .pill {
+  margin-top: auto;
+}
+.b-scope .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+}
+.b-scope .pill.dark {
+  background: var(--ink);
+  color: var(--card);
+}
+.b-scope .pill.red {
+  border-color: var(--red);
+  color: var(--red);
+}
+.b-scope .newcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 160px;
+  border: 2px dashed var(--red);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--red);
+  cursor: pointer;
+  font: 700 16px var(--body);
+  text-decoration: none;
+}
+.b-scope .ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.b-scope .chip {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font: 600 14px var(--body);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.b-scope .stages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.b-scope .stages li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.b-scope .stages .bar {
+  width: 22px;
+  height: 0;
+  border-top: 1.5px solid var(--ink);
+}
+.b-scope .stages .bar.todo {
+  border-top-style: dashed;
+}
+.b-scope .stages .now {
+  padding: 6px 12px;
+  border: 2px solid var(--red);
+  border-radius: 999px;
+  color: var(--red);
+}
+.b-scope .stages .todo-label {
+  color: var(--ink2);
+}
+.b-scope .bench {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+.b-scope .bench .boardcol {
+  flex: 999 1 620px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.b-scope .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.b-scope .toolbar .lab {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  margin-right: 6px;
+}
+.b-scope .tool {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--ink);
+  font: 600 14px var(--body);
+  cursor: pointer;
+}
+.b-scope .tool[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--card);
+}
+.b-scope .board {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background-color: var(--card);
+  background-image:
+    linear-gradient(rgba(63, 122, 110, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(63, 122, 110, 0.1) 1px, transparent 1px);
+  background-size: 24px 24px;
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 5px 5px 0 rgba(51, 38, 26, 0.15);
+}
+.b-scope .board > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.b-scope .board .caption {
+  position: absolute;
+  left: 16px;
+  bottom: 8px;
+  margin: 0;
+  font-family: var(--hand);
+  font-size: 22px;
+  color: var(--ink2);
+}
+.b-scope .board .stamp {
+  position: absolute;
+  right: 16px;
+  top: 14px;
+  transform: rotate(4deg);
+  font: 700 14px var(--body);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--red);
+  border: 2.5px solid var(--red);
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: rgba(251, 244, 228, 0.8);
+}
+.b-scope .callout {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--red);
+  background: var(--card);
+  color: var(--red);
+  font: 700 17px var(--body);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.b-scope .callout[aria-pressed="true"] {
+  background: var(--red);
+  color: var(--card);
+}
+.b-scope .belowboard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.b-scope .statuscard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+  padding: 16px 20px;
+}
+.b-scope .statuscard .grow {
+  flex: 1 1 260px;
+}
+.b-scope .drafts {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 6px 4px 14px;
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+}
+.b-scope .drafts li {
+  flex: 1 0 210px;
+  max-width: 280px;
+}
+.b-scope .draft {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 10px 12px;
+  background: var(--card);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--body);
+  box-shadow: 3px 3px 0 rgba(51, 38, 26, 0.15);
+  position: relative;
+}
+.b-scope .draft svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--white);
+}
+.b-scope .draft.current {
+  border: 2.5px solid var(--red);
+}
+.b-scope .draft::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
 .b-zoom-in {
   animation: zoomIn 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
   transform-origin: 50% 40%;
@@ -516,5 +1096,10 @@
   }
   .b-scope .sketching * {
     stroke-dashoffset: 0 !important;
+  }
+  .b-scope .tag.is-new,
+  .b-scope .apprentice-float,
+  .b-scope .progress-bar {
+    animation: none !important;
   }
 }
