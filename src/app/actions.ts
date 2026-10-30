@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import cole from "@/lib/spec/fixtures/cole.json";
 import maria from "@/lib/spec/fixtures/maria.json";
+import {
+  detectWorkshopType,
+  isWorkshopTypeId,
+} from "@/lib/design/workshop-types";
 import { createClient } from "@/lib/supabase/server";
 import { createApp } from "@/lib/versions";
 
@@ -19,10 +23,12 @@ async function ownWorkshop(supabase: Awaited<ReturnType<typeof createClient>>, w
 export async function createWorkshop(formData: FormData): Promise<void> {
   const name = String(formData.get("name") ?? "").trim();
   if (!name || name.length > 40) throw new Error("Name the workshop (1–40 chars).");
+  const picked = String(formData.get("type") ?? "");
+  const type = isWorkshopTypeId(picked) ? picked : detectWorkshopType(name);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("workshops")
-    .insert({ name })
+    .insert({ name, type })
     .select("id")
     .single();
   if (error || !data) throw new Error(error?.message ?? "Couldn't create it.");

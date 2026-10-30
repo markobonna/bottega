@@ -201,3 +201,21 @@ export async function setPrivate(
     return fail(e);
   }
 }
+
+export async function setKind(
+  appId: string,
+  kind: "software" | "hardware",
+): Promise<Ok<{ kind: "software" | "hardware" }> | Fail> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("apps")
+      .update({ kind })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/projects/${appId}`);
+    return { ok: true, kind };
+  } catch (e) {
+    return fail(e);
+  }
+}

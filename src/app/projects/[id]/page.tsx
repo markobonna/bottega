@@ -15,7 +15,7 @@ export default async function AppPage({
   const supabase = await createClient();
   const { data: app, error } = await supabase
     .from("apps")
-    .select("id, name, version, spec, private, workshop_id, workshops ( name )")
+    .select("id, name, version, spec, private, kind, workshop_id, workshops ( name )")
     .eq("id", id)
     .single();
   if (error || !app) notFound();
@@ -55,6 +55,7 @@ export default async function AppPage({
           name: app.name,
           version: app.version,
           private: app.private ?? false,
+          kind: app.kind === "hardware" ? "hardware" : "software",
           workshop: workshop
             ? { id: app.workshop_id, name: workshop.name }
             : null,

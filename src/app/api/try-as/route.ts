@@ -88,7 +88,7 @@ export async function POST(req: Request): Promise<Response> {
     for (const w of workshops) {
       const { data, error } = await admin
         .from("workshops")
-        .insert({ owner: guestUid, name: w.name })
+        .insert({ owner: guestUid, name: w.name, type: w.type })
         .select("id")
         .single();
       if (error || !data) throw new Error(`copy workshop: ${error?.message}`);
@@ -106,6 +106,7 @@ export async function POST(req: Request): Promise<Response> {
           spec: app.spec,
           version: app.version,
           private: app.private,
+          kind: app.kind,
           workshop_id: workshopId,
         })
         .select("id")
@@ -114,6 +115,19 @@ export async function POST(req: Request): Promise<Response> {
       appMap.set(app.id, data.id);
     }
     const rewrite = rewriter(templateUid, guestUid, appMap);
+    for (const app of apps) {
+      if (!app.look_path && !app.blueprint_path) continue;
+      const { error } = await admin
+        .from("apps")
+        .update({
+          look_path: app.look_path ? rewrite(app.look_path) : null,
+          blueprint_path: app.blueprint_path
+            ? rewrite(app.blueprint_path)
+            : null,
+        })
+        .eq("id", appMap.get(app.id)!);
+      if (error) throw new Error(`copy art paths: ${error.message}`);
+    }
 
     for (const [oldApp, newApp] of appMap) {
       const { data: versions, error: vError } = await admin

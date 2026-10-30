@@ -80,7 +80,12 @@ export default function AppRuntime({
           </div>
           <p className="text-muted truncate text-sm">{spec.tagline}</p>
         </div>
-        <SettingsSheet appId={app.id} initialPriv={app.private} spec={spec} />
+        <SettingsSheet
+          appId={app.id}
+          initialPriv={app.private}
+          initialKind={app.kind}
+          spec={spec}
+        />
       </header>
 
       {spec.screens.length > 0 && (

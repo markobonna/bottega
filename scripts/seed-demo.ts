@@ -104,10 +104,11 @@ function dayAgo(n: number): string {
 async function makeWorkshop(
   client: Client,
   name: string,
+  type: string,
 ): Promise<string> {
   const { data, error } = await client
     .from("workshops")
-    .insert({ name })
+    .insert({ name, type })
     .select("id")
     .single();
   if (error || !data) throw new Error(`workshop ${name}: ${error?.message}`);
@@ -115,7 +116,7 @@ async function makeWorkshop(
 }
 
 async function seedMaria(client: Client, uid: string): Promise<string> {
-  const workshopId = await makeWorkshop(client, "Bakery");
+  const workshopId = await makeWorkshop(client, "Bakery", "cafe");
   const appId = await createApp(client, mariaFixture, {
     source: "build",
     summary: "Demo seed",
@@ -254,7 +255,7 @@ async function seedMariaTeach(
 }
 
 async function seedCole(client: Client, uid: string): Promise<string> {
-  const workshopId = await makeWorkshop(client, "Restoration Bench");
+  const workshopId = await makeWorkshop(client, "Restoration Bench", "garage");
   const appId = await createApp(client, coleFixture, {
     source: "build",
     summary: "Demo seed",

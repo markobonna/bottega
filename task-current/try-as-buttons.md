@@ -6,7 +6,7 @@ Status: ⬜ to start · 🟡 in progress · ✅ AI check passed **and** human ch
 | ---- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------- | ------ |
 | 1 | POST /api/try-as: admin copy of template (apps, versions, records, models, examples, photo_features, storage) to the signed-in guest with new ids + rewritten paths. Muse Code. | `typecheck` + `build` pass (`/api/try-as` listed) | — | ✅ |
 | 2 | Try as Maria / Try as Cole buttons on /sign-in (anonymous sign-in → copy → open app). Muse Code. | `typecheck` + `build` pass | Click both: fresh copy opens, data present, guest isolated | 🟡 |
-| 3 | Supabase dashboard: enable anonymous sign-ins. | Button works without error | Flip the switch | ⬜ |
+| 3 | Supabase dashboard: enable anonymous sign-ins. | Button works without error | Flip the switch | ✅ |
 
 ## Decisions
 

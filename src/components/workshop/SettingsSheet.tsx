@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { setPrivate } from "@/app/projects/[id]/actions";
+import { setKind, setPrivate } from "@/app/projects/[id]/actions";
 import { btn, card, Label, Status } from "@/components/ui";
 import type { AppSpec } from "@/lib/spec/schema";
 
@@ -15,15 +15,18 @@ const META_USE: Record<string, string> = {
 export default function SettingsSheet({
   appId,
   initialPriv,
+  initialKind,
   spec,
 }: {
   appId: string;
   initialPriv: boolean;
+  initialKind: "software" | "hardware";
   spec: AppSpec;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [priv, setPriv] = useState(initialPriv);
+  const [kind, setKindState] = useState(initialKind);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState("");
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -57,6 +60,20 @@ export default function SettingsSheet({
       return;
     }
     setPriv(res.priv);
+    router.refresh();
+  }
+
+  async function pickKind(next: "software" | "hardware") {
+    if (saving || next === kind) return;
+    setSaving(true);
+    setProblem("");
+    const res = await setKind(appId, next);
+    setSaving(false);
+    if (!res.ok) {
+      setProblem("Couldn't save. Try again.");
+      return;
+    }
+    setKindState(res.kind);
     router.refresh();
   }
 
@@ -98,6 +115,21 @@ export default function SettingsSheet({
             ourselves, not on Meta&apos;s API. Seeing, drawing and transcribing
             still use Meta&apos;s models.
           </p>
+          <Label>Project kind</Label>
+          <div className="flex gap-2" role="group" aria-label="Project kind">
+            {(["software", "hardware"] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={kind === k}
+                disabled={saving}
+                onClick={() => void pickKind(k)}
+                className={`${btn.quiet} ${btn.small} capitalize`}
+              >
+                {k}
+              </button>
+            ))}
+          </div>
           <Label>Still uses Meta&apos;s API</Label>
           {metaBlocks.length === 0 ? (
             <p className="text-sm text-muted">

@@ -60,8 +60,11 @@ export type Database = {
       }
       apps: {
         Row: {
+          blueprint_path: string | null
           created_at: string | null
           id: string
+          kind: string
+          look_path: string | null
           name: string
           owner: string
           private: boolean
@@ -71,8 +74,11 @@ export type Database = {
           workshop_id: string
         }
         Insert: {
+          blueprint_path?: string | null
           created_at?: string | null
           id?: string
+          kind?: string
+          look_path?: string | null
           name: string
           owner?: string
           private?: boolean
@@ -82,8 +88,11 @@ export type Database = {
           workshop_id: string
         }
         Update: {
+          blueprint_path?: string | null
           created_at?: string | null
           id?: string
+          kind?: string
+          look_path?: string | null
           name?: string
           owner?: string
           private?: boolean
@@ -338,6 +347,7 @@ export type Database = {
           id: string
           name: string
           owner: string
+          type: string
           updated_at: string | null
         }
         Insert: {
@@ -345,6 +355,7 @@ export type Database = {
           id?: string
           name: string
           owner?: string
+          type?: string
           updated_at?: string | null
         }
         Update: {
@@ -352,6 +363,7 @@ export type Database = {
           id?: string
           name?: string
           owner?: string
+          type?: string
           updated_at?: string | null
         }
         Relationships: []
