@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import ZoomMount from "@/components/design/ZoomMount";
 import AppRuntime from "@/components/runtime/AppRuntime";
 import { card } from "@/components/ui";
 import { listRecords, type DbRecord } from "@/lib/records";
@@ -48,21 +49,23 @@ export default async function AppPage({
   const records: Record<string, DbRecord[]> = Object.fromEntries(entries);
 
   return (
-    <Suspense fallback={<p className="text-muted">Loading…</p>}>
-      <AppRuntime
-        app={{
-          id: app.id,
-          name: app.name,
-          version: app.version,
-          private: app.private ?? false,
-          kind: app.kind === "hardware" ? "hardware" : "software",
-          workshop: workshop
-            ? { id: app.workshop_id, name: workshop.name }
-            : null,
-        }}
-        spec={spec}
-        records={records}
-      />
-    </Suspense>
+    <ZoomMount depth={3}>
+      <Suspense fallback={<p className="text-muted">Loading…</p>}>
+        <AppRuntime
+          app={{
+            id: app.id,
+            name: app.name,
+            version: app.version,
+            private: app.private ?? false,
+            kind: app.kind === "hardware" ? "hardware" : "software",
+            workshop: workshop
+              ? { id: app.workshop_id, name: workshop.name }
+              : null,
+          }}
+          spec={spec}
+          records={records}
+        />
+      </Suspense>
+    </ZoomMount>
   );
 }

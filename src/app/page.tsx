@@ -88,7 +88,7 @@ export default async function Home() {
 
   if ((workshops ?? []).length === 0) {
     return (
-      <ZoomMount depth={0}>
+      <ZoomMount depth={1}>
         <h1 className="font-display text-3xl">Start a Workshop.</h1>
         <p className="text-muted mt-2">
           A workshop holds your projects — one for the bakery, one for the
@@ -105,7 +105,7 @@ export default async function Home() {
   }
 
   return (
-    <ZoomMount depth={0}>
+    <ZoomMount depth={1}>
       <h1 className="font-display text-3xl">Your workshops.</h1>
       <div className="mt-4">
         <WorldScene workshops={scene} version={version} />

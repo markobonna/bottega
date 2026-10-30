@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import BuildForm from "./form";
+import ZoomMount from "@/components/design/ZoomMount";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function NewAppPage({
@@ -17,9 +18,9 @@ export default async function NewAppPage({
     .maybeSingle();
   if (!data) redirect("/");
   return (
-    <div>
+    <ZoomMount depth={2}>
       <h1 className="font-display">Tell Bottega about your work.</h1>
       <BuildForm workshopId={workshop} />
-    </div>
+    </ZoomMount>
   );
 }

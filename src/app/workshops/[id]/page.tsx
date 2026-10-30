@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { btn, card } from "@/components/ui";
+import ZoomMount from "@/components/design/ZoomMount";
 import ProjectBuildButton from "@/components/workshop/ProjectBuildButton";
 import { parseSpec } from "@/lib/spec/schema";
 import { createClient } from "@/lib/supabase/server";
@@ -52,7 +53,7 @@ export default async function WorkshopPage({
   const urls = signed.ok ? signed.urls : {};
 
   return (
-    <div>
+    <ZoomMount depth={2}>
       <Link
         href="/"
         className="text-muted text-sm underline-offset-4 hover:underline"
@@ -148,6 +149,6 @@ export default async function WorkshopPage({
       <section aria-label="Delete workshop" className="mt-8">
         <DeleteWorkshopButton workshopId={workshop.id} />
       </section>
-    </div>
+    </ZoomMount>
   );
 }
