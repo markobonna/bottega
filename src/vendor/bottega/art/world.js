@@ -1,5 +1,7 @@
-/* The world map: an isometric island with a 3×3 grid of lots around a fountain.
-   Each workshop sits on a lot and is drawn by its type; new ones start in ink. */
+/* The world map: an isometric island with four lots in a square around a
+   fountain (BOTTEGA DIVERGENCE, per the design author: the prototype's 3×3
+   grid was too much for a demo). Each workshop sits on a lot and is drawn
+   by its type; new ones start in ink. */
 (function () {
   const B = window.B;
   const C = B.C;
@@ -9,8 +11,8 @@
   const CX = 800, CY = 550, S = 238;
   const EX = [0.866, 0.5], EY = [-0.866, 0.5];
   const P = (i, j) => [CX + (i - 1) * S * EX[0] + (j - 1) * S * EY[0], CY + (i - 1) * S * EX[1] + (j - 1) * S * EY[1]];
-  // Lot order: right, left, back first (all visible above the fold), then the rest.
-  const SLOTS = [[2, 0], [0, 2], [0, 0], [2, 2], [2, 1], [1, 2], [1, 0], [0, 1]];
+  // Four quadrant centers around the fountain plaza.
+  const SLOTS = [[0.25, 0.25], [1.75, 0.25], [0.25, 1.75], [1.75, 1.75]];
   const HW = 132, HH = 76;
 
   A.WORLD = { W, H, slotPos: (i) => P(SLOTS[i][0], SLOTS[i][1]) };
@@ -179,8 +181,8 @@
     const cl = { stroke: C.red, 'stroke-width': 1.2, 'stroke-dasharray': '4 6', opacity: 0.55 };
     s += A.line(Lc, [Lc[0] - 62, Lc[1] + 31], cl) + A.line(Lc, [Lc[0] - 62, Lc[1] - 31], cl) + A.line(Rc, [Rc[0] + 62, Rc[1] + 31], cl) + A.line(Rc, [Rc[0] + 62, Rc[1] - 31], cl) + A.line(Tc, [Tc[0] + 62, Tc[1] - 31], cl) + A.line(Tc, [Tc[0] - 62, Tc[1] - 31], cl);
 
-    // streets between lots
-    for (const k of [0.5, 1.5]) {
+    // one crossroads between the four lots; the fountain covers the middle
+    for (const k of [1]) {
       for (const [a, b] of [[P(k, -0.5), P(k, 2.5)], [P(-0.5, k), P(2.5, k)]]) {
         s += A.line(a, b, { stroke: '#E0CBA0', 'stroke-width': 26 });
         s += A.line(a, b, { stroke: C.ink, 'stroke-width': 1.2, 'stroke-dasharray': '6 9', opacity: 0.4 });
@@ -199,7 +201,7 @@
       items.push({ y: p[1], svg: A.tree(p[0], p[1], id) });
     }
     for (const ws of state.workshops) {
-      if (ws.slot < 0 || ws.slot > 7) continue;
+      if (ws.slot < 0 || ws.slot > 3) continue;
       const b = building(ws, id, { sketching: opts.sketchingId === ws.id });
       items.push({ y: b.y, svg: b.svg });
       tags.push({ ws, x: B.pct(b.anchor[0], W), y: B.pct(b.anchor[1], H) });

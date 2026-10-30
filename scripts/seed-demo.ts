@@ -117,6 +117,8 @@ async function makeWorkshop(
 
 async function seedMaria(client: Client, uid: string): Promise<string> {
   const workshopId = await makeWorkshop(client, "Bakery", "cafe");
+  await makeWorkshop(client, "Dance Studio", "studio");
+  await makeWorkshop(client, "Office", "other");
   const appId = await createApp(client, mariaFixture, {
     source: "build",
     summary: "Demo seed",
@@ -255,7 +257,9 @@ async function seedMariaTeach(
 }
 
 async function seedCole(client: Client, uid: string): Promise<string> {
-  const workshopId = await makeWorkshop(client, "Restoration Bench", "garage");
+  const workshopId = await makeWorkshop(client, "House Interior", "other");
+  await makeWorkshop(client, "Garage", "garage");
+  await makeWorkshop(client, "Office", "other");
   const appId = await createApp(client, coleFixture, {
     source: "build",
     summary: "Demo seed",

@@ -359,7 +359,7 @@
 }
 .b-scope .scene {
   position: relative;
-  min-width: 900px;
+  width: 100%;
 }
 .b-scope .scene.framed {
   border: 1.5px solid var(--ink);
@@ -377,18 +377,6 @@
   height: 100%;
   display: block;
 }
-.b-scope .pan-hint {
-  display: none;
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: var(--ink2);
-}
-@media (max-width: 940px) {
-  .b-scope .pan-hint {
-    display: block;
-  }
-}
-
 .b-scope .tag {
   position: absolute;
   transform: translate(-50%, -100%);

@@ -28,7 +28,7 @@ export default function WorldScene({
   const art = useMemo(() => {
     const used = new Set(workshops.map((w) => w.slot));
     let free = -1;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 4; i++) {
       if (!used.has(i)) {
         free = i;
         break;
@@ -76,7 +76,6 @@ export default function WorldScene({
           )}
         </div>
       </div>
-      <p className="pan-hint">Swipe sideways to look around the island.</p>
     </div>
   );
 }
