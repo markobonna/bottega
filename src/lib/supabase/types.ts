@@ -60,43 +60,55 @@ export type Database = {
       }
       apps: {
         Row: {
+          arrival_seen: boolean
+          arrive_at: string | null
           blueprint_path: string | null
           created_at: string | null
           id: string
           kind: string
           look_path: string | null
           name: string
+          order_info: Json | null
           owner: string
           private: boolean
           spec: Json
+          stage: string | null
           updated_at: string | null
           version: number
           workshop_id: string
         }
         Insert: {
+          arrival_seen?: boolean
+          arrive_at?: string | null
           blueprint_path?: string | null
           created_at?: string | null
           id?: string
           kind?: string
           look_path?: string | null
           name: string
+          order_info?: Json | null
           owner?: string
           private?: boolean
           spec: Json
+          stage?: string | null
           updated_at?: string | null
           version?: number
           workshop_id: string
         }
         Update: {
+          arrival_seen?: boolean
+          arrive_at?: string | null
           blueprint_path?: string | null
           created_at?: string | null
           id?: string
           kind?: string
           look_path?: string | null
           name?: string
+          order_info?: Json | null
           owner?: string
           private?: boolean
           spec?: Json
+          stage?: string | null
           updated_at?: string | null
           version?: number
           workshop_id?: string
@@ -260,6 +272,44 @@ export type Database = {
           x?: number[]
         }
         Relationships: []
+      }
+      project_notes: {
+        Row: {
+          app_id: string | null
+          created_at: string | null
+          id: string
+          owner: string
+          part: number | null
+          text: string
+          who: string
+        }
+        Insert: {
+          app_id?: string | null
+          created_at?: string | null
+          id?: string
+          owner?: string
+          part?: number | null
+          text: string
+          who: string
+        }
+        Update: {
+          app_id?: string | null
+          created_at?: string | null
+          id?: string
+          owner?: string
+          part?: number | null
+          text?: string
+          who?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_notes_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       records: {
         Row: {

@@ -30,6 +30,115 @@ export function stageForVersion(version: number): DesignStage {
   return "arrived";
 }
 
+export type LiveStage = DesignStage | "sent";
+
+const LIVE_STAGES = new Set<string>([
+  "sketch",
+  "shape",
+  "build",
+  "sent",
+  "arrived",
+]);
+
+export function isLiveStage(v: string): v is LiveStage {
+  return LIVE_STAGES.has(v);
+}
+
+// A stored stage (set by advancing / sending off / arriving) wins; otherwise
+// the stage is derived from the version number.
+export function effectiveStage(
+  stored: string | null,
+  version: number,
+): LiveStage {
+  if (stored && isLiveStage(stored)) return stored;
+  return stageForVersion(version);
+}
+
+export function nextStage(stage: LiveStage): LiveStage | null {
+  if (stage === "sketch") return "shape";
+  if (stage === "shape") return "build";
+  return null;
+}
+
+// Port of arrivalLine + the arrival head from the design prototype.
+export function arrivalHead(medium: DesignMedium): string {
+  return (
+    {
+      hardware: "It's here!",
+      software: "It's installed!",
+      print: "Delivered!",
+      space: "All done!",
+      music: "Released!",
+      dance: "Showtime!",
+      recipe: "On the menu!",
+    } as Record<DesignMedium, string>
+  )[medium];
+}
+
+export function arrivalLine(
+  workshopType: string,
+  workshopName: string,
+  projectName: string,
+  medium: DesignMedium,
+  target?: string,
+): string {
+  const where =
+    workshopType === "studio"
+      ? "on the studio floor"
+      : workshopType === "garage"
+        ? "on the workbench"
+        : "on the counter";
+  switch (medium) {
+    case "software":
+      return `${projectName} is installed and running. It's on the ${target || "tablet"} in ${workshopName}. What should we make next?`;
+    case "print":
+      return `${projectName} just came back from the printer — I hung it up in ${workshopName}. What's next?`;
+    case "space":
+      return `The new layout for ${workshopName} is done. Want to plan the next thing?`;
+    case "music":
+      return `${projectName} is mixed and released. Want to start another?`;
+    case "dance":
+      return `${projectName} is ready for the stage. What's next in ${workshopName}?`;
+    case "recipe":
+      return `${projectName} is on the menu at ${workshopName}. What should we cook up next?`;
+    default:
+      return `Your ${projectName} has arrived! I unpacked it and set it up ${where} in ${workshopName}. Ready for the next project?`;
+  }
+}
+
+// Lines for a print board's menu: the most name-like text values in the data.
+export function menuLines(
+  collections: { id: string; fields: { id: string; type: string }[] }[],
+  records: Record<string, { data: unknown }[]>,
+  max = 4,
+): string[] {
+  const cell = (r: { data: unknown }, field: string): string => {
+    const d =
+      typeof r.data === "object" && r.data !== null
+        ? (r.data as Record<string, unknown>)
+        : null;
+    return String(d?.[field] ?? "").trim();
+  };
+  for (const want of ["name", "title", "item"]) {
+    for (const c of collections) {
+      const f = c.fields.find((x) => x.id === want && x.type === "text");
+      if (!f) continue;
+      const lines = (records[c.id] ?? [])
+        .map((r) => cell(r, f.id))
+        .filter(Boolean)
+        .slice(0, max);
+      if (lines.length > 0) return lines;
+    }
+  }
+  const first = collections[0];
+  const f = first?.fields.find((x) => x.type === "text");
+  if (!first || !f) return [];
+  return (records[first.id] ?? [])
+    .map((r) => cell(r, f.id))
+    .filter(Boolean)
+    .slice(0, max);
+}
+
 export function mediumForKind(kind: string): DesignMedium {
   return isMediumId(kind) ? kind : "software";
 }

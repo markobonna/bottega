@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/auth/actions";
-import AskBar from "./AskBar";
+import Crumbs from "./Crumbs";
 import { btn, card } from "./ui";
 
 export default function TopBar({ email }: { email: string | null }) {
@@ -31,24 +31,36 @@ export default function TopBar({ email }: { email: string | null }) {
   return (
     <header className="sticky top-[env(safe-area-inset-top,0px)] z-20 border-b border-line bg-paper">
       <div className="gutter mx-auto flex h-14 max-w-[720px] items-center gap-2">
-        <Link href="/" className="flex items-center gap-2">
-          <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-            <rect
-              x="2"
-              y="5"
-              width="18"
-              height="3.5"
-              rx="1"
-              className="fill-brass"
+        <Link href="/" className="flex shrink-0 items-center gap-2">
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 32 32"
+            aria-hidden="true"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <circle
+              cx="16"
+              cy="6"
+              r="3"
+              className="stroke-ink"
             />
-            <rect x="4.5" y="8.5" width="2.5" height="9.5" className="fill-ink" />
-            <rect x="15" y="8.5" width="2.5" height="9.5" className="fill-ink" />
+            <path
+              d="M14.5 8.5L7 28M17.5 8.5L25 28"
+              className="stroke-ink"
+            />
+            <path
+              d="M5 20a14 14 0 0 0 22 0"
+              className="stroke-accent"
+            />
           </svg>
           <span className="font-display hidden text-xl min-[420px]:inline">
             Bottega
           </span>
         </Link>
-        <AskBar />
+        <Crumbs />
         {email ? (
           <div ref={menuRef} className="relative">
             <button

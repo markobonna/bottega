@@ -20,9 +20,12 @@ async function ownWorkshop(supabase: Awaited<ReturnType<typeof createClient>>, w
   if (!data) throw new Error("No such workshop.");
 }
 
-export async function createWorkshop(formData: FormData): Promise<void> {
+export async function createWorkshop(
+  formData: FormData,
+): Promise<{ id: string }> {
   const name = String(formData.get("name") ?? "").trim();
-  if (!name || name.length > 40) throw new Error("Name the workshop (1–40 chars).");
+  if (!name || name.length > 40)
+    throw new Error("Name the workshop (1–40 chars).");
   const picked = String(formData.get("type") ?? "");
   const type = isWorkshopTypeId(picked) ? picked : detectWorkshopType(name);
   const supabase = await createClient();
@@ -32,7 +35,7 @@ export async function createWorkshop(formData: FormData): Promise<void> {
     .select("id")
     .single();
   if (error || !data) throw new Error(error?.message ?? "Couldn't create it.");
-  redirect(`/workshops/${data.id}`);
+  return { id: data.id };
 }
 
 export async function deleteWorkshop(workshopId: string): Promise<void> {

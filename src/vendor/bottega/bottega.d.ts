@@ -79,8 +79,16 @@ interface BottegaGlobal {
     };
     modeForStage: (stage: string) => string;
     drawingFor: (p: BottegaRoomProject) => string;
+    houseIcon: (level: string) => string;
   };
+  isLit: (ws: { lit?: boolean; lastActivity: number | null }) => boolean;
   store: { freeSlot: () => number };
+  MAKER_KINDS: Record<
+    string,
+    { kind: string; does: string; contact: string }[]
+  >;
+  download: (filename: string, text: string, mime?: string) => void;
+  slug: (s: string) => string;
   WORKSHOP_TYPES: Record<
     string,
     {

@@ -4,7 +4,12 @@ import BoardPanel, { type BoardDraft } from "@/components/design/BoardPanel";
 import ZoomMount from "@/components/design/ZoomMount";
 import AppRuntime from "@/components/runtime/AppRuntime";
 import { card } from "@/components/ui";
-import { mediumForKind, stageForVersion } from "@/lib/design/project-art";
+import {
+  effectiveStage,
+  mediumForKind,
+  menuLines,
+  stageForVersion,
+} from "@/lib/design/project-art";
 import { listRecords, type DbRecord } from "@/lib/records";
 import { parseSpec } from "@/lib/spec/schema";
 import { createClient } from "@/lib/supabase/server";
@@ -18,7 +23,9 @@ export default async function AppPage({
   const supabase = await createClient();
   const { data: app, error } = await supabase
     .from("apps")
-    .select("id, name, version, spec, private, kind, workshop_id, workshops ( name )")
+    .select(
+      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, workshop_id, workshops ( name, type )",
+    )
     .eq("id", id)
     .single();
   if (error || !app) notFound();
@@ -60,21 +67,53 @@ export default async function AppPage({
     stage: stageForVersion(v.version),
   }));
   const medium = mediumForKind(app.kind ?? "software");
+  const stage = effectiveStage(app.stage, app.version);
+  const { data: noteRows } = await supabase
+    .from("project_notes")
+    .select("id, who, part, text")
+    .eq("app_id", id)
+    .order("created_at", { ascending: true });
+  const notes = (noteRows ?? []).map((n) => ({
+    id: n.id,
+    who: (n.who === "apprentice" ? "apprentice" : "you") as
+      | "you"
+      | "apprentice",
+    part: n.part,
+    text: n.text,
+  }));
+  const orderInfo = app.order_info as {
+    vendor?: string;
+    price?: number;
+    lead?: number;
+  } | null;
+  const order =
+    orderInfo?.vendor && typeof orderInfo.price === "number"
+      ? {
+          vendor: orderInfo.vendor,
+          price: orderInfo.price,
+          lead: typeof orderInfo.lead === "number" ? orderInfo.lead : 2,
+        }
+      : null;
+  const lines =
+    medium === "print" ? menuLines(spec.collections, records) : undefined;
 
   return (
     <ZoomMount depth={3}>
       {workshop && app.workshop_id && (
         <BoardPanel
-          project={{
-            name: app.name,
-            medium,
-            stage: stageForVersion(app.version),
-          }}
+          appId={app.id}
+          project={{ name: app.name, medium, stage }}
           drafts={drafts}
+          notes={notes}
           tagline={spec.tagline}
           backTo={{ id: app.workshop_id, name: workshop.name }}
           newIn={app.workshop_id}
-          version={`${app.id}@${app.version}`}
+          workshopType={workshop.type ?? "other"}
+          order={order}
+          arriveAt={app.arrive_at}
+          showArrival={stage === "arrived" && !app.arrival_seen}
+          lines={lines}
+          version={`${app.id}@${app.version}@${app.stage ?? ""}`}
         />
       )}
       <Suspense fallback={<p className="text-muted">Loading…</p>}>

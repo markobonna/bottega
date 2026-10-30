@@ -4,7 +4,7 @@ import { btn, card } from "@/components/ui";
 import WorkshopScreen from "@/components/design/WorkshopScreen";
 import ZoomMount from "@/components/design/ZoomMount";
 import ProjectBuildButton from "@/components/workshop/ProjectBuildButton";
-import { mediumForKind, stageForVersion } from "@/lib/design/project-art";
+import { effectiveStage, mediumForKind } from "@/lib/design/project-art";
 import { parseSpec } from "@/lib/spec/schema";
 import { createClient } from "@/lib/supabase/server";
 import DeleteWorkshopButton from "../../DeleteWorkshopButton";
@@ -44,7 +44,9 @@ export default async function WorkshopPage({
   if (!workshop) notFound();
   const { data: apps, error } = await supabase
     .from("apps")
-    .select("id, name, version, updated_at, spec, kind, look_path, blueprint_path")
+    .select(
+      "id, name, version, updated_at, spec, kind, stage, look_path, blueprint_path",
+    )
     .eq("workshop_id", id)
     .order("updated_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -60,7 +62,7 @@ export default async function WorkshopPage({
       id: a.id,
       name: a.name,
       medium: mediumForKind(a.kind ?? "software"),
-      stage: stageForVersion(a.version),
+      stage: effectiveStage(a.stage, a.version),
       tagline: parsed.ok ? parsed.spec.tagline : "",
     };
   });

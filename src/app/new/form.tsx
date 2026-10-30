@@ -102,13 +102,13 @@ export default function BuildForm({
       return;
     }
     if (res.ok) {
-      setResult(
-        (await res.json()) as {
-          appId: string;
-          spec: AppSpec;
-          answeredBy?: string;
-        },
-      );
+      const done = (await res.json()) as {
+        appId: string;
+        spec: AppSpec;
+        answeredBy?: string;
+      };
+      sessionStorage.setItem("bottega:new-project", done.appId);
+      setResult(done);
       setPhase("done");
     } else if (res.status === 503) {
       setPhase("off");

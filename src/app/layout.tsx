@@ -7,6 +7,7 @@ import {
   Karla,
 } from "next/font/google";
 import type { ReactNode } from "react";
+import TalkBar from "@/components/design/TalkBar";
 import TopBar from "@/components/TopBar";
 import { createClient } from "@/lib/supabase/server";
 import "./globals.css";
@@ -65,9 +66,12 @@ export default async function RootLayout({
     >
       <body className="font-sans">
         {user && <TopBar email={user.email ?? null} />}
-        <main className="gutter mx-auto max-w-[720px] pt-5 pb-24">
+        <main
+          className={`gutter mx-auto max-w-[720px] pt-5 ${user ? "pb-[calc(var(--talk-h)+24px)]" : "pb-24"}`}
+        >
           {children}
         </main>
+        {user && <TalkBar />}
       </body>
     </html>
   );

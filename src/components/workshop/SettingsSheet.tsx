@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setKind, setPrivate } from "@/app/projects/[id]/actions";
 import { btn, card, Label, Status } from "@/components/ui";
+import { MEDIUM_IDS, type DesignMedium } from "@/lib/design/project-art";
 import type { AppSpec } from "@/lib/spec/schema";
 
 const META_USE: Record<string, string> = {
@@ -20,7 +21,7 @@ export default function SettingsSheet({
 }: {
   appId: string;
   initialPriv: boolean;
-  initialKind: "software" | "hardware";
+  initialKind: DesignMedium;
   spec: AppSpec;
 }) {
   const router = useRouter();
@@ -63,7 +64,7 @@ export default function SettingsSheet({
     router.refresh();
   }
 
-  async function pickKind(next: "software" | "hardware") {
+  async function pickKind(next: DesignMedium) {
     if (saving || next === kind) return;
     setSaving(true);
     setProblem("");
@@ -116,8 +117,12 @@ export default function SettingsSheet({
             still use Meta&apos;s models.
           </p>
           <Label>Project kind</Label>
-          <div className="flex gap-2" role="group" aria-label="Project kind">
-            {(["software", "hardware"] as const).map((k) => (
+          <div
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label="Project kind"
+          >
+            {MEDIUM_IDS.map((k) => (
               <button
                 key={k}
                 type="button"

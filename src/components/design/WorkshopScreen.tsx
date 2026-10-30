@@ -7,13 +7,15 @@ import "@/vendor/bottega/core.js";
 import "@/vendor/bottega/types.js";
 import "@/vendor/bottega/art/common.js";
 import "@/vendor/bottega/art/room.js";
-import type { DesignMedium } from "@/lib/design/project-art";
+import { say } from "@/lib/apprentice-client";
+import type { DesignMedium, LiveStage } from "@/lib/design/project-art";
+import NewProjectDialog from "./NewProjectDialog";
 
 export interface RoomProject {
   id: string;
   name: string;
   medium: DesignMedium;
-  stage: "sketch" | "shape" | "build" | "arrived";
+  stage: LiveStage;
   tagline: string;
 }
 
@@ -57,6 +59,12 @@ export default function WorkshopScreen({
   version: string;
 }) {
   const [view, setView] = useState<"room" | "list">("room");
+  const [creating, setCreating] = useState(false);
+  const [newId] = useState<string | null>(() => {
+    const v = sessionStorage.getItem("bottega:new-project");
+    sessionStorage.removeItem("bottega:new-project");
+    return v;
+  });
   const B = window.B;
   const def =
     B.WORKSHOP_TYPES[workshop.type] ?? B.WORKSHOP_TYPES.other;
@@ -75,7 +83,7 @@ export default function WorkshopScreen({
           type: workshop.type,
           projects,
         },
-        {},
+        newId ? { newId } : {},
       ),
     // Memoized on a server-computed version string, per the art contract.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,12 +117,13 @@ export default function WorkshopScreen({
               <Icon svg={B.icon("list")} /> List
             </button>
           </div>
-          <Link
-            href={`/new?workshop=${workshop.id}`}
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
             className="btn btn-primary btn-lg"
           >
             <Icon svg={B.icon("plus", 18, 2.4)} /> New project
-          </Link>
+          </button>
         </div>
       </section>
 
@@ -143,7 +152,7 @@ export default function WorkshopScreen({
                     key={pid}
                     href={`/projects/${pid}`}
                     style={{ left: x, top: y }}
-                    className={`tag${p.stage === "sketch" ? " is-sketch" : ""}${p.stage === "build" ? " is-hot" : ""}`}
+                    className={`tag${p.stage === "sketch" ? " is-sketch" : ""}${p.stage === "build" ? " is-hot" : ""}${newId === pid ? " is-new" : ""}`}
                   >
                     <span className="name">{p.name}</span>
                     <span className="meta">
@@ -157,13 +166,14 @@ export default function WorkshopScreen({
                 );
               })}
               {rm.newSpot && (
-                <Link
-                  href={`/new?workshop=${workshop.id}`}
+                <button
+                  type="button"
+                  onClick={() => setCreating(true)}
                   className="btn btn-primary spot-btn"
                   style={{ left: rm.newSpot.x, top: rm.newSpot.y }}
                 >
                   <Icon svg={B.icon("plus", 18, 2.4)} /> New project
-                </Link>
+                </button>
               )}
               <Link
                 href="/"
@@ -232,12 +242,13 @@ export default function WorkshopScreen({
             );
           })}
           <li>
-            <Link
-              href={`/new?workshop=${workshop.id}`}
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
               className="newcard"
             >
               <Icon svg={B.icon("plus", 28)} /> New project
-            </Link>
+            </button>
           </li>
         </ul>
       )}
@@ -262,13 +273,14 @@ export default function WorkshopScreen({
             </p>
             <div className="ideas">
               {def.examples.map((e) => (
-                <Link
+                <button
                   key={e}
-                  href={`/new?workshop=${workshop.id}&idea=${encodeURIComponent(`I want to make ${e}`)}`}
+                  type="button"
                   className="chip"
+                  onClick={() => say(`I want to make ${e}`)}
                 >
                   {B.cap(e)}
-                </Link>
+                </button>
               ))}
             </div>
             {busy && (
@@ -300,6 +312,12 @@ export default function WorkshopScreen({
           </ul>
         </div>
       </section>
+      {creating && (
+        <NewProjectDialog
+          workshop={workshop}
+          onClose={() => setCreating(false)}
+        />
+      )}
     </div>
   );
 }

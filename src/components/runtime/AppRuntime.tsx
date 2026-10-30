@@ -129,7 +129,7 @@ export default function AppRuntime({
       {spec.screens.length > 0 && (
         <nav
           aria-label="Screens"
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-paper pt-1 pb-[max(8px,env(safe-area-inset-bottom))] sm:hidden"
+          className="fixed inset-x-0 bottom-[var(--talk-h,0px)] z-20 border-t border-line bg-paper pt-1 pb-[max(8px,env(safe-area-inset-bottom))] sm:hidden"
         >
           <div className="gutter mx-auto flex max-w-[720px]">{tabs(true)}</div>
         </nav>

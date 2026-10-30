@@ -154,7 +154,7 @@ export default function ChangeBar({ appId }: { appId: string }) {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-10 sm:bottom-0">
+    <div className="fixed inset-x-0 bottom-[calc(72px+var(--talk-h,0px)+env(safe-area-inset-bottom))] z-10 sm:bottom-[var(--talk-h,0px)]">
       <div className="gutter mx-auto flex max-w-[720px] flex-col gap-2 border-t border-line bg-paper pt-2 pb-2">
         {toast !== null && (
           <div role="status" className={`${card} flex items-center gap-3 p-3`}>

@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  arrivalHead,
+  arrivalLine,
   detectMedium,
+  effectiveStage,
   isMediumId,
   mediumForKind,
+  menuLines,
+  nextStage,
   stageForVersion,
 } from "./project-art";
 
@@ -38,6 +43,62 @@ describe("isMediumId", () => {
   it("accepts the seven mediums only", () => {
     expect(isMediumId("dance")).toBe(true);
     expect(isMediumId("video")).toBe(false);
+  });
+});
+
+describe("effectiveStage / nextStage", () => {
+  it("prefers a stored stage, else derives from the version", () => {
+    expect(effectiveStage("sent", 1)).toBe("sent");
+    expect(effectiveStage(null, 1)).toBe("sketch");
+    expect(effectiveStage("bogus", 2)).toBe("shape");
+  });
+  it("advances sketch to shape to build, then stops", () => {
+    expect(nextStage("sketch")).toBe("shape");
+    expect(nextStage("shape")).toBe("build");
+    expect(nextStage("build")).toBeNull();
+    expect(nextStage("sent")).toBeNull();
+    expect(nextStage("arrived")).toBeNull();
+  });
+});
+
+describe("arrival", () => {
+  it("heads each medium like the design", () => {
+    expect(arrivalHead("hardware")).toBe("It's here!");
+    expect(arrivalHead("dance")).toBe("Showtime!");
+  });
+  it("lines name the project, room and surface", () => {
+    expect(
+      arrivalLine("garage", "The Garage", "Bike rack", "hardware"),
+    ).toContain("on the workbench");
+    expect(arrivalLine("cafe", "Café", "Menu", "print")).toContain(
+      "back from the printer",
+    );
+  });
+});
+
+describe("menuLines", () => {
+  const collections = [
+    {
+      id: "orders",
+      fields: [
+        { id: "customer", type: "text" },
+        { id: "item", type: "text" },
+      ],
+    },
+    { id: "specials", fields: [{ id: "name", type: "text" }] },
+  ];
+  it("prefers a name field anywhere, then item", () => {
+    const records = {
+      orders: [{ data: { item: "Sourdough" } }],
+      specials: [{ data: { name: "Morning bun" } }],
+    };
+    expect(menuLines(collections, records)).toEqual(["Morning bun"]);
+    expect(menuLines(collections, { orders: records.orders })).toEqual([
+      "Sourdough",
+    ]);
+  });
+  it("returns nothing without text", () => {
+    expect(menuLines([], {})).toEqual([]);
   });
 });
 

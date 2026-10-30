@@ -116,14 +116,38 @@ async function makeWorkshop(
 }
 
 async function seedMaria(client: Client, uid: string): Promise<string> {
-  const workshopId = await makeWorkshop(client, "Bakery", "cafe");
-  await makeWorkshop(client, "Dance Studio", "studio");
-  await makeWorkshop(client, "Office", "other");
-  const appId = await createApp(client, mariaFixture, {
-    source: "build",
-    summary: "Demo seed",
-    workshopId,
-  });
+  const cafeId = await makeWorkshop(client, "The Café", "cafe");
+  const studioId = await makeWorkshop(client, "Dance Studio", "studio");
+  await makeWorkshop(client, "Music Room", "music");
+  await makeWorkshop(client, "Classroom", "classroom");
+  const appId = await createApp(
+    client,
+    { ...mariaFixture, name: "Bakery orders" },
+    { source: "build", summary: "Demo seed", workshopId: cafeId },
+  );
+  // The design's example projects live in the café alongside the working app.
+  for (const [name, kind] of [
+    ["Espresso machine v2", "hardware"],
+    ["Register drawer fix", "hardware"],
+    ["Loyalty app", "software"],
+    ["Autumn menu board", "print"],
+  ] as const) {
+    await createApp(
+      client,
+      { ...mariaFixture, name },
+      { source: "build", summary: "Demo seed", workshopId: cafeId, kind },
+    );
+  }
+  await createApp(
+    client,
+    { ...mariaFixture, name: "Spring showcase routine" },
+    {
+      source: "build",
+      summary: "Demo seed",
+      workshopId: studioId,
+      kind: "dance",
+    },
+  );
   const spec = mariaFixture as AppSpec;
   const see = spec.screens
     .flatMap((s) => s.blocks)
@@ -257,14 +281,26 @@ async function seedMariaTeach(
 }
 
 async function seedCole(client: Client, uid: string): Promise<string> {
-  const workshopId = await makeWorkshop(client, "House Interior", "other");
-  await makeWorkshop(client, "Garage", "garage");
-  await makeWorkshop(client, "Office", "other");
-  const appId = await createApp(client, coleFixture, {
-    source: "build",
-    summary: "Demo seed",
-    workshopId,
-  });
+  await makeWorkshop(client, "The Store", "store");
+  const garageId = await makeWorkshop(client, "The Garage", "garage");
+  await makeWorkshop(client, "The Kitchen", "kitchen");
+  await makeWorkshop(client, "Classroom", "classroom");
+  const appId = await createApp(
+    client,
+    { ...coleFixture, name: "Restoration Bench" },
+    { source: "build", summary: "Demo seed", workshopId: garageId },
+  );
+  // The design's example projects live in the garage alongside the working app.
+  for (const [name, kind] of [
+    ["Bike wall rack", "hardware"],
+    ["Workbench lamp", "hardware"],
+  ] as const) {
+    await createApp(
+      client,
+      { ...coleFixture, name },
+      { source: "build", summary: "Demo seed", workshopId: garageId, kind },
+    );
+  }
   const spec = coleFixture as AppSpec;
   const see = spec.screens
     .flatMap((s) => s.blocks)

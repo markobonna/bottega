@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { DesignMedium } from "@/lib/design/project-art";
 import type { AppSpec, Block, BlockType } from "@/lib/spec/schema";
 import type { DbRecord } from "@/lib/records";
 import Compare from "../blocks/Compare";
@@ -18,7 +19,7 @@ export type RuntimeApp = {
   name: string;
   version: number;
   private: boolean;
-  kind: "software" | "hardware";
+  kind: DesignMedium;
   workshop: { id: string; name: string } | null;
 };
 

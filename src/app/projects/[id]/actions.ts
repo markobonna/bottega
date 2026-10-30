@@ -2,6 +2,12 @@
 
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import {
+  effectiveStage,
+  isMediumId,
+  nextStage,
+  type DesignMedium,
+} from "@/lib/design/project-art";
 import { signedUrls } from "@/lib/media";
 import {
   addRecord,
@@ -204,8 +210,9 @@ export async function setPrivate(
 
 export async function setKind(
   appId: string,
-  kind: "software" | "hardware",
-): Promise<Ok<{ kind: "software" | "hardware" }> | Fail> {
+  kind: string,
+): Promise<Ok<{ kind: DesignMedium }> | Fail> {
+  if (!isMediumId(kind)) return fail(new Error("bad kind"));
   try {
     const supabase = await createClient();
     const { error } = await supabase
@@ -215,6 +222,166 @@ export async function setKind(
     if (error) throw new Error(error.message);
     revalidatePath(`/projects/${appId}`);
     return { ok: true, kind };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+async function loadStage(appId: string) {
+  const supabase = await createClient();
+  const { data: app, error } = await supabase
+    .from("apps")
+    .select("id, version, stage")
+    .eq("id", appId)
+    .maybeSingle();
+  if (error || !app) throw new Error("No such project.");
+  return { supabase, app };
+}
+
+export async function advanceStage(
+  appId: string,
+): Promise<Ok<{ stage: string }> | Fail> {
+  try {
+    const { supabase, app } = await loadStage(appId);
+    const next = nextStage(effectiveStage(app.stage, app.version));
+    if (!next) throw new Error("Nothing left to advance.");
+    const { error } = await supabase
+      .from("apps")
+      .update({ stage: next })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/projects/${appId}`);
+    return { ok: true, stage: next };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function placeOrder(
+  appId: string,
+  order: { vendor: string; price: number; lead: number },
+): Promise<{ ok: true } | Fail> {
+  try {
+    const { supabase } = await loadStage(appId);
+    const arriveAt = new Date(Date.now() + 14 * 86400000).toISOString();
+    const { error } = await supabase
+      .from("apps")
+      .update({
+        stage: "sent",
+        arrive_at: arriveAt,
+        arrival_seen: false,
+        order_info: order,
+      })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/projects/${appId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+async function arriveNow(appId: string) {
+  const { supabase } = await loadStage(appId);
+  const { error } = await supabase
+    .from("apps")
+    .update({ stage: "arrived", arrive_at: null, arrival_seen: false })
+    .eq("id", appId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/projects/${appId}`);
+}
+
+export async function markInstalled(
+  appId: string,
+): Promise<{ ok: true } | Fail> {
+  try {
+    await arriveNow(appId);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function markFinished(
+  appId: string,
+): Promise<{ ok: true } | Fail> {
+  try {
+    await arriveNow(appId);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function markArrived(
+  appId: string,
+): Promise<{ ok: true } | Fail> {
+  try {
+    await arriveNow(appId);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function dismissArrival(
+  appId: string,
+): Promise<{ ok: true } | Fail> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("apps")
+      .update({ arrival_seen: true })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export type ProjectNote = {
+  id: string;
+  who: "you" | "apprentice";
+  part: number | null;
+  text: string;
+};
+
+export async function addProjectNote(
+  appId: string,
+  note: { who: "you" | "apprentice"; text: string; part?: number | null },
+): Promise<Ok<{ note: ProjectNote }> | Fail> {
+  const text = note.text.trim().slice(0, 2000);
+  if (!text) return fail(new Error("Write something first."));
+  try {
+    const supabase = await createClient();
+    const { data: app, error: appError } = await supabase
+      .from("apps")
+      .select("id")
+      .eq("id", appId)
+      .maybeSingle();
+    if (appError || !app) throw new Error("No such project.");
+    const { data, error } = await supabase
+      .from("project_notes")
+      .insert({
+        app_id: appId,
+        who: note.who,
+        text,
+        part: note.part ?? null,
+      })
+      .select("id, who, part, text")
+      .single();
+    if (error || !data) throw new Error(error?.message ?? "Couldn't save.");
+    revalidatePath(`/projects/${appId}`);
+    return {
+      ok: true,
+      note: {
+        id: data.id,
+        who: data.who === "apprentice" ? "apprentice" : "you",
+        part: data.part,
+        text: data.text,
+      },
+    };
   } catch (e) {
     return fail(e);
   }

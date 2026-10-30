@@ -20,6 +20,8 @@
   --n4: #f08c00;
   --n5: #7048e8;
   --n6: #0c8599;
+  /* Talk bar height; TalkBar measures and updates it live. */
+  --talk-h: 108px;
 }
 
 :root[data-accent="terracotta"] {
@@ -486,6 +488,342 @@
   background: #4a3828;
   color: var(--card);
 }
+.b-scope .btn:not(.btn-primary):not(.btn-dark):hover {
+  background: rgba(51, 38, 26, 0.06);
+  color: var(--ink);
+}
+.b-scope .icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  background: var(--card);
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: none;
+}
+.b-scope .icon-btn[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--card);
+}
+.b-scope .icon-btn.ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.b-scope .backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(51, 38, 26, 0.35);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fade 0.2s ease;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+.b-scope .dialog {
+  width: 520px;
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: var(--card);
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  box-shadow: 8px 8px 0 rgba(51, 38, 26, 0.22);
+  padding: 22px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--ink);
+}
+.b-scope .dialog.wide {
+  width: 760px;
+}
+.b-scope .dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.b-scope .dialog-head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1.1;
+}
+.b-scope .dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+.b-scope label.lbl {
+  font-size: 15px;
+  color: var(--ink2);
+  line-height: 1.45;
+}
+.b-scope textarea,
+.b-scope input[type="text"] {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  background: var(--white);
+  color: var(--ink);
+  font: 500 16px var(--body);
+  line-height: 1.4;
+}
+.b-scope textarea {
+  resize: vertical;
+}
+.b-scope .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.b-scope .chip[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--card);
+}
+.b-scope .check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 15px;
+}
+.b-scope .check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--red);
+  margin: 0;
+  flex: none;
+}
+.b-scope .steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+.b-scope .steps li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(51, 38, 26, 0.35);
+  color: var(--ink2);
+}
+.b-scope .steps li.on {
+  border-color: var(--red);
+  color: var(--red);
+}
+.b-scope .steps li.done {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--card);
+}
+.b-scope .filelist,
+.b-scope .vendors,
+.b-scope .reach {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.b-scope .filelist li,
+.b-scope .reach li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1.5px solid rgba(51, 38, 26, 0.3);
+  border-radius: 6px;
+  background: var(--white);
+}
+.b-scope .vendors li {
+  padding: 10px 12px;
+  border: 1.5px solid rgba(51, 38, 26, 0.3);
+  border-radius: 6px;
+  background: var(--white);
+}
+.b-scope .filelist .grow,
+.b-scope .reach .grow {
+  flex: 1;
+  min-width: 0;
+}
+.b-scope .sim {
+  font-size: 13px;
+  color: var(--ink2);
+  padding: 8px 12px;
+  border: 1.5px dashed var(--ink2);
+  border-radius: 6px;
+}
+.b-scope .status-ok {
+  color: var(--verd);
+  font-weight: 700;
+}
+.b-scope .status-wait {
+  color: var(--ink2);
+  font-weight: 600;
+}
+.b-scope .quotes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.b-scope .quotes th,
+.b-scope .quotes td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(51, 38, 26, 0.2);
+  vertical-align: middle;
+}
+.b-scope .quotes th {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink2);
+}
+.b-scope .quotes-wrap {
+  overflow-x: auto;
+}
+.b-scope .log {
+  font: 14px/1.6 ui-monospace, Menlo, Consolas, monospace;
+  background: #2f3b34;
+  color: var(--paper);
+  padding: 14px 16px;
+  border-radius: 6px;
+  min-height: 140px;
+  white-space: pre-wrap;
+}
+.b-scope .install ol {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.b-scope .arrival {
+  text-align: center;
+  align-items: center;
+}
+.b-scope .arrival .board {
+  width: 100%;
+  max-width: 420px;
+}
+.b-scope .arrival .big {
+  font-family: var(--display);
+  font-size: 40px;
+  margin: 0;
+  line-height: 1.05;
+}
+.b-scope .margin {
+  flex: 1 1 340px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--paper2);
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+}
+.b-scope .margin-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.b-scope .notes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 560px;
+  overflow: auto;
+  padding: 2px;
+}
+.b-scope .mnote {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background: var(--card);
+  cursor: default;
+  color: var(--ink);
+}
+.b-scope .mnote.active {
+  border-color: var(--red);
+  background: var(--white);
+}
+.b-scope .mnote .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+.b-scope .mnote .who {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--ink2);
+}
+.b-scope .mnote .num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--red);
+  color: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex: none;
+  border: none;
+  cursor: pointer;
+}
+.b-scope .mnote p {
+  margin: 0;
+}
+.b-scope .mnote .say-a {
+  font-family: var(--hand);
+  font-size: 23px;
+  line-height: 1.2;
+}
+.b-scope .mnote .say-y {
+  font-size: 16px;
+  line-height: 1.45;
+}
+.b-scope .composer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.b-scope .composer .row {
+  display: flex;
+  gap: 8px;
+}
+.b-scope .composer input {
+  flex: 1;
+  min-width: 0;
+}
 .b-scope .btn-lg {
   min-height: 50px;
   padding: 0 24px;
@@ -503,6 +841,41 @@
   font-weight: 700;
   font-size: 15px;
   color: var(--ink);
+}
+.b-scope .crumbs {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+}
+.b-scope .crumbs li {
+  white-space: nowrap;
+  flex: none;
+}
+.b-scope .crumbs li:last-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.b-scope .crumbs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: inherit;
+}
+.b-scope .crumbs a:hover {
+  text-decoration: underline;
+}
+.b-scope .crumbs .sep {
+  display: flex;
+  opacity: 0.6;
 }
 .b-scope .seg {
   display: inline-flex;
@@ -1057,6 +1430,125 @@
   background: var(--red);
 }
 
+.b-scope .talk {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: var(--paper2);
+  border-top: 1.5px solid var(--ink);
+  box-shadow: 0 -4px 0 rgba(51, 38, 26, 0.06);
+}
+.b-scope .talk-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-top: 10px;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.b-scope .talk-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 0;
+  overflow: auto;
+  transition: max-height 0.25s;
+}
+.b-scope .talk.open .talk-log {
+  max-height: 38vh;
+}
+.b-scope .talk-last {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 24px;
+  color: var(--ink);
+}
+.b-scope .talk-last .said {
+  font-family: var(--hand);
+  font-size: 22px;
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.b-scope .msg {
+  display: flex;
+  gap: 8px;
+  font-size: 15px;
+  color: var(--ink);
+}
+.b-scope .msg .who {
+  flex: none;
+  width: 92px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  padding-top: 4px;
+}
+.b-scope .msg.apprentice .text {
+  font-family: var(--hand);
+  font-size: 21px;
+  line-height: 1.2;
+}
+.b-scope .talk-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.b-scope .talk-form input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 999px;
+  padding: 0 18px;
+}
+.b-scope .thinking {
+  display: inline-flex;
+  gap: 4px;
+}
+.b-scope .thinking i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink2);
+  animation: blink 1s infinite;
+}
+.b-scope .thinking i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.b-scope .thinking i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+@media (max-width: 640px) {
+  .b-scope .talk-form .btn-text,
+  .b-scope #talk-voice,
+  .b-scope .talk-form > span:first-child {
+    display: none;
+  }
+  .b-scope .msg .who {
+    width: 70px;
+  }
+  .b-scope .talk-last .said {
+    -webkit-line-clamp: 1;
+    font-size: 20px;
+  }
+}
+
 .b-zoom-in {
   animation: zoomIn 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
   transform-origin: 50% 40%;
@@ -1099,7 +1591,9 @@
   }
   .b-scope .tag.is-new,
   .b-scope .apprentice-float,
-  .b-scope .progress-bar {
+  .b-scope .progress-bar,
+  .b-scope .thinking i,
+  .b-scope .backdrop {
     animation: none !important;
   }
 }
