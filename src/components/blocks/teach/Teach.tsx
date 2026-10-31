@@ -706,6 +706,9 @@ export default function Teach({ block, ctx }: BlockProps) {
           {brain.rounds} rounds · {mistakes(brain)} of {brain.train.length} wrong ·{" "}
           {pct(wrongness(brain))} wrong
         </p>
+        <p className="text-sm text-muted">
+          Practices on this device — no model call.
+        </p>
         {brain.curve.length > 0 ? (
           <Curve curve={brain.curve} />
         ) : (

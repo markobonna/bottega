@@ -43,6 +43,7 @@ export default function TalkBar() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [open, setOpen] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [problem, setProblem] = useState("");
   const [voiceOn, setVoiceOn] = useState(false);
   const barRef = useRef<HTMLElement>(null);
@@ -155,6 +156,7 @@ export default function TalkBar() {
   const mic = useRecorder({
     onBlob: (blob) =>
       void (async () => {
+        setTranscribing(true);
         try {
           const transcript = await transcribeBlob(blob);
           if (!transcript.trim()) return;
@@ -166,6 +168,8 @@ export default function TalkBar() {
           setProblem(
             e instanceof Error ? e.message : "Couldn't hear that. Try again.",
           );
+        } finally {
+          setTranscribing(false);
         }
       })(),
     onDenied: () =>
@@ -211,7 +215,7 @@ export default function TalkBar() {
               ))}
           </div>
           <div className="talk-last">
-            {thinking ? (
+            {thinking || transcribing ? (
               <>
                 <span
                   className="small"
@@ -223,6 +227,11 @@ export default function TalkBar() {
                   <i />
                   <i />
                   <i />
+                </span>
+                <span className="small">
+                  {transcribing && !thinking
+                    ? "Muse Voice is transcribing…"
+                    : "Asking Muse Spark…"}
                 </span>
               </>
             ) : (

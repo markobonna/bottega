@@ -142,7 +142,7 @@ export default function NewProjectDialog({
         </p>
         {busy && (
           <p className="small" style={{ margin: 0 }}>
-            Designing… {elapsed}s
+            Muse Spark is designing… {elapsed}s
           </p>
         )}
         {problem !== "" && (

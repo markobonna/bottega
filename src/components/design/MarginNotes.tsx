@@ -141,10 +141,13 @@ export default function MarginNotes({
           ))
         )}
         {busy && (
-          <span className="thinking" aria-label="Thinking">
-            <i />
-            <i />
-            <i />
+          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="thinking" aria-label="Thinking">
+              <i />
+              <i />
+              <i />
+            </span>
+            <span className="small">Asking Muse Spark…</span>
           </span>
         )}
       </div>

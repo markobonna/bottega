@@ -291,7 +291,7 @@ export default function Make({ block, app }: BlockProps) {
               disabled={asking || sentence.trim().length < 5}
               className={btn.primary}
             >
-              {asking ? "Thinking…" : "Fill in"}
+              {asking ? "Asking Muse Spark…" : "Fill in"}
             </button>
           </form>
           <DataNotice />

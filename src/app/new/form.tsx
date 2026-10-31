@@ -181,7 +181,7 @@ export default function BuildForm({
           onClick={() => void build()}
           className={btn.primary}
         >
-          {busy ? "Designing…" : "Build my project"}
+          {busy ? "Muse Spark is designing…" : "Build my project"}
         </button>
         <button
           type="button"

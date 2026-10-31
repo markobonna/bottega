@@ -116,7 +116,9 @@ export default function Hear({ block, spec, ctx }: BlockProps) {
       <p className="text-sm text-muted">{block.hint}</p>
       {mic.recording && <p className="text-sm text-muted">{mic.secs}s</p>}
       <DataNotice />
-      {working && <Status tone="muted">Writing it down…</Status>}
+      {working && (
+        <Status tone="muted">Muse Voice is writing it down…</Status>
+      )}
       {voiceOff && (
         <Status tone="muted">
           Voice is off right now (no model key). Type it instead.

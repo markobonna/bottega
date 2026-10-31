@@ -120,7 +120,7 @@ export default function Draw({ block, records, ctx }: BlockProps) {
                   className={`${btn.quiet} ${btn.small}`}
                 >
                   {busyId === r.id
-                    ? "Drawing…"
+                    ? "Muse Image is drawing…"
                     : path !== ""
                       ? "Draw again"
                       : "Draw it"}

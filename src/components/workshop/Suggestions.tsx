@@ -138,6 +138,9 @@ export default function Suggestions({
   return (
     <section aria-label="Ideas for your project" className="flex flex-col gap-2">
       <Label>Ideas for your project</Label>
+      <p className="text-sm text-muted">
+        From Muse Wonder, based on how you use this app.
+      </p>
       <div className="flex flex-col gap-2">
         {items.map((s, i) => (
           <button

@@ -167,7 +167,9 @@ export default function See({ block, ctx }: BlockProps) {
         </div>
       )}
       {busy && (
-        <Status tone="muted">Looking for {seeNouns.join(", ")}…</Status>
+        <Status tone="muted">
+          SAM 3.1 is looking for {seeNouns.join(", ")}…
+        </Status>
       )}
       <button
         type="button"

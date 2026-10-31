@@ -48,11 +48,13 @@ DO: open the café workshop. Room interior. SAY:
 > "Let's build. A cake stand for the café — hardware."
 
 DO: footer talk bar, type "I want to make a cake stand". Apprentice asks
-hardware or software. SAY:
+hardware or software. SAY (point at the footer status):
 
-> "It always asks one question first: hardware or software?"
+> "Watch the footer — 'Asking Muse Spark.' Every reply is a live model
+> call, and it always asks one question first: hardware or software?"
 
-DO: answer "hardware". Build runs — TALK OVER THE WAIT:
+DO: answer "hardware". Build runs — TALK OVER THE WAIT (point at the
+"Muse Spark is designing" line and the elapsed seconds):
 
 > "While it designs — every Bottega app is a spec, JSON the runtime
 > renders. Validated on every change. Never generated code."
@@ -84,6 +86,13 @@ working app. SAY:
 
 > "And software? Same workshop. One tap — that's the actual app running,
 > the same link it installs from. Not a mockup."
+
+OPTIONAL, if time allows (20s): inside the Preview tab, open a See
+block, take a photo. SAY:
+
+> "'SAM 3.1 is looking' — live counting, right inside the app the
+> apprentice just built. Voice, drawing, and suggestions all name
+> their models the same way."
 
 IF-FAILS lines (say, smile, keep rolling; cut in edit):
 
