@@ -10,6 +10,7 @@ import {
   type DesignMedium,
 } from "@/lib/design/project-art";
 import { signedUrls } from "@/lib/media";
+import { needApp } from "@/lib/ownership";
 import {
   addRecord,
   deleteRecord,
@@ -87,6 +88,13 @@ export async function signPhotoPaths(
 ): Promise<Ok<{ urls: Record<string, string> }> | Fail> {
   try {
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error("Sign in first.");
+    for (const p of paths) {
+      if (!p.startsWith(`${user.id}/`)) throw new Error("No such photo.");
+    }
     const urls = await signedUrls(supabase, paths);
     return { ok: true, urls };
   } catch (e) {
@@ -136,6 +144,15 @@ export async function getOrCreateShare(
 ): Promise<Ok<{ token: string }> | Fail> {
   try {
     const supabase = await createClient();
+    await needApp(supabase, appId);
+    const { data: rec, error: recError } = await supabase
+      .from("records")
+      .select("app_id")
+      .eq("id", recordId)
+      .maybeSingle();
+    if (recError || !rec || rec.app_id !== appId) {
+      throw new Error("No such record.");
+    }
     const { data: existing, error: findError } = await supabase
       .from("shares")
       .select("token")
@@ -161,11 +178,13 @@ export async function revokeShare(
 ): Promise<Ok<{ revoked: true }> | Fail> {
   try {
     const supabase = await createClient();
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("shares")
       .update({ revoked: true })
-      .eq("token", token);
+      .eq("token", token)
+      .select("id");
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("No such share.");
     return { ok: true, revoked: true };
   } catch (e) {
     return fail(e);
@@ -203,6 +222,7 @@ export async function setPrivate(
 ): Promise<Ok<{ priv: boolean }> | Fail> {
   try {
     const supabase = await createClient();
+    await needApp(supabase, appId);
     const { error } = await supabase
       .from("apps")
       .update({ private: priv })
@@ -222,6 +242,7 @@ export async function setKind(
   if (!isMediumId(kind)) return fail(new Error("bad kind"));
   try {
     const supabase = await createClient();
+    await needApp(supabase, appId);
     const { error } = await supabase
       .from("apps")
       .update({ kind })
@@ -242,6 +263,7 @@ export async function renameProject(
   if (!clean) return fail(new Error("Name the project."));
   try {
     const supabase = await createClient();
+    await needApp(supabase, appId);
     const { error } = await supabase
       .from("apps")
       .update({ name: clean })
@@ -260,6 +282,7 @@ export async function moveProject(
 ): Promise<{ ok: true } | Fail> {
   try {
     const supabase = await createClient();
+    await needApp(supabase, appId);
     const { data: app, error: appError } = await supabase
       .from("apps")
       .select("workshop_id, position")
@@ -324,10 +347,14 @@ async function loadStage(appId: string) {
   const supabase = await createClient();
   const { data: app, error } = await supabase
     .from("apps")
-    .select("id, version, stage")
+    .select("id, version, stage, owner")
     .eq("id", appId)
     .maybeSingle();
   if (error || !app) throw new Error("No such project.");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || app.owner !== user.id) throw new Error("No such project.");
   return { supabase, app };
 }
 
@@ -386,6 +413,7 @@ async function mergeOrderInfo(
   set: Record<string, unknown>,
 ): Promise<void> {
   const supabase = await createClient();
+  await needApp(supabase, appId);
   const { data: app, error: loadError } = await supabase
     .from("apps")
     .select("order_info")
@@ -413,6 +441,7 @@ export async function savePromise(
     const at = new Date(`${date}T12:00:00Z`);
     if (Number.isNaN(at.getTime())) throw new Error("Pick a real date.");
     const supabase = await createClient();
+    await needApp(supabase, appId);
     const { error } = await supabase
       .from("apps")
       .update({ arrive_at: at.toISOString(), arrival_seen: false })
@@ -492,6 +521,7 @@ export async function dismissArrival(
 ): Promise<{ ok: true } | Fail> {
   try {
     const supabase = await createClient();
+    await needApp(supabase, appId);
     const { error } = await supabase
       .from("apps")
       .update({ arrival_seen: true })
@@ -516,6 +546,7 @@ export async function submitConciergeRequest(
   }
   try {
     const supabase = await createClient();
+    await needApp(supabase, appId);
     const { data: app, error: loadError } = await supabase
       .from("apps")
       .select("id, name, kind, workshops ( name )")
@@ -582,12 +613,7 @@ export async function addProjectNote(
   const topic = note.topic?.trim().slice(0, 32) || null;
   try {
     const supabase = await createClient();
-    const { data: app, error: appError } = await supabase
-      .from("apps")
-      .select("id")
-      .eq("id", appId)
-      .maybeSingle();
-    if (appError || !app) throw new Error("No such project.");
+    await needApp(supabase, appId);
     const { data, error } = await supabase
       .from("project_notes")
       .insert({

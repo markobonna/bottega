@@ -388,6 +388,14 @@ async function main(): Promise<void> {
   if (!mariaClient) throw new Error("maria was not seeded");
   await seedMariaTeach(mariaClient, mariaApp, mariaUid);
 
+  for (const who of ["maria", "cole"] as const) {
+    const { error } = await admin
+      .from("demo_templates")
+      .upsert({ owner: ids[who], label: who }, { onConflict: "owner" });
+    if (error) throw new Error(`register template: ${error.message}`);
+    console.log(`demo template: ${who}`);
+  }
+
   console.log("---");
   console.log("maria@example.com / cole@example.com reseeded");
   console.log("orders=8 pantry=2 specials=3 pieces=3 loaf examples=6");

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { json, jsonWithFallback, type MetaMessage } from "./meta";
+import { needApp } from "./ownership";
 import {
   EDITOR_SYSTEM,
   WireEditSchema,
@@ -51,6 +52,11 @@ export async function proposeEdit(
   appId: string,
   request: string,
 ): Promise<EditProposal> {
+  try {
+    await needApp(supabase, appId);
+  } catch {
+    throw new EditError(404, "No such project.");
+  }
   const { data: app } = await supabase
     .from("apps")
     .select("spec, version, private")

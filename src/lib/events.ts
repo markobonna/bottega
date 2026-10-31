@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json } from "./supabase/types";
+import { needApp } from "./ownership";
 
 // Usage events for Muse Wonder suggestions. Callers pass only spec-derived
 // ids and counts — never user free text.
@@ -15,6 +16,7 @@ export async function logEvent(
   kind: string,
   detail: Json,
 ): Promise<void> {
+  await needApp(client, appId);
   const { error } = await client
     .from("events")
     .insert({ app_id: appId, kind, detail });

@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { Snapshot } from "./brain";
 import { downloadAsDataUrl } from "./media";
+import { needApp, needExample, needModel } from "./ownership";
 import { json, type MetaMessage } from "./meta";
 import type { Database } from "./supabase/types";
 
@@ -76,6 +77,7 @@ export async function getOrCreateModel(
   dimNames: string[],
   source: FeatureSource,
 ): Promise<{ model: DbModel; examples: DbExample[] }> {
+  await needApp(client, appId);
   const { data: found, error } = await client
     .from("models")
     .select("*")
@@ -118,6 +120,7 @@ export async function addExample(
   x: number[],
   y: 0 | 1,
 ): Promise<DbExample> {
+  await needModel(client, modelId);
   const { data, error } = await client
     .from("examples")
     .insert({ model_id: modelId, photo_path: photoPath, x, y })
@@ -132,6 +135,7 @@ export async function removeExample(
   client: Client,
   id: string,
 ): Promise<void> {
+  await needExample(client, id);
   const { error } = await client.from("examples").delete().eq("id", id);
   if (error) throw new Error(`remove example: ${error.message}`);
 }
@@ -141,6 +145,7 @@ export async function setLabel(
   id: string,
   y: 0 | 1,
 ): Promise<void> {
+  await needExample(client, id);
   const { error } = await client.from("examples").update({ y }).eq("id", id);
   if (error) throw new Error(`set label: ${error.message}`);
 }
@@ -150,6 +155,7 @@ export async function setFeatures(
   id: string,
   x: number[],
 ): Promise<void> {
+  await needExample(client, id);
   const { error } = await client.from("examples").update({ x }).eq("id", id);
   if (error) throw new Error(`set features: ${error.message}`);
 }
@@ -159,6 +165,7 @@ export async function saveModel(
   modelId: string,
   snap: Snapshot,
 ): Promise<void> {
+  await needModel(client, modelId);
   const { error } = await client
     .from("models")
     .update({
@@ -179,6 +186,7 @@ export async function resetModel(
   source: FeatureSource,
   dimNames: string[],
 ): Promise<void> {
+  await needModel(client, modelId);
   const { error: examplesError } = await client
     .from("examples")
     .update({ x: null })

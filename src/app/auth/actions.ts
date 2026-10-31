@@ -13,7 +13,7 @@ export async function signOut() {
     // Exit = reset for demo guests. A failed wipe must not trap the user,
     // so log it and still sign out.
     try {
-      await wipeGuestData(user.id);
+      await wipeGuestData(supabase, user.id);
     } catch (e) {
       console.error(e instanceof Error ? e.message : e);
     }

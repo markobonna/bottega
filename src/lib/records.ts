@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { needApp } from "./ownership";
 import type { Collection } from "./spec/schema";
 import type { Database } from "./supabase/types";
 import { checkValues } from "./values";
@@ -33,6 +34,7 @@ async function needCollection(
   appId: string,
   collection: string,
 ): Promise<Collection> {
+  await needApp(client, appId);
   const spec = await loadSpec(client, appId);
   const coll = spec.collections.find((c) => c.id === collection);
   if (!coll) throw new Error(`no collection '${collection}' in app`);
@@ -56,6 +58,7 @@ export async function listRecords(
   collection: string,
   opts?: { limit?: number },
 ): Promise<DbRecord[]> {
+  await needApp(client, appId);
   const { data, error } = await client
     .from("records")
     .select("*")

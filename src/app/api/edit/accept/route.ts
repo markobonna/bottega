@@ -21,10 +21,11 @@ export async function POST(req: Request): Promise<Response> {
   if (body instanceof Response) return body;
   const { data: app } = await auth.supabase
     .from("apps")
-    .select("id")
+    .select("id, owner")
     .eq("id", body.appId)
     .maybeSingle();
-  if (!app) return Response.json({ error: "No such project." }, { status: 404 });
+  if (!app || app.owner !== auth.user.id)
+    return Response.json({ error: "No such project." }, { status: 404 });
   try {
     const saved = await saveVersion(
       auth.supabase,

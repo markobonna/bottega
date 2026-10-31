@@ -41,10 +41,14 @@ export default async function WorkshopPage({
   const supabase = await createClient();
   const { data: workshop } = await supabase
     .from("workshops")
-    .select("id, name, type")
+    .select("id, name, type, owner")
     .eq("id", id)
     .maybeSingle();
   if (!workshop) notFound();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || workshop.owner !== user.id) notFound();
   const { data: apps, error } = await supabase
     .from("apps")
     .select(

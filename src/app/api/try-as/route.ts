@@ -1,18 +1,12 @@
 import { z } from "zod";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 import { readJson, requireUser } from "@/lib/api";
 import { wipeGuestData } from "@/lib/guest-wipe";
-import { createAdminClient } from "@/lib/supabase/admin";
-import type { Database } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const BodySchema = z.object({ who: z.enum(["maria", "cole"]) });
-
-type Admin = SupabaseClient<Database>;
 
 // Photo paths look like "<uid>/<appId>/<file>". Templates keep their ids;
 // every copy gets fresh ones, so rewrite both segments.
@@ -62,9 +56,11 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
   const guestUid = auth.user.id;
-  const admin: Admin = createAdminClient();
+  // The guest's own key: templates are world-readable (demo_templates),
+  // copies are owner-scoped. No secret needed — judges run this as-is.
+  const db = auth.supabase;
 
-  const { data: apps, error: appsError } = await admin
+  const { data: apps, error: appsError } = await db
     .from("apps")
     .select("*")
     .eq("owner", templateUid)
@@ -83,16 +79,16 @@ export async function POST(req: Request): Promise<Response> {
     // Clean room: a returning guest starts fresh instead of stacking copies.
     // Anonymous guests only — a signed-in user's own work is never touched.
     if (auth.user.is_anonymous) {
-      await wipeGuestData(guestUid);
+      await wipeGuestData(auth.supabase, guestUid);
     }
-    const { data: workshops, error: wError } = await admin
+    const { data: workshops, error: wError } = await db
       .from("workshops")
       .select("*")
       .eq("owner", templateUid);
     if (wError) throw new Error(`load workshops: ${wError.message}`);
     const workshopMap = new Map<string, string>();
     for (const w of workshops) {
-      const { data, error } = await admin
+      const { data, error } = await db
         .from("workshops")
         .insert({ owner: guestUid, name: w.name, type: w.type })
         .select("id")
@@ -104,7 +100,7 @@ export async function POST(req: Request): Promise<Response> {
     for (const app of apps) {
       const workshopId = workshopMap.get(app.workshop_id);
       if (!workshopId) throw new Error("copy app: workshop missing");
-      const { data, error } = await admin
+      const { data, error } = await db
         .from("apps")
         .insert({
           owner: guestUid,
@@ -124,7 +120,7 @@ export async function POST(req: Request): Promise<Response> {
     const rewrite = rewriter(templateUid, guestUid, appMap);
     for (const app of apps) {
       if (!app.look_path && !app.blueprint_path) continue;
-      const { error } = await admin
+      const { error } = await db
         .from("apps")
         .update({
           look_path: app.look_path ? rewrite(app.look_path) : null,
@@ -137,13 +133,13 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     for (const [oldApp, newApp] of appMap) {
-      const { data: versions, error: vError } = await admin
+      const { data: versions, error: vError } = await db
         .from("app_versions")
         .select("*")
         .eq("app_id", oldApp);
       if (vError) throw new Error(`load versions: ${vError.message}`);
       for (const v of versions) {
-        const { error } = await admin.from("app_versions").insert({
+        const { error } = await db.from("app_versions").insert({
           owner: guestUid,
           app_id: newApp,
           version: v.version,
@@ -155,13 +151,13 @@ export async function POST(req: Request): Promise<Response> {
         if (error) throw new Error(`copy version: ${error.message}`);
       }
 
-      const { data: records, error: rError } = await admin
+      const { data: records, error: rError } = await db
         .from("records")
         .select("*")
         .eq("app_id", oldApp);
       if (rError) throw new Error(`load records: ${rError.message}`);
       for (const r of records) {
-        const { error } = await admin.from("records").insert({
+        const { error } = await db.from("records").insert({
           owner: guestUid,
           app_id: newApp,
           collection: r.collection,
@@ -170,13 +166,13 @@ export async function POST(req: Request): Promise<Response> {
         if (error) throw new Error(`copy record: ${error.message}`);
       }
 
-      const { data: models, error: mError } = await admin
+      const { data: models, error: mError } = await db
         .from("models")
         .select("*")
         .eq("app_id", oldApp);
       if (mError) throw new Error(`load models: ${mError.message}`);
       for (const m of models) {
-        const { data: nm, error: nmError } = await admin
+        const { data: nm, error: nmError } = await db
           .from("models")
           .insert({
             owner: guestUid,
@@ -193,7 +189,7 @@ export async function POST(req: Request): Promise<Response> {
           .select("id")
           .single();
         if (nmError || !nm) throw new Error(`copy model: ${nmError?.message}`);
-        const { data: examples, error: eError } = await admin
+        const { data: examples, error: eError } = await db
           .from("examples")
           .select("*")
           .eq("model_id", m.id);
@@ -201,7 +197,7 @@ export async function POST(req: Request): Promise<Response> {
         for (const e of examples) {
           const photoPath = e.photo_path ? rewrite(e.photo_path) : null;
           if (e.photo_path && !photoPath) continue;
-          const { error } = await admin.from("examples").insert({
+          const { error } = await db.from("examples").insert({
             owner: guestUid,
             model_id: nm.id,
             photo_path: photoPath,
@@ -214,7 +210,7 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // Feature cache rows travel with the photos, so the copy scores identically.
-    const { data: features, error: fError } = await admin
+    const { data: features, error: fError } = await db
       .from("photo_features")
       .select("*")
       .eq("owner", templateUid);
@@ -222,7 +218,7 @@ export async function POST(req: Request): Promise<Response> {
     for (const f of features) {
       const photoPath = rewrite(f.photo_path);
       if (!photoPath) continue;
-      const { error } = await admin.from("photo_features").insert({
+      const { error } = await db.from("photo_features").insert({
         owner: guestUid,
         photo_path: photoPath,
         x: f.x,
@@ -233,14 +229,14 @@ export async function POST(req: Request): Promise<Response> {
 
     // Storage files, folder by folder (folders are template app ids),
     // copied in parallel: 13 sequential round-trips was the slow part.
-    const { data: folders, error: lError } = await admin.storage
+    const { data: folders, error: lError } = await db.storage
       .from("media")
       .list(templateUid);
     if (lError) throw new Error(`list storage: ${lError.message}`);
     const jobs: [string, string][] = [];
     for (const folder of folders) {
       if (!appMap.has(folder.name)) continue;
-      const { data: files, error: flError } = await admin.storage
+      const { data: files, error: flError } = await db.storage
         .from("media")
         .list(`${templateUid}/${folder.name}`);
       if (flError) throw new Error(`list storage: ${flError.message}`);
@@ -252,12 +248,12 @@ export async function POST(req: Request): Promise<Response> {
     }
     await Promise.all(
       jobs.map(async ([from, to]) => {
-        const { data: blob, error: dError } = await admin.storage
+        const { data: blob, error: dError } = await db.storage
           .from("media")
           .download(from);
         if (dError || !blob)
           throw new Error(`copy photo: ${dError?.message}`);
-        const { error: uError } = await admin.storage
+        const { error: uError } = await db.storage
           .from("media")
           .upload(to, blob, { contentType: "image/jpeg", upsert: true });
         if (uError) throw new Error(`copy photo: ${uError.message}`);

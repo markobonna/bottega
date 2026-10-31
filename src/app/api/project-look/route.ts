@@ -18,10 +18,11 @@ export async function POST(req: Request): Promise<Response> {
   if (body instanceof Response) return body;
   const { data: app } = await auth.supabase
     .from("apps")
-    .select("id, name, spec, kind")
+    .select("id, name, spec, kind, owner")
     .eq("id", body.appId)
     .maybeSingle();
-  if (!app) return Response.json({ error: "No such project." }, { status: 404 });
+  if (!app || app.owner !== auth.user.id)
+    return Response.json({ error: "No such project." }, { status: 404 });
   const parsed = parseSpec(app.spec);
   if (!parsed.ok)
     return Response.json({ error: "Bad project spec." }, { status: 404 });

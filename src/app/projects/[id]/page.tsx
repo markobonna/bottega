@@ -26,11 +26,15 @@ export default async function AppPage({
   const { data: app, error } = await supabase
     .from("apps")
     .select(
-      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, workshop_id, workshops ( name, type )",
+      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, owner, workshop_id, workshops ( name, type )",
     )
     .eq("id", id)
     .single();
   if (error || !app) notFound();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || app.owner !== user.id) notFound();
   const workshop = Array.isArray(app.workshops)
     ? app.workshops[0]
     : app.workshops;

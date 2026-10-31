@@ -164,6 +164,24 @@ export type Database = {
           },
         ]
       }
+      demo_templates: {
+        Row: {
+          created_at: string | null
+          label: string
+          owner: string
+        }
+        Insert: {
+          created_at?: string | null
+          label: string
+          owner: string
+        }
+        Update: {
+          created_at?: string | null
+          label?: string
+          owner?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           app_id: string | null

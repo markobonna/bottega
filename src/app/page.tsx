@@ -7,14 +7,19 @@ import DeleteWorkshopButton from "./DeleteWorkshopButton";
 
 export default async function Home() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data: workshops, error } = await supabase
     .from("workshops")
     .select("id, name, type")
+    .eq("owner", user?.id ?? "")
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   const { data: apps } = await supabase
     .from("apps")
-    .select("id, name, workshop_id, updated_at, version, stage");
+    .select("id, name, workshop_id, updated_at, version, stage")
+    .eq("owner", user?.id ?? "");
 
   const scene: SceneWorkshop[] = (workshops ?? []).map((w, i) => {
     const projects = (apps ?? []).filter((a) => a.workshop_id === w.id);

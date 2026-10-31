@@ -13,10 +13,14 @@ export default async function NewAppPage({
   const supabase = await createClient();
   const { data } = await supabase
     .from("workshops")
-    .select("id")
+    .select("id, owner")
     .eq("id", workshop)
     .maybeSingle();
   if (!data) redirect("/");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || data.owner !== user.id) redirect("/");
   return (
     <ZoomMount depth={2}>
       <h1 className="font-display">Tell Bottega about your work.</h1>

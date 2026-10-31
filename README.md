@@ -23,21 +23,43 @@ Hackathon 2026 ("Build for your world").
 Prerequisites: Node >= 20.9 and pnpm (`corepack prepare pnpm@12.15.0
 --activate` matches this repo's pin).
 
+**Fastest path — hosted demo backend (judges start here, no Supabase
+account, available through Nov 8):**
+
+> Why we're comfortable printing these: the URL and publishable key
+> are public by design (they ship in every client bundle, including
+> ours). The real boundary is Row Level Security — every table is
+> owner-scoped and proven by `pnpm run check:isolation` — plus the
+> secret key, which never leaves our servers and which this path never
+> needs. The only world-readable data is the fictional maria/cole demo
+> content (no PII); every guest and user account stays invisible to
+> everyone else. These values come out of this README on Nov 9, after
+> judging ends Nov 8 — after that, use your own Supabase below.
+
 1. `git clone <this repo> && cd bottega && pnpm install`
-2. Supabase (free tier is enough): create a project, then in
-   **Project Settings → API** copy the project URL, publishable/anon
-   key, and secret key into `.env.local` (start from `.env.example`).
+2. Copy `.env.example` to `.env.local` and set:
+   `NEXT_PUBLIC_SUPABASE_URL="https://oyspuvypyuuauydruoxw.supabase.co"`
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="sb_publishable_pDE0Bmqvs8_tdeZdGSC33A_gjNqsvnV"`
+   Add `MODEL_API_KEY` for live AI calls; without it every AI feature
+   shows its off-state.
+3. `pnpm dev` → http://localhost:3000 → Try as Maria/Cole. One click,
+   full demo world — copies land in a fresh guest account that wipes
+   on exit.
+
+**Full path — your own Supabase:**
+
+1. Create a free project, then in **Project Settings → API** copy the
+   project URL, publishable/anon key, and secret key into `.env.local`.
    With the Supabase CLI installed, link the project and push the
-   schema:
-   `supabase login && supabase link && pnpm db:push`
-3. Seed the demo templates (works with or without a Meta key; without
+   schema: `supabase login && supabase link && pnpm db:push`
+2. Seed the demo templates (works with or without a Meta key; without
    one it uses fixed counts and color features and says so):
    `pnpm run seed:demo`
-4. `pnpm dev` → http://localhost:3000
+3. `pnpm dev` → http://localhost:3000
 
-Signing in: use the Try-as buttons (no email needed), any real email
-via magic link, or `pnpm run login-link -- maria@example.com`, which
-prints a sign-in link without sending email.
+Other ways in: any real email via magic link, or
+`pnpm run login-link -- maria@example.com`, which prints a sign-in
+link without sending email (needs the secret key, so local-only).
 
 ## Keys (all optional except Supabase)
 

@@ -78,6 +78,7 @@ export async function POST(req: Request): Promise<Response> {
   const { data: workshops } = await auth.supabase
     .from("workshops")
     .select("id, name")
+    .eq("owner", auth.user.id)
     .order("created_at", { ascending: true });
   let appLine = "No project open.";
   let openStage: LiveStage | null = null;
@@ -90,10 +91,10 @@ export async function POST(req: Request): Promise<Response> {
   if (body.context.appId) {
     const { data: app } = await auth.supabase
       .from("apps")
-      .select("id, name, kind, version, stage")
+      .select("id, name, kind, version, stage, owner")
       .eq("id", body.context.appId)
       .maybeSingle();
-    if (app) {
+    if (app && app.owner === auth.user.id) {
       const kind = mediumForKind(app.kind ?? "software");
       openStage = effectiveStage(app.stage, app.version);
       appLine =
@@ -148,10 +149,11 @@ export async function POST(req: Request): Promise<Response> {
     if (type === "open_project" && reply.project_id) {
       const { data: target } = await auth.supabase
         .from("apps")
-        .select("id")
+        .select("id, owner")
         .eq("id", reply.project_id)
         .maybeSingle();
-      if (!target) return Response.json({ say: "I couldn't find that project." });
+      if (!target || target.owner !== auth.user.id)
+        return Response.json({ say: "I couldn't find that project." });
       return Response.json({
         say: reply.say,
         navigate: `/projects/${reply.project_id}`,

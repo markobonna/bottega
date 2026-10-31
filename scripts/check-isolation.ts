@@ -1,4 +1,5 @@
-// Local only: prove RLS + storage isolation with two throwaway users.
+// Local only: prove RLS + storage isolation with two throwaway users,
+// plus the demo-template exception Try-as relies on.
 // Usage: pnpm run check:isolation
 // Needs the real SUPABASE_SECRET_KEY (vercel env pull redacts it).
 // Prints PASS/FAIL per check, exits non-zero on any FAIL, always deletes
@@ -63,6 +64,7 @@ async function main(): Promise<void> {
   let aId: string | null = null;
   let bId: string | null = null;
   let filePath: string | null = null;
+  let filePath2: string | null = null;
 
   try {
     for (const [label, email] of [
@@ -83,9 +85,17 @@ async function main(): Promise<void> {
     const a = await signInAs(admin, url, anonKey, emailA);
     const b = await signInAs(admin, url, anonKey, emailB);
 
+    const ws = await a
+      .from("workshops")
+      .insert({ name: "iso", type: "garage" })
+      .select("id")
+      .single();
+    if (ws.error || !ws.data) {
+      throw new Error(`A insert workshop: ${ws.error?.message ?? "none"}`);
+    }
     const app = await a
       .from("apps")
-      .insert({ name: "iso", spec: cole })
+      .insert({ name: "iso", spec: cole, workshop_id: ws.data.id })
       .select("id")
       .single();
     if (app.error || !app.data) {
@@ -102,10 +112,16 @@ async function main(): Promise<void> {
     }
     const recId = rec.data.id;
     filePath = `${aId}/${appId}/x.png`;
-    const up = await a.storage.from("media").upload(filePath, PNG, {
-      contentType: "image/png",
-    });
-    if (up.error) throw new Error(`A upload: ${up.error.message}`);
+    // Two files: phase 1 downloads x.png (allowed as a template) and phase 2
+    // must use a different object, because the storage edge can serve the
+    // just-authorized bytes again after the permission is revoked.
+    filePath2 = `${aId}/${appId}/x2.png`;
+    for (const p of [filePath, filePath2]) {
+      const up = await a.storage.from("media").upload(p, PNG, {
+        contentType: "image/png",
+      });
+      if (up.error) throw new Error(`A upload: ${up.error.message}`);
+    }
 
     const check = (name: string, pass: boolean, detail = "") => {
       console.log(
@@ -114,12 +130,76 @@ async function main(): Promise<void> {
       if (!pass) failed = true;
     };
 
-    const apps = await b.from("apps").select("id");
+    // Phase 1: A registered as a demo template — B may read A's demo
+    // rows (the Try-as path), but concierge rows stay private always.
+    const reg = await admin
+      .from("demo_templates")
+      .insert({ owner: aId as string, label: "iso" });
+    if (reg.error) throw new Error(`register template: ${reg.error.message}`);
+    const tApps = await b.from("apps").select("id").eq("id", appId);
     check(
-      "B sees 0 apps",
-      !apps.error && apps.data.length === 0,
+      "B lists A's app as template: 1 row",
+      !tApps.error && tApps.data.length === 1,
+      `${tApps.data?.length ?? "?"} rows`,
+    );
+    const tRec = await b.from("records").select("id").eq("id", recId);
+    check(
+      "B reads A's record as template: 1 row",
+      !tRec.error && tRec.data.length === 1,
+      `${tRec.data?.length ?? "?"} rows`,
+    );
+    const tDl = await b.storage.from("media").download(filePath);
+    check(
+      "B downloads A's file as template: ok",
+      tDl.error === null,
+      tDl.error ? "error" : "ok",
+    );
+    const cIns = await a
+      .from("concierge_requests")
+      .insert({ app_id: appId, email: emailA, note: "iso" });
+    if (cIns.error) throw new Error(`A concierge insert: ${cIns.error.message}`);
+    const cOwn = await a.from("concierge_requests").select("id");
+    check(
+      "A reads own concierge row: 1 row",
+      !cOwn.error && cOwn.data.length === 1,
+      `${cOwn.data?.length ?? "?"} rows`,
+    );
+    const cOther = await b.from("concierge_requests").select("id");
+    check(
+      "B reads A's concierge row: 0 rows",
+      !cOther.error && cOther.data.length === 0,
+      `${cOther.data?.length ?? "?"} rows`,
+    );
+    const unreg = await admin
+      .from("demo_templates")
+      .delete()
+      .eq("owner", aId as string);
+    if (unreg.error) throw new Error(`unregister: ${unreg.error.message}`);
+
+    // Phase 2: ordinary users — B sees only own rows plus any seeded
+    // templates, and nothing of A's.
+    const apps = await b.from("apps").select("id, owner");
+    const templates = await b.from("demo_templates").select("owner");
+    const templateOwners = new Set(
+      (templates.data ?? []).map((t) => t.owner as string),
+    );
+    const leaked = (apps.data ?? []).some(
+      (r) => r.owner !== bId && !templateOwners.has(r.owner as string),
+    );
+    check(
+      "B sees only own + template apps",
+      !apps.error && !templates.error && !leaked,
       `${apps.data?.length ?? "?"} rows`,
     );
+    if (templateOwners.size > 0) {
+      check(
+        "B sees seeded templates",
+        (apps.data ?? []).some((r) =>
+          templateOwners.has(r.owner as string),
+        ),
+        `${templateOwners.size} template(s)`,
+      );
+    }
 
     const one = await b.from("records").select("id").eq("id", recId);
     check(
@@ -153,7 +233,7 @@ async function main(): Promise<void> {
       forgery.error ? "rejected" : "ALLOWED",
     );
 
-    const dl = await b.storage.from("media").download(filePath);
+    const dl = await b.storage.from("media").download(filePath2);
     check(
       "B downloads A's file: error",
       dl.error !== null,
@@ -171,8 +251,15 @@ async function main(): Promise<void> {
       evil.error ? "error" : "ALLOWED",
     );
   } finally {
+    if (aId) {
+      await admin.from("demo_templates").delete().eq("owner", aId);
+    }
     if (filePath) {
-      const { error } = await admin.storage.from("media").remove([filePath]);
+      const { error } = await admin.storage
+        .from("media")
+        .remove(
+          [filePath, filePath2].filter((p): p is string => p !== null),
+        );
       if (error) console.error(`cleanup file: ${error.message}`);
     }
     for (const [label, id] of [

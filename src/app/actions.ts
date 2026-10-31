@@ -9,15 +9,11 @@ import {
   isWorkshopTypeId,
 } from "@/lib/design/workshop-types";
 import { createClient } from "@/lib/supabase/server";
+import { needApp, needWorkshop } from "@/lib/ownership";
 import { createApp } from "@/lib/versions";
 
 async function ownWorkshop(supabase: Awaited<ReturnType<typeof createClient>>, workshopId: string) {
-  const { data } = await supabase
-    .from("workshops")
-    .select("id")
-    .eq("id", workshopId)
-    .maybeSingle();
-  if (!data) throw new Error("No such workshop.");
+  await needWorkshop(supabase, workshopId);
 }
 
 export async function createWorkshop(
@@ -40,6 +36,7 @@ export async function createWorkshop(
 
 export async function deleteWorkshop(workshopId: string): Promise<void> {
   const supabase = await createClient();
+  await needWorkshop(supabase, workshopId);
   const { error } = await supabase.from("workshops").delete().eq("id", workshopId);
   if (error) throw new Error(error.message);
   revalidatePath("/");
@@ -94,6 +91,7 @@ export async function createSample(
 
 export async function deleteApp(appId: string): Promise<void> {
   const supabase = await createClient();
+  await needApp(supabase, appId);
   const { error } = await supabase.from("apps").delete().eq("id", appId);
   if (error) throw new Error(error.message);
   revalidatePath("/");

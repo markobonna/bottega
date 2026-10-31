@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DesignMedium } from "./design/project-art";
+import { needApp, needWorkshop } from "./ownership";
 import { applyOps, type Op } from "./spec/ops";
 import { parseSpec, type AppSpec } from "./spec/schema";
 import type { Database } from "./supabase/types";
@@ -31,6 +32,7 @@ export async function createApp(
     throw new Error(`bad spec: ${parsed.issues.join("; ")}`);
   }
   const clean: AppSpec = parsed.spec;
+  await needWorkshop(client, opts.workshopId, opts.owner);
   const owned = opts.owner !== undefined ? { owner: opts.owner } : {};
   const { data: top } = await client
     .from("apps")
@@ -81,6 +83,7 @@ export async function saveVersion(
     .eq("id", appId)
     .single();
   if (error || !app) throw new Error(`no app '${appId}'`);
+  await needApp(client, appId);
   if (app.version !== baseVersion) return { conflict: true };
   const applied = applyOps(app.spec as unknown as AppSpec, ops);
   if (!applied.ok) {
@@ -118,6 +121,7 @@ export async function restorePrevious(
     .eq("id", appId)
     .single();
   if (error || !app) throw new Error(`no app '${appId}'`);
+  await needApp(client, appId);
   const { data: rows, error: rowsError } = await client
     .from("app_versions")
     .select("version, spec, summary")
@@ -161,6 +165,7 @@ export async function restoreVersion(
     .eq("id", appId)
     .single();
   if (error || !app) throw new Error(`no app '${appId}'`);
+  await needApp(client, appId);
   if (target === app.version) throw new Error("already on that version");
   const { data: row, error: rowError } = await client
     .from("app_versions")
@@ -203,6 +208,7 @@ export async function listVersions(
   appId: string,
   limit = 5,
 ): Promise<VersionRow[]> {
+  await needApp(client, appId);
   const { data, error } = await client
     .from("app_versions")
     .select("version, summary, created_at")

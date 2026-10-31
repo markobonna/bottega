@@ -24,6 +24,13 @@ export async function POST(req: Request): Promise<Response> {
       { status: 403 },
     );
   }
+  const { data: app } = await auth.supabase
+    .from("apps")
+    .select("owner")
+    .eq("id", body.appId)
+    .maybeSingle();
+  if (!app || app.owner !== auth.user.id)
+    return Response.json({ error: "No such project." }, { status: 404 });
   try {
     const dataUrl = await downloadAsDataUrl(auth.supabase, body.photoPath);
     const results = await Promise.all(

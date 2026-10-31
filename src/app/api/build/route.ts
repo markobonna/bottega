@@ -33,10 +33,10 @@ export async function POST(req: Request): Promise<Response> {
   if (body instanceof Response) return body;
   const { data: workshop } = await auth.supabase
     .from("workshops")
-    .select("id")
+    .select("id, owner")
     .eq("id", body.workshopId)
     .maybeSingle();
-  if (!workshop)
+  if (!workshop || workshop.owner !== auth.user.id)
     return Response.json({ error: "No such workshop." }, { status: 404 });
   try {
     let viaOpen = false;
