@@ -15,7 +15,7 @@ import {
   placeOrder,
 } from "@/app/projects/[id]/actions";
 import type { DesignMedium } from "@/lib/design/project-art";
-import { brief, scad, slug, stl } from "@/lib/design/cad";
+import { brief, pack, scad, slug, stl } from "@/lib/design/cad";
 import { toolsFor } from "@/lib/design/tools";
 
 import "@/vendor/bottega/core.js";
@@ -49,6 +49,30 @@ const QUOTE_NOTES = [
 ];
 
 const CRATE_SVG = `<svg width="44" height="40" viewBox="0 0 44 40" aria-hidden="true"><path d="M4 14 L22 6 L40 14 V34 L22 39 L4 34 Z" fill="#D9B47A" stroke="#33261A" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 14 L22 20 L40 14 M22 20 V39" fill="none" stroke="#33261A" stroke-width="1.6"/></svg>`;
+
+const PACKS: Record<string, { file: string; label: string; what: string }> = {
+  music: {
+    file: "song-pack.md",
+    label: "Song pack",
+    what: "Lyrics, chords and notes — ready to play or share",
+  },
+  dance: {
+    file: "rehearsal-pack.md",
+    label: "Rehearsal pack",
+    what: "Counts, formations and music notes — ready to rehearse",
+  },
+  recipe: {
+    file: "recipe-card.md",
+    label: "Recipe card",
+    what: "Ingredients, steps and cost — ready for the kitchen",
+  },
+};
+
+const EXPORT_DONE: Record<string, string> = {
+  music: "Go play it — and add a photo when you do.",
+  dance: "Break a leg — and add a photo after the show.",
+  recipe: "Serve the first plate — and add a photo of it.",
+};
 
 export default function SendOffDialog({
   onClose,
@@ -152,6 +176,20 @@ export default function SendOffDialog({
           topics: tools,
         }),
     });
+    const pkg = PACKS[project.medium];
+    if (pkg) {
+      list.push({
+        name: `${s}-${pkg.file}`,
+        what: pkg.what,
+        make: () =>
+          pack({
+            name: project.name,
+            packLabel: pkg.label,
+            notes,
+            topics: tools,
+          }),
+      });
+    }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId]);
@@ -233,7 +271,7 @@ export default function SendOffDialog({
   // Simulated software build log.
   function runBuild() {
     setStarted(true);
-    const link = `${window.location.origin}/projects/${appId}`;
+    const link = `${window.location.origin}/apps/${appId}`;
     const lines = [
       `$ bottega build "${project.name}" --for ${target}`,
       "✓ Writing screens from the drawing",
@@ -255,7 +293,7 @@ export default function SendOffDialog({
   }
 
   function installSteps(): string[] {
-    const link = `${window.location.origin}/projects/${appId}`;
+    const link = `${window.location.origin}/apps/${appId}`;
     return (
       {
         tablet: [
@@ -328,7 +366,7 @@ Thank you,
     }
     await addProjectNote(appId, {
       who: "apprentice",
-      text: `Ordered from ${q.vendor} for $${q.price.toLocaleString()}. They said ${q.lead} week${q.lead > 1 ? "s" : ""} — I'll track it and tell you when it lands.`,
+      text: `Requested a build from ${q.vendor} (about $${q.price.toLocaleString()}, they said ${q.lead} week${q.lead > 1 ? "s" : ""}). I'll track it and tell you when it lands.`,
     });
     setBusy(false);
     setDone(q);
@@ -343,8 +381,8 @@ Thank you,
       setProblem("Couldn't save that. Try again.");
       return;
     }
+    setDone("installed");
     router.refresh();
-    onClose();
   }
 
   async function finish() {
@@ -355,8 +393,8 @@ Thank you,
       setProblem("Couldn't save that. Try again.");
       return;
     }
+    setDone("finished");
     router.refresh();
-    onClose();
   }
 
   function addVendor() {
@@ -415,7 +453,12 @@ Thank you,
       return (
         <>
           <p className="hand" style={{ fontSize: 26, margin: 0, lineHeight: 1.2 }}>
-            Order placed with {done.vendor} for ${done.price.toLocaleString()}.
+            Request sent to {done.vendor} — about $
+            {done.price.toLocaleString()}.
+          </p>
+          <p style={{ margin: 0 }}>
+            They&apos;ll reply with payment details. Have your credit card
+            ready — nothing is ordered until you pay their reply.
           </p>
           <p className="hand" style={{ fontSize: 26, margin: 0, lineHeight: 1.2 }}>
             {line}
@@ -743,8 +786,8 @@ Thank you,
             disabled={!pick || busy}
             onClick={() => void order()}
           >
-            <BIcon svg={B.icon("crate")} />{" "}
-            {busy ? "Ordering…" : "Place the order"}
+            <BIcon svg={B.icon("send")} />{" "}
+            {busy ? "Sending…" : "Send the request"}
           </button>
         </div>
       </>
@@ -752,6 +795,32 @@ Thank you,
   }
 
   function shipBody(): ReactNode {
+    if (done === "installed") {
+      const link = `${window.location.origin}/apps/${appId}`;
+      return (
+        <>
+          <p className="hand" style={{ fontSize: 26, margin: 0, lineHeight: 1.2 }}>
+            {target === "web"
+              ? `It's live at ${link}.`
+              : "It's installed."}
+          </p>
+          {target !== "web" && (
+            <p style={{ margin: 0 }}>
+              Open it any time at {link}.
+            </p>
+          )}
+          <div className="dialog-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={onClose}
+            >
+              Done
+            </button>
+          </div>
+        </>
+      );
+    }
     if (!started) {
       const targets = [
         ["tablet", "Tablet"],
@@ -800,8 +869,8 @@ Thank you,
             {log.join("\n")}
           </div>
           <p className="sim">
-            Simulated build. A real build runs the generated code through
-            tests and packaging.
+            Simulated build. A real build checks the spec and packages the
+            app for the device.
           </p>
           <div className="dialog-actions">
             <button
@@ -866,9 +935,33 @@ Thank you,
   }
 
   function exportBody(): ReactNode {
+    if (done === "finished") {
+      return (
+        <>
+          <p className="hand" style={{ fontSize: 26, margin: 0, lineHeight: 1.2 }}>
+            {medium.arrivedLabel}.{" "}
+            {EXPORT_DONE[project.medium] ?? "It's out in the world."}
+          </p>
+          <div className="dialog-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={onClose}
+            >
+              Done
+            </button>
+          </div>
+        </>
+      );
+    }
+    const pkg = PACKS[project.medium];
     return (
       <>
-        <p style={{ margin: 0 }}>Here&apos;s everything, ready to share.</p>
+        <p style={{ margin: 0 }}>
+          {pkg
+            ? `Here's your ${pkg.label.toLowerCase()} and the brief — ready to share.`
+            : "Here's everything, ready to share."}
+        </p>
         {fileList()}
         {problem !== "" && (
           <p className="small" style={{ margin: 0, color: "var(--red)" }}>

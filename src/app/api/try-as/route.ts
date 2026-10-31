@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { readJson, requireUser } from "@/lib/api";
+import { wipeGuestData } from "@/lib/guest-wipe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/types";
 
@@ -79,6 +80,11 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   try {
+    // Clean room: a returning guest starts fresh instead of stacking copies.
+    // Anonymous guests only — a signed-in user's own work is never touched.
+    if (auth.user.is_anonymous) {
+      await wipeGuestData(guestUid);
+    }
     const { data: workshops, error: wError } = await admin
       .from("workshops")
       .select("*")

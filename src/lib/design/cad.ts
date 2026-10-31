@@ -131,3 +131,29 @@ export function brief(args: {
     "—";
   return `# ${args.name}\n\nWorkshop: ${args.workshopName}  \nKind: ${args.kindLabel}  \nStage: ${args.stageLabel}\n\n## What it is\n${args.tagline || "—"}\n\n## Decisions and notes\n${notes}\n\n## Drafts\n${drafts}\n`;
 }
+
+/** Export-family artifact: the user's own notes as a song pack,
+ * rehearsal pack or recipe card. Only "you" notes — the user's material. */
+export function pack(args: {
+  name: string;
+  packLabel: string;
+  notes: { who: string; topic?: string | null; text: string }[];
+  topics: [id: string, label: string][];
+}): string {
+  const mine = args.notes.filter((x) => x.who === "you" && x.text);
+  const sections: string[] = [];
+  const general = mine.filter((x) => !x.topic);
+  if (general.length > 0) {
+    sections.push(`## General\n${general.map((x) => `- ${x.text}`).join("\n")}`);
+  }
+  for (const [id, label] of args.topics) {
+    const group = mine.filter((x) => x.topic === id);
+    if (group.length > 0) {
+      sections.push(`## ${label}\n${group.map((x) => `- ${x.text}`).join("\n")}`);
+    }
+  }
+  const body =
+    sections.join("\n") ||
+    "_No notes yet. Write in the margins to fill this in._";
+  return `# ${args.name} — ${args.packLabel}\n\n${body}\n`;
+}

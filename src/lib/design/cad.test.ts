@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brief, drawingKindFor, scad, slug, stl } from "./cad";
+import { brief, drawingKindFor, pack, scad, slug, stl } from "./cad";
 
 describe("cad files", () => {
   it("slugs names", () => {
@@ -64,5 +64,35 @@ describe("cad files", () => {
     expect(out.indexOf("### General")).toBeLessThan(
       out.indexOf("### Measure"),
     );
+  });
+  it("pack keeps only your notes, grouped by topic", () => {
+    const out = pack({
+      name: "Harvest Song",
+      packLabel: "Song pack",
+      topics: [
+        ["lyrics", "Lyrics"],
+        ["note", "Melody"],
+      ],
+      notes: [
+        { who: "you", topic: "lyrics", text: "Chorus about rain" },
+        { who: "apprentice", topic: "lyrics", text: "Nice" },
+        { who: "you", topic: null, text: "Capo 2" },
+      ],
+    });
+    expect(out).toContain("# Harvest Song — Song pack");
+    expect(out).toContain("## Lyrics");
+    expect(out).toContain("Chorus about rain");
+    expect(out).toContain("Capo 2");
+    expect(out).not.toContain("Nice");
+    expect(out.indexOf("## General")).toBeLessThan(out.indexOf("## Lyrics"));
+  });
+  it("pack says so when there is nothing to pack", () => {
+    const out = pack({
+      name: "Stew",
+      packLabel: "Recipe card",
+      topics: [["pot", "Ingredients"]],
+      notes: [{ who: "apprentice", text: "Hello" }],
+    });
+    expect(out).toContain("No notes yet");
   });
 });

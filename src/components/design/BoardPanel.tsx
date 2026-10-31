@@ -14,7 +14,7 @@ import {
   type DesignMedium,
   type LiveStage,
 } from "@/lib/design/project-art";
-import { toolsFor } from "@/lib/design/tools";
+import { sentLabelFor, toolIcon, toolsFor } from "@/lib/design/tools";
 
 import "@/vendor/bottega/core.js";
 import "@/vendor/bottega/types.js";
@@ -127,7 +127,7 @@ export default function BoardPanel({
     "Sketched",
     "Shaped",
     "Built",
-    medium.sentLabel,
+    sentLabelFor(project.medium, medium.sentLabel),
     medium.arrivedLabel,
   ];
   const partsWithNotes = new Set(
@@ -338,23 +338,34 @@ export default function BoardPanel({
             aria-label={`${medium.label} tools`}
           >
             <span className="lab">{medium.label} tools</span>
-            {tools.map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className="tool"
-                aria-pressed={tool === id}
-                onClick={() => {
-                  setTool(id);
-                  document
-                    .getElementById("margin-notes")
-                    ?.scrollIntoView({ block: "nearest" });
-                }}
-              >
-                <BIcon svg={B.icon(id === "sketch" ? "pencil" : id, 18, 1.9)} />{" "}
-                {label}
-              </button>
-            ))}
+            {tools.map(([id, label]) =>
+              id === "preview" ? (
+                <a
+                  key={id}
+                  className="tool"
+                  href={`/apps/${appId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <BIcon svg={B.icon(toolIcon(id), 18, 1.9)} /> {label}
+                </a>
+              ) : (
+                <button
+                  key={id}
+                  type="button"
+                  className="tool"
+                  aria-pressed={tool === id}
+                  onClick={() => {
+                    setTool(id);
+                    document
+                      .getElementById("margin-notes")
+                      ?.scrollIntoView({ block: "nearest" });
+                  }}
+                >
+                  <BIcon svg={B.icon(toolIcon(id), 18, 1.9)} /> {label}
+                </button>
+              ),
+            )}
           </div>
           <div className="board">
             <div

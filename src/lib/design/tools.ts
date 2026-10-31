@@ -14,7 +14,7 @@ export const TOOLS_OVERRIDE: Record<string, ToolEntry[] | undefined> = {
     ["screen", "Screens"],
     ["data", "Data"],
     ["group", "Users"],
-    ["test", "Test"],
+    ["preview", "Preview"],
     ["globe", "Launch"],
   ],
 };
@@ -22,6 +22,19 @@ export const TOOLS_OVERRIDE: Record<string, ToolEntry[] | undefined> = {
 /** Effective toolbar: our override when present, else the design's list. */
 export function toolsFor(medium: string, designTools: ToolEntry[]): ToolEntry[] {
   return TOOLS_OVERRIDE[medium] ?? designTools;
+}
+
+/** Icon for a tool id; most ids are icon names, these few map. */
+export function toolIcon(id: string): string {
+  if (id === "sketch") return "pencil";
+  if (id === "preview") return "play";
+  return id;
+}
+
+/** "Ordered" was renamed: requests go out, nothing auto-orders. */
+export function sentLabelFor(medium: string, designLabel: string): string {
+  if (medium === "hardware" || medium === "space") return "Requested";
+  return designLabel;
 }
 
 /** Display label for a note topic; falls back to the capitalized id. */
