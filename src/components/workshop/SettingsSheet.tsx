@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { setKind, setPrivate } from "@/app/projects/[id]/actions";
+import {
+  renameProject,
+  setAccent,
+  setKind,
+  setPrivate,
+} from "@/app/projects/[id]/actions";
+import { ACCENTS, type Accent } from "@/lib/accents";
 import { btn, card, Label, Status } from "@/components/ui";
 import { MEDIUM_IDS, type DesignMedium } from "@/lib/design/project-art";
 import type { AppSpec } from "@/lib/spec/schema";
@@ -17,17 +23,23 @@ export default function SettingsSheet({
   appId,
   initialPriv,
   initialKind,
+  initialName,
+  version,
   spec,
 }: {
   appId: string;
   initialPriv: boolean;
   initialKind: DesignMedium;
+  initialName: string;
+  version: number;
   spec: AppSpec;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [priv, setPriv] = useState(initialPriv);
   const [kind, setKindState] = useState(initialKind);
+  const [name, setName] = useState(initialName);
+  const [accent, setAccentState] = useState<Accent>(spec.look.accent);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState("");
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -78,6 +90,39 @@ export default function SettingsSheet({
     router.refresh();
   }
 
+  async function saveName() {
+    const clean = name.trim();
+    if (saving || !clean || clean === initialName) return;
+    setSaving(true);
+    setProblem("");
+    const res = await renameProject(appId, clean);
+    setSaving(false);
+    if (!res.ok) {
+      setProblem("Couldn't rename. Try again.");
+      return;
+    }
+    router.refresh();
+  }
+
+  async function pickAccent(next: Accent) {
+    if (saving || next === accent) return;
+    setSaving(true);
+    setProblem("");
+    const res = await setAccent(appId, version, next);
+    setSaving(false);
+    if (!res.ok) {
+      setProblem("Couldn't save. Try again.");
+      return;
+    }
+    if (res.conflict) {
+      setProblem("Changed elsewhere; reloaded.");
+      router.refresh();
+      return;
+    }
+    setAccentState(next);
+    router.refresh();
+  }
+
   const metaBlocks = spec.screens.flatMap((s) =>
     s.blocks.filter((b) => b.type in META_USE),
   );
@@ -116,6 +161,49 @@ export default function SettingsSheet({
             ourselves, not on Meta&apos;s API. Seeing, drawing and transcribing
             still use Meta&apos;s models.
           </p>
+          <Label htmlFor="settings-name">Project name</Label>
+          <span className="flex gap-2">
+            <input
+              id="settings-name"
+              type="text"
+              value={name}
+              maxLength={80}
+              disabled={saving}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void saveName();
+              }}
+              className="min-w-0 flex-1 rounded-[6px] border-[1.5px] border-ink bg-card px-3 py-1.5"
+            />
+            <button
+              type="button"
+              disabled={saving || !name.trim() || name.trim() === initialName}
+              onClick={() => void saveName()}
+              className={`${btn.primary} ${btn.small}`}
+            >
+              Save
+            </button>
+          </span>
+          <Label>Accent color</Label>
+          <div
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label="Accent color"
+          >
+            {ACCENTS.map((a) => (
+              <button
+                key={a}
+                type="button"
+                aria-pressed={accent === a}
+                aria-label={`${a} accent`}
+                title={a}
+                disabled={saving}
+                onClick={() => void pickAccent(a)}
+                data-accent={a}
+                className="h-9 w-9 rounded-full border-[1.5px] border-ink bg-accent aria-pressed:ring-2 aria-pressed:ring-ink aria-pressed:ring-offset-2 aria-pressed:ring-offset-card"
+              />
+            ))}
+          </div>
           <Label>Project kind</Label>
           <div
             className="flex flex-wrap gap-2"

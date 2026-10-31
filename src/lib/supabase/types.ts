@@ -70,6 +70,7 @@ export type Database = {
           name: string
           order_info: Json | null
           owner: string
+          position: number
           private: boolean
           spec: Json
           stage: string | null
@@ -88,6 +89,7 @@ export type Database = {
           name: string
           order_info?: Json | null
           owner?: string
+          position?: number
           private?: boolean
           spec: Json
           stage?: string | null
@@ -106,6 +108,7 @@ export type Database = {
           name?: string
           order_info?: Json | null
           owner?: string
+          position?: number
           private?: boolean
           spec?: Json
           stage?: string | null
@@ -281,6 +284,7 @@ export type Database = {
           owner: string
           part: number | null
           text: string
+          topic: string | null
           who: string
         }
         Insert: {
@@ -290,6 +294,7 @@ export type Database = {
           owner?: string
           part?: number | null
           text: string
+          topic?: string | null
           who: string
         }
         Update: {
@@ -299,6 +304,7 @@ export type Database = {
           owner?: string
           part?: number | null
           text?: string
+          topic?: string | null
           who?: string
         }
         Relationships: [

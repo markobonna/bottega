@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { btn, card } from "@/components/ui";
-import WorkshopScreen from "@/components/design/WorkshopScreen";
+import WorkshopScreenMount from "@/components/design/WorkshopScreenMount";
 import ZoomMount from "@/components/design/ZoomMount";
 import ProjectBuildButton from "@/components/workshop/ProjectBuildButton";
+import ProjectMoveButtons from "@/components/workshop/ProjectMoveButtons";
+import RenameWorkshop from "@/components/workshop/RenameWorkshop";
+import WorkshopTypePicker from "@/components/workshop/WorkshopTypePicker";
 import { effectiveStage, mediumForKind } from "@/lib/design/project-art";
 import { parseSpec } from "@/lib/spec/schema";
 import { createClient } from "@/lib/supabase/server";
@@ -48,7 +51,8 @@ export default async function WorkshopPage({
       "id, name, version, updated_at, spec, kind, stage, look_path, blueprint_path",
     )
     .eq("workshop_id", id)
-    .order("updated_at", { ascending: false });
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   const artPaths = (apps ?? []).flatMap((a) =>
     [a.look_path, a.blueprint_path].filter((p): p is string => !!p),
@@ -66,11 +70,11 @@ export default async function WorkshopPage({
       tagline: parsed.ok ? parsed.spec.tagline : "",
     };
   });
-  const sceneVersion = `${workshop.id}:${(apps ?? []).map((a) => `${a.id}@${a.version}`).join(",")}`;
+  const sceneVersion = `${workshop.id}:${(apps ?? []).map((a, i) => `${i}:${a.id}@${a.version}`).join(",")}`;
 
   return (
     <ZoomMount depth={2}>
-      <WorkshopScreen
+      <WorkshopScreenMount
         workshop={{
           id: workshop.id,
           name: workshop.name,
@@ -80,14 +84,26 @@ export default async function WorkshopPage({
         version={sceneVersion}
       />
 
-      <h2 className="font-display mt-4 text-xl">Manage projects</h2>
+      <h2 className="font-display mt-4 text-xl">Manage workshop</h2>
+      <div className="mt-4 flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold">{workshop.name}</span>
+          <RenameWorkshop workshopId={workshop.id} initial={workshop.name} />
+        </div>
+        <WorkshopTypePicker
+          workshopId={workshop.id}
+          initial={workshop.type ?? "other"}
+        />
+      </div>
+
+      <h2 className="font-display mt-8 text-xl">Manage projects</h2>
       <div className="mt-4 flex flex-col gap-3">
         {(apps ?? []).length === 0 && (
           <p className="text-muted">
             No projects yet. Describe your first one below.
           </p>
         )}
-        {(apps ?? []).map((a) => {
+        {(apps ?? []).map((a, i, all) => {
           const parsed = parseSpec(a.spec);
           const look = parsed.ok
             ? { icon: parsed.spec.look.icon, tagline: parsed.spec.tagline }
@@ -135,6 +151,11 @@ export default async function WorkshopPage({
               )}
               <div className="mt-3 flex items-center gap-2">
                 <ProjectBuildButton appId={a.id} />
+                <ProjectMoveButtons
+                  appId={a.id}
+                  isFirst={i === 0}
+                  isLast={i === all.length - 1}
+                />
                 <DeleteAppButton appId={a.id} />
               </div>
             </div>

@@ -1,19 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f6f1e7;
-  --card: #fffdf8;
-  --ink: #221c15;
-  --muted: #6b5f50;
-  --line: #e2d8c6;
-  --accent: #b5532a;
-  --accent-ink: #fff;
+  color-scheme: light;
+  --paper: #f3e9d2;
+  --card: #fbf4e4;
+  --ink: #33261a;
+  --muted: #5e4a36;
+  --line: #d3c5a3;
+  --accent: #a23e25;
+  --accent-ink: #fbf4e4;
   --accent-soft: color-mix(in oklab, var(--accent) 14%, var(--card));
-  --ok: #2f7d4f;
-  --bad: #b4441c;
-  --brass: #a8812f;
-  --side-a: #0c8599;
-  --side-b: #c2255c;
+  --ok: #3f7a6e;
+  --bad: #a23e25;
+  --brass: #c8963e;
+  --side-a: #a23e25;
+  --side-b: #3f7a6e;
   --n1: #e03131;
   --n2: #1c7ed6;
   --n3: #2f9e44;
@@ -43,88 +44,6 @@
   --accent: #a16207;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --paper: #16130f;
-    --card: #201c17;
-    --ink: #efe7da;
-    --muted: #a99c8a;
-    --line: #352f27;
-    --accent: #e8835a;
-    --accent-ink: #16130f;
-    --ok: #63c48d;
-    --bad: #f08a5d;
-    --brass: #d4ae62;
-    --side-a: #22b8cf;
-    --side-b: #f06595;
-    --n1: #ff6b6b;
-    --n2: #4dabf7;
-    --n3: #51cf66;
-    --n4: #ffc53d;
-    --n5: #9775fa;
-    --n6: #22b8cf;
-  }
-  :root:not([data-theme="light"])[data-accent="terracotta"] {
-    --accent: #e8835a;
-  }
-  :root:not([data-theme="light"])[data-accent="olive"] {
-    --accent: #9cc46a;
-  }
-  :root:not([data-theme="light"])[data-accent="indigo"] {
-    --accent: #8b85ff;
-  }
-  :root:not([data-theme="light"])[data-accent="teal"] {
-    --accent: #3bc9db;
-  }
-  :root:not([data-theme="light"])[data-accent="plum"] {
-    --accent: #da77f2;
-  }
-  :root:not([data-theme="light"])[data-accent="ochre"] {
-    --accent: #f2b84b;
-  }
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --paper: #16130f;
-  --card: #201c17;
-  --ink: #efe7da;
-  --muted: #a99c8a;
-  --line: #352f27;
-  --accent: #e8835a;
-  --accent-ink: #16130f;
-  --ok: #63c48d;
-  --bad: #f08a5d;
-  --brass: #d4ae62;
-  --side-a: #22b8cf;
-  --side-b: #f06595;
-  --n1: #ff6b6b;
-  --n2: #4dabf7;
-  --n3: #51cf66;
-  --n4: #ffc53d;
-  --n5: #9775fa;
-  --n6: #22b8cf;
-}
-:root[data-theme="dark"][data-accent="terracotta"] {
-  --accent: #e8835a;
-}
-:root[data-theme="dark"][data-accent="olive"] {
-  --accent: #9cc46a;
-}
-:root[data-theme="dark"][data-accent="indigo"] {
-  --accent: #8b85ff;
-}
-:root[data-theme="dark"][data-accent="teal"] {
-  --accent: #3bc9db;
-}
-:root[data-theme="dark"][data-accent="plum"] {
-  --accent: #da77f2;
-}
-:root[data-theme="dark"][data-accent="ochre"] {
-  --accent: #f2b84b;
-}
-
 /* data-accent on any element (the runtime sets it on its own root). */
 [data-accent="terracotta"] {
   --accent: #b5532a;
@@ -144,44 +63,6 @@
 [data-accent="ochre"] {
   --accent: #a16207;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) [data-accent="terracotta"] {
-    --accent: #e8835a;
-  }
-  :root:not([data-theme="light"]) [data-accent="olive"] {
-    --accent: #9cc46a;
-  }
-  :root:not([data-theme="light"]) [data-accent="indigo"] {
-    --accent: #8b85ff;
-  }
-  :root:not([data-theme="light"]) [data-accent="teal"] {
-    --accent: #3bc9db;
-  }
-  :root:not([data-theme="light"]) [data-accent="plum"] {
-    --accent: #da77f2;
-  }
-  :root:not([data-theme="light"]) [data-accent="ochre"] {
-    --accent: #f2b84b;
-  }
-}
-:root[data-theme="dark"] [data-accent="terracotta"] {
-  --accent: #e8835a;
-}
-:root[data-theme="dark"] [data-accent="olive"] {
-  --accent: #9cc46a;
-}
-:root[data-theme="dark"] [data-accent="indigo"] {
-  --accent: #8b85ff;
-}
-:root[data-theme="dark"] [data-accent="teal"] {
-  --accent: #3bc9db;
-}
-:root[data-theme="dark"] [data-accent="plum"] {
-  --accent: #da77f2;
-}
-:root[data-theme="dark"] [data-accent="ochre"] {
-  --accent: #f2b84b;
-}
 
 @theme inline {
   --color-paper: var(--paper);
@@ -198,9 +79,9 @@
   --color-side-a: var(--side-a);
   --color-side-b: var(--side-b);
   --font-sans:
-    var(--font-atkinson), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    var(--font-karla), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     sans-serif;
-  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-display: var(--font-fell), Georgia, serif;
 }
 
 @utility gutter {

@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { signOut } from "@/app/auth/actions";
-import Crumbs from "./Crumbs";
 import { btn, card } from "./ui";
+
+const Crumbs = dynamic(() => import("./Crumbs"), { ssr: false });
 
 export default function TopBar({ email }: { email: string | null }) {
   const [open, setOpen] = useState(false);
@@ -30,7 +32,7 @@ export default function TopBar({ email }: { email: string | null }) {
 
   return (
     <header className="sticky top-[env(safe-area-inset-top,0px)] z-20 border-b border-line bg-paper">
-      <div className="gutter mx-auto flex h-14 max-w-[720px] items-center gap-2">
+      <div className="gutter mx-auto flex h-14 max-w-[1180px] items-center gap-2">
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <svg
             width="26"

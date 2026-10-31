@@ -1,6 +1,14 @@
 import { z } from "zod";
 
 import { fail, readJson, requireUser } from "@/lib/api";
+import { EditError, proposeEdit } from "@/lib/edit-pipeline";
+import {
+  effectiveStage,
+  mediumForKind,
+  MEDIUM_QUESTIONS,
+  nextStage,
+  type LiveStage,
+} from "@/lib/design/project-art";
 import {
   detectWorkshopType,
   isWorkshopTypeId,
@@ -12,9 +20,9 @@ export const maxDuration = 30;
 
 const ASK_SYSTEM = `You are Bottega's helper. Act on one person's spoken or typed request.
 You know their workshops (id and name), the page they are on, and their open project if any.
-You can: create a workshop (needs a name), open a workshop or project by name, or build a project (needs a workshop, a description of the work, and the kind: hardware, software, music, dance, print, recipe, or space).
-Do the smallest thing that satisfies the request. If a slot is missing, ask exactly one short question and name the options (for example the workshop names, or "what kind — hardware, software, music, dance, print, recipe, or space?"). Always confirm the kind before building, unless the person already said which. Never invent ids. Never small talk. Keep say to one or two short sentences.
-If they ask for anything else (edits, records, advice), say what you can do instead and set action_type to none.`;
+You can: create a workshop (needs a name), open a workshop or project by name, build a project (needs a workshop, a description of the work, and the kind: hardware, software, music, dance, print, recipe, or space), advance the open project one stage ("looks good", "start building"), send it off ("send it off", "ship it"), or change the open project ("add a field", "change the title", "remove the map") — advance, send_off and edit_app only work with a project open; advance and send_off only when its stage allows them.
+Do the smallest thing that satisfies the request. If a slot is missing, ask exactly one short question and name the options (for example the workshop names, or "what kind — hardware, software, music, dance, print, recipe, or space?"). Always confirm the kind before building, unless the person already said which. Never invent ids. Never small talk. Keep say to one or two short sentences. When the person writes in a margin note or asks about the open project, you may ask one of its kind's questions.
+If they ask for anything else (records, advice), say what you can do instead and set action_type to none.`;
 
 const BodySchema = z.object({
   message: z.string().min(1).max(500),
@@ -36,6 +44,9 @@ const ReplySchema = z.object({
       "open_workshop",
       "open_project",
       "build_project",
+      "advance_project",
+      "send_off",
+      "edit_app",
     ])
     .nullable(),
   workshop_name: z.string().nullable().default(null),
@@ -43,6 +54,7 @@ const ReplySchema = z.object({
   workshop_id: z.string().nullable().default(null),
   project_id: z.string().nullable().default(null),
   description: z.string().nullable().default(null),
+  request: z.string().nullable().default(null),
   kind: z
     .enum([
       "hardware",
@@ -68,6 +80,7 @@ export async function POST(req: Request): Promise<Response> {
     .select("id, name")
     .order("created_at", { ascending: true });
   let appLine = "No project open.";
+  let openStage: LiveStage | null = null;
   if (!body.context.appId && body.context.workshopId) {
     const here = (workshops ?? []).find(
       (w) => w.id === body.context.workshopId,
@@ -77,10 +90,17 @@ export async function POST(req: Request): Promise<Response> {
   if (body.context.appId) {
     const { data: app } = await auth.supabase
       .from("apps")
-      .select("id, name")
+      .select("id, name, kind, version, stage")
       .eq("id", body.context.appId)
       .maybeSingle();
-    if (app) appLine = `Open project: '${app.name}' (${app.id}).`;
+    if (app) {
+      const kind = mediumForKind(app.kind ?? "software");
+      openStage = effectiveStage(app.stage, app.version);
+      appLine =
+        `Open project: '${app.name}' (${app.id}), a ${kind} at stage ${openStage}. ` +
+        `Advance is allowed at sketch or shape; send_off only at build. ` +
+        `Its kind's questions: ${MEDIUM_QUESTIONS[kind].join(" ")}`;
+    }
   }
   const workshopLines = (workshops ?? [])
     .map((w) => `- '${w.name}' (${w.id})`)
@@ -153,6 +173,30 @@ export async function POST(req: Request): Promise<Response> {
           kind: reply.kind,
         },
       });
+    }
+    if (type === "advance_project" && openStage) {
+      if (!nextStage(openStage)) {
+        return Response.json({ say: reply.say });
+      }
+      return Response.json({ say: reply.say, advance: true });
+    }
+    if (type === "send_off" && openStage === "build") {
+      return Response.json({ say: reply.say, sendoff: true });
+    }
+    if (type === "edit_app" && body.context.appId && reply.request) {
+      try {
+        const edit = await proposeEdit(
+          auth.supabase,
+          body.context.appId,
+          reply.request.slice(0, 400),
+        );
+        return Response.json({ say: reply.say, edit });
+      } catch (e) {
+        if (e instanceof EditError) {
+          return Response.json({ say: reply.say, editError: e.message });
+        }
+        throw e;
+      }
     }
     return Response.json({ say: reply.say });
   } catch (e) {

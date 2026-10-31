@@ -143,6 +143,54 @@ export function mediumForKind(kind: string): DesignMedium {
   return isMediumId(kind) ? kind : "software";
 }
 
+// What the apprentice asks about each kind, ported from B.MEDIUMS.
+export const MEDIUM_QUESTIONS: Record<DesignMedium, string[]> = {
+  hardware: [
+    "Where does it live — what does it sit on, and how much room is there?",
+    "What has to plug into it: power, water, air, anything else?",
+    "Is there anything you already own that it has to fit?",
+    "How many do you need — just one, or a small run?",
+    "What would make you say it's better than what you have now?",
+  ],
+  software: [
+    "Who uses it first — you, your staff, or customers?",
+    "What will it run on: a phone, a tablet, a computer, or the web?",
+    "What's the one thing it must do on day one?",
+    "Does it need to talk to anything you already use, like a till or a calendar?",
+    "What should it never do — anything that would annoy people?",
+  ],
+  music: [
+    "What should it feel like in the first ten seconds?",
+    "Roughly how fast — slow dance, walking pace, or running?",
+    "Is there a line or phrase that has to be in it?",
+    "Who sings or plays it?",
+  ],
+  dance: [
+    "How many dancers, and what level?",
+    "What's the music, or should I suggest some?",
+    "How long is the piece?",
+    "Is there a moment you already see in your head?",
+  ],
+  print: [
+    "Where will it hang or be handed out?",
+    "What's the one thing people should read first?",
+    "How big, and how many copies?",
+    "Any colors or fonts it has to match?",
+  ],
+  recipe: [
+    "How many portions at a time?",
+    "What should it cost you per serving, at most?",
+    "Any allergens to avoid?",
+    "Is it for every day or a special?",
+  ],
+  space: [
+    "How big is the room, roughly?",
+    "How many people at the busiest moment?",
+    "What can't move — plumbing, doors, windows?",
+    "What's your budget range?",
+  ],
+};
+
 // Keyword lists ported from the design prototype's B.MEDIUMS so the server
 // can guess the medium the same way the prototype does.
 // Client art uses its own copy; keep the lists in sync.

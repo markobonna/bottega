@@ -7,6 +7,7 @@ import {
   type ProjectNote,
 } from "@/app/projects/[id]/actions";
 import { askApprentice } from "@/lib/apprentice-client";
+import { topicLabel, type ToolEntry } from "@/lib/design/tools";
 
 import "@/vendor/bottega/core.js";
 import { BIcon } from "./Dialog";
@@ -29,6 +30,8 @@ export default function MarginNotes({
   onPart,
   partLabel,
   locked,
+  topics,
+  topicId,
 }: {
   appId: string;
   medium: string;
@@ -37,6 +40,8 @@ export default function MarginNotes({
   onPart: (n: number) => void;
   partLabel: (n: number) => string;
   locked: boolean;
+  topics: ToolEntry[];
+  topicId: string;
 }) {
   const B = window.B;
   const router = useRouter();
@@ -55,6 +60,7 @@ export default function MarginNotes({
       who: "you",
       text: clean,
       part: activePart,
+      topic: topicId,
     });
     if (!mine.ok) {
       setBusy(false);
@@ -70,6 +76,7 @@ export default function MarginNotes({
           who: "apprentice",
           text: say,
           part: activePart,
+          topic: topicId,
         });
         if (theirs.ok) setNotes((ns) => [...ns, theirs.note]);
       }
@@ -81,8 +88,9 @@ export default function MarginNotes({
     }
   }
 
+  const focusLabel = topicLabel(topics, topicId) ?? "General";
   return (
-    <aside className="margin" aria-label="Margin notes">
+    <aside id="margin-notes" className="margin" aria-label="Margin notes">
       <div className="margin-head">
         <BIcon svg={B.sigil(40)} />
         <div>
@@ -121,6 +129,9 @@ export default function MarginNotes({
                 ) : (
                   <strong>General</strong>
                 )}
+                {n.topic ? (
+                  <span className="who">{topicLabel(topics, n.topic)}</span>
+                ) : null}
                 <span className="who">
                   {n.who === "you" ? "You" : "Apprentice"}
                 </span>
@@ -146,8 +157,7 @@ export default function MarginNotes({
           }}
         >
           <label htmlFor="margin-input" style={{ fontSize: 14, fontWeight: 700 }}>
-            Write in the margin, pinned to {activePart}:{" "}
-            {partLabel(activePart)}
+            {focusLabel} note, pinned to {activePart}: {partLabel(activePart)}
           </label>
           <div className="row">
             <input

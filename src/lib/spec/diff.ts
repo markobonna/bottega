@@ -54,6 +54,12 @@ export function diffSpecs(a: AppSpec, b: AppSpec): SpecDiff {
   if (a.tagline !== b.tagline) {
     changed.push(`App tagline: ${a.tagline} → ${b.tagline}`);
   }
+  if (a.look.accent !== b.look.accent) {
+    changed.push(`App accent: ${a.look.accent} → ${b.look.accent}`);
+  }
+  if (a.look.icon !== b.look.icon) {
+    changed.push(`App icon: ${a.look.icon} → ${b.look.icon}`);
+  }
 
   const aScreens = new Map(a.screens.map((s) => [s.id, s]));
   const bScreens = new Map(b.screens.map((s) => [s.id, s]));

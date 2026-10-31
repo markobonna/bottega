@@ -96,16 +96,36 @@ export function brief(args: {
   kindLabel: string;
   stageLabel: string;
   tagline: string;
-  notes: { who: string; part: number | null; text: string }[];
+  notes: { who: string; part: number | null; topic?: string | null; text: string }[];
   drafts: { n: number; label: string; stage: string }[];
+  topics?: [id: string, label: string][];
 }): string {
-  const notes =
-    args.notes
-      .map(
-        (x) =>
-          `- **${x.who === "you" ? "You" : "Apprentice"}${x.part ? ` (part ${x.part})` : ""}:** ${x.text}`,
-      )
-      .join("\n") || "—";
+  const line = (x: {
+    who: string;
+    part: number | null;
+    text: string;
+  }) =>
+    `- **${x.who === "you" ? "You" : "Apprentice"}${x.part ? ` (part ${x.part})` : ""}:** ${x.text}`;
+  const grouped =
+    args.topics && args.notes.some((x) => x.topic);
+  let notes: string;
+  if (grouped && args.topics) {
+    const topics = args.topics;
+    const sections: string[] = [];
+    const general = args.notes.filter((x) => !x.topic);
+    if (general.length > 0) {
+      sections.push(`### General\n${general.map(line).join("\n")}`);
+    }
+    for (const [id, label] of topics) {
+      const group = args.notes.filter((x) => x.topic === id);
+      if (group.length > 0) {
+        sections.push(`### ${label}\n${group.map(line).join("\n")}`);
+      }
+    }
+    notes = sections.join("\n") || "—";
+  } else {
+    notes = args.notes.map(line).join("\n") || "—";
+  }
   const drafts =
     args.drafts.map((x) => `${x.n}. ${x.label} (${x.stage})`).join("\n") ||
     "—";

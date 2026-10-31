@@ -45,6 +45,39 @@ export async function deleteWorkshop(workshopId: string): Promise<void> {
   revalidatePath("/");
 }
 
+export async function renameWorkshop(
+  workshopId: string,
+  name: string,
+): Promise<void> {
+  const clean = name.trim().slice(0, 40);
+  if (!clean) throw new Error("Name the workshop (1–40 chars).");
+  const supabase = await createClient();
+  await ownWorkshop(supabase, workshopId);
+  const { error } = await supabase
+    .from("workshops")
+    .update({ name: clean })
+    .eq("id", workshopId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/");
+  revalidatePath(`/workshops/${workshopId}`);
+}
+
+export async function setWorkshopType(
+  workshopId: string,
+  type: string,
+): Promise<void> {
+  if (!isWorkshopTypeId(type)) throw new Error("Bad workshop type.");
+  const supabase = await createClient();
+  await ownWorkshop(supabase, workshopId);
+  const { error } = await supabase
+    .from("workshops")
+    .update({ type })
+    .eq("id", workshopId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/");
+  revalidatePath(`/workshops/${workshopId}`);
+}
+
 export async function createSample(
   kind: "maria" | "cole",
   workshopId: string,

@@ -20,10 +20,22 @@ export interface AskBuild {
   kind: DesignMedium;
 }
 
+export interface AskEdit {
+  summary: string;
+  ops: unknown[];
+  baseVersion: number;
+  preview: { added: string[]; changed: string[]; removed: string[] };
+  answeredBy?: string;
+}
+
 export interface AskReply {
   say?: string;
   navigate?: string;
   build?: AskBuild;
+  advance?: boolean;
+  sendoff?: boolean;
+  edit?: AskEdit;
+  editError?: string;
   error?: string;
 }
 

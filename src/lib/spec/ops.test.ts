@@ -156,6 +156,24 @@ describe("spec ops", () => {
     });
   });
 
+  test("updateLook changes the accent and icon", () => {
+    const spec = coleSpec();
+    const result = applyOps(spec, [
+      { op: "updateLook", accent: "plum", icon: "🪑" },
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.spec.look.accent).toBe("plum");
+    expect(result.spec.look.icon).toBe("🪑");
+  });
+
+  test("updateLook rejects a bad accent", () => {
+    const result = applyOps(coleSpec(), [
+      { op: "updateLook", accent: "hotpink" },
+    ]);
+    expect(result.ok).toBe(false);
+  });
+
   test("the input spec is unchanged after any call", () => {
     const snapshot = JSON.stringify(maria);
     const parsed = parseSpec(structuredClone(maria));

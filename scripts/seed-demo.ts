@@ -288,7 +288,12 @@ async function seedCole(client: Client, uid: string): Promise<string> {
   const appId = await createApp(
     client,
     { ...coleFixture, name: "Restoration Bench" },
-    { source: "build", summary: "Demo seed", workshopId: garageId },
+    {
+      source: "build",
+      summary: "Demo seed",
+      workshopId: garageId,
+      kind: "hardware",
+    },
   );
   // The design's example projects live in the garage alongside the working app.
   for (const [name, kind] of [

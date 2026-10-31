@@ -1,5 +1,5 @@
-import WorldScreen from "@/components/design/WorldScreen";
 import type { SceneWorkshop } from "@/components/design/WorldScene";
+import WorldScreenMount from "@/components/design/WorldScreenMount";
 import ZoomMount from "@/components/design/ZoomMount";
 import { effectiveStage } from "@/lib/design/project-art";
 import { createClient } from "@/lib/supabase/server";
@@ -46,7 +46,7 @@ export default async function Home() {
 
   return (
     <ZoomMount depth={1}>
-      <WorldScreen workshops={scene} version={version} />
+      <WorldScreenMount workshops={scene} version={version} />
 
       {(workshops ?? []).length > 0 && (
         <section aria-label="Manage workshops" className="mt-4">

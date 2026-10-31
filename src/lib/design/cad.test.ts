@@ -40,4 +40,29 @@ describe("cad files", () => {
     expect(out).toContain("Holds three bikes");
     expect(out).toContain("1. Sketch (sketch)");
   });
+  it("brief groups tagged notes under their topics", () => {
+    const out = brief({
+      name: "Rack",
+      workshopName: "Garage",
+      kindLabel: "Hardware",
+      stageLabel: "Being built",
+      tagline: "Wall rack",
+      topics: [
+        ["measure", "Measure"],
+        ["screens", "Screens"],
+      ],
+      notes: [
+        { who: "you", part: null, topic: null, text: "For the side wall" },
+        { who: "you", part: 1, topic: "measure", text: "90 cm clearance" },
+        { who: "apprentice", part: 1, topic: "measure", text: "Noted" },
+      ],
+      drafts: [],
+    });
+    expect(out).toContain("### General");
+    expect(out).toContain("### Measure");
+    expect(out).not.toContain("### Screens");
+    expect(out.indexOf("### General")).toBeLessThan(
+      out.indexOf("### Measure"),
+    );
+  });
 });

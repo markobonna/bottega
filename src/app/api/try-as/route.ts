@@ -107,6 +107,7 @@ export async function POST(req: Request): Promise<Response> {
           version: app.version,
           private: app.private,
           kind: app.kind,
+          position: app.position,
           workshop_id: workshopId,
         })
         .select("id")

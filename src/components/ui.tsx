@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 // Shared primitives. All color comes from globals.css tokens.
 
 const labelCls =
-  "block text-[0.72rem] font-bold uppercase tracking-[0.09em] text-muted";
+  "block text-[13px] font-bold uppercase tracking-[0.14em] text-muted";
 
 export function Label({
   htmlFor,
@@ -25,16 +25,17 @@ export function Label({
 }
 
 const btnBase =
-  "inline-flex cursor-pointer items-center justify-center gap-2 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-[6px] border-[1.5px] px-[18px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
 export const btn = {
-  primary: `${btnBase} rounded-[12px] bg-ink px-5 py-2.5 text-paper`,
-  quiet: `${btnBase} rounded-[12px] bg-card px-4 py-2 shadow-[inset_0_0_0_1.5px_var(--line)] aria-pressed:shadow-[inset_0_0_0_2px_var(--ink)]`,
+  primary: `${btnBase} border-accent bg-accent text-accent-ink`,
+  quiet: `${btnBase} border-ink bg-card text-ink aria-pressed:bg-ink aria-pressed:text-paper`,
   // Trailing `!` so small wins over the variant's own padding when composed.
-  small: "px-3! py-1.5! text-sm!",
+  small: "min-h-[36px]! px-3! py-1.5! text-sm!",
 };
 
-export const card = "rounded-2xl border-[1.5px] border-line bg-card";
+export const card =
+  "rounded-[6px] border-[1.5px] border-ink bg-card shadow-[4px_4px_0_rgba(51,38,26,0.15)]";
 
 const statusTone = {
   ok: "text-ok",

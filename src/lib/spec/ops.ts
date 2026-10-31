@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ACCENTS } from "../accents";
 import {
   BlockSchema,
   CollectionSchema,
@@ -51,6 +52,11 @@ export const OpSchema = z.discriminatedUnion("op", [
     op: z.literal("renameApp"),
     name: z.string().optional(),
     tagline: z.string().optional(),
+  }),
+  z.object({
+    op: z.literal("updateLook"),
+    accent: z.enum(ACCENTS).optional(),
+    icon: z.string().optional(),
   }),
 ]);
 export type Op = z.infer<typeof OpSchema>;
@@ -155,6 +161,11 @@ function applyOne(spec: AppSpec, op: Op): string | null {
     case "renameApp": {
       if (op.name !== undefined) spec.name = op.name;
       if (op.tagline !== undefined) spec.tagline = op.tagline;
+      return null;
+    }
+    case "updateLook": {
+      if (op.accent !== undefined) spec.look.accent = op.accent;
+      if (op.icon !== undefined) spec.look.icon = op.icon;
       return null;
     }
   }

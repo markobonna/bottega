@@ -2,19 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { btn, card, DataNotice, Status } from "@/components/ui";
+import { btn, card, Status } from "@/components/ui";
+import type { AskEdit } from "@/lib/apprentice-client";
 import type { Op } from "@/lib/spec/ops";
-import { inputCls } from "../blocks/Form";
-import DiffPreview, { type PreviewDiff } from "./DiffPreview";
+import DiffPreview from "./DiffPreview";
 
-type Phase = "idle" | "working" | "preview";
-
-interface EditReply {
-  summary: string;
+interface EditReply extends AskEdit {
   ops: Op[];
-  baseVersion: number;
-  preview: PreviewDiff;
-  answeredBy?: string;
 }
 
 async function readError(res: Response, fallback: string): Promise<string> {
@@ -26,13 +20,12 @@ async function readError(res: Response, fallback: string): Promise<string> {
   }
 }
 
+// Review strip for changes proposed in the talk bar. It renders nothing until
+// an edit arrives, then offers Accept / Discard plus the undo toast.
 export default function ChangeBar({ appId }: { appId: string }) {
   const router = useRouter();
-  const [text, setText] = useState("");
-  const [phase, setPhase] = useState<Phase>("idle");
   const [edit, setEdit] = useState<EditReply | null>(null);
   const [problem, setProblem] = useState("");
-  const [keyOff, setKeyOff] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [toast, setToast] = useState<number | null>(null);
   const [undone, setUndone] = useState(false);
@@ -44,41 +37,24 @@ export default function ChangeBar({ appId }: { appId: string }) {
     };
   }, []);
 
+  useEffect(() => {
+    const onEdit = (e: Event) => {
+      const { appId: forApp, edit: incoming } = (e as CustomEvent).detail as {
+        appId: string;
+        edit: EditReply;
+      };
+      if (forApp !== appId) return;
+      setProblem("");
+      setToast(null);
+      setEdit(incoming);
+    };
+    window.addEventListener("bottega:edit", onEdit);
+    return () => window.removeEventListener("bottega:edit", onEdit);
+  }, [appId]);
+
   function laterToast(fn: () => void, ms: number) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(fn, ms);
-  }
-
-  async function submit() {
-    const request = text.trim();
-    if (request.length < 3 || phase !== "idle") return;
-    setPhase("working");
-    setProblem("");
-    setEdit(null);
-    let res: Response;
-    try {
-      res = await fetch("/api/edit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appId, request }),
-      });
-    } catch {
-      setProblem("The model didn't answer. Try again.");
-      setPhase("idle");
-      return;
-    }
-    if (res.status === 503) {
-      setKeyOff(true);
-      setPhase("idle");
-      return;
-    }
-    if (!res.ok) {
-      setProblem(await readError(res, "The model didn't answer. Try again."));
-      setPhase("idle");
-      return;
-    }
-    setEdit((await res.json()) as EditReply);
-    setPhase("preview");
   }
 
   async function accept() {
@@ -105,7 +81,6 @@ export default function ChangeBar({ appId }: { appId: string }) {
     if (res.status === 409) {
       setProblem("Project changed while you were asking. Try again.");
       setEdit(null);
-      setPhase("idle");
       setAccepting(false);
       router.refresh();
       return;
@@ -119,8 +94,6 @@ export default function ChangeBar({ appId }: { appId: string }) {
     setToast(data.version);
     setUndone(false);
     setEdit(null);
-    setPhase("idle");
-    setText("");
     setAccepting(false);
     router.refresh();
     laterToast(() => setToast(null), 10000);
@@ -153,9 +126,11 @@ export default function ChangeBar({ appId }: { appId: string }) {
     }, 4000);
   }
 
+  if (edit === null && toast === null && problem === "") return null;
+
   return (
     <div className="fixed inset-x-0 bottom-[calc(72px+var(--talk-h,0px)+env(safe-area-inset-bottom))] z-10 sm:bottom-[var(--talk-h,0px)]">
-      <div className="gutter mx-auto flex max-w-[720px] flex-col gap-2 border-t border-line bg-paper pt-2 pb-2">
+      <div className="gutter mx-auto flex max-w-[1180px] flex-col gap-2 border-t border-line bg-paper pt-2 pb-2">
         {toast !== null && (
           <div role="status" className={`${card} flex items-center gap-3 p-3`}>
             {undone ? (
@@ -174,52 +149,17 @@ export default function ChangeBar({ appId }: { appId: string }) {
             )}
           </div>
         )}
-        {phase === "preview" && edit !== null && (
+        {edit !== null && (
           <DiffPreview
             summary={edit.summary}
             preview={edit.preview}
             busy={accepting}
             answeredBy={edit.answeredBy}
             onAccept={() => void accept()}
-            onDiscard={() => {
-              setEdit(null);
-              setPhase("idle");
-            }}
+            onDiscard={() => setEdit(null)}
           />
         )}
-        {keyOff ? (
-          <Status tone="muted">
-            Changes are off right now (no model key).
-          </Status>
-        ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void submit();
-            }}
-            className="flex gap-2"
-          >
-            <input
-              type="text"
-              aria-label="Ask Bottega to change this project"
-              placeholder="Ask for a change…"
-              value={text}
-              disabled={phase !== "idle"}
-              onChange={(e) => setText(e.target.value)}
-              className={`${inputCls} min-w-0 flex-1`}
-            />
-            <button
-              type="submit"
-              disabled={phase !== "idle" || text.trim().length < 3}
-              className={btn.primary}
-            >
-              Change
-            </button>
-          </form>
-        )}
-        {phase === "working" && <Status tone="muted">Working on it…</Status>}
         {problem !== "" && <Status tone="bad">{problem}</Status>}
-        <DataNotice />
       </div>
     </div>
   );

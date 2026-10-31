@@ -16,6 +16,7 @@ import {
 } from "@/app/projects/[id]/actions";
 import type { DesignMedium } from "@/lib/design/project-art";
 import { brief, scad, slug, stl } from "@/lib/design/cad";
+import { toolsFor } from "@/lib/design/tools";
 
 import "@/vendor/bottega/core.js";
 import "@/vendor/bottega/types.js";
@@ -63,12 +64,13 @@ export default function SendOffDialog({
   project: { name: string; medium: DesignMedium; tagline: string };
   workshopName: string;
   stageLabel: string;
-  notes: { who: string; part: number | null; text: string }[];
+  notes: { who: string; part: number | null; topic: string | null; text: string }[];
   drafts: { n: number; label: string; stage: string }[];
 }) {
   const B = window.B;
   const router = useRouter();
   const medium = B.MEDIUMS[project.medium] ?? B.MEDIUMS.hardware;
+  const tools = toolsFor(project.medium, medium.tools);
   const flow: string = medium.flow;
   const stepNames =
     flow === "quote"
@@ -147,6 +149,7 @@ export default function SendOffDialog({
           tagline: project.tagline,
           notes,
           drafts,
+          topics: tools,
         }),
     });
     return list;
@@ -281,11 +284,19 @@ export default function SendOffDialog({
   }
 
   const initialMessage = useMemo(() => {
-    const decided = notes
+    const mine = notes
       .filter((n) => n.who === "you" && n.text !== project.tagline)
-      .slice(-4)
-      .map((n) => `- ${n.text}`)
-      .join("\n");
+      .slice(-8);
+    const blocks = mine
+      .filter((n) => !n.topic)
+      .map((n) => `- ${n.text}`);
+    for (const [id, label] of tools) {
+      const group = mine.filter((n) => n.topic === id);
+      if (group.length > 0) {
+        blocks.push(`${label}:\n${group.map((n) => `- ${n.text}`).join("\n")}`);
+      }
+    }
+    const decided = blocks.join("\n");
     return `Hello,
 
 I'm an AI assistant writing on behalf of [YOUR NAME] at ${workshopName}. We're looking for a quote to make the following:
@@ -326,7 +337,7 @@ Thank you,
 
   async function installed() {
     setBusy(true);
-    const res = await markInstalled(appId);
+    const res = await markInstalled(appId, target);
     setBusy(false);
     if (!res.ok) {
       setProblem("Couldn't save that. Try again.");

@@ -5,6 +5,8 @@ import {
   detectMedium,
   effectiveStage,
   isMediumId,
+  MEDIUM_IDS,
+  MEDIUM_QUESTIONS,
   mediumForKind,
   menuLines,
   nextStage,
@@ -43,6 +45,17 @@ describe("isMediumId", () => {
   it("accepts the seven mediums only", () => {
     expect(isMediumId("dance")).toBe(true);
     expect(isMediumId("video")).toBe(false);
+  });
+});
+
+describe("MEDIUM_QUESTIONS", () => {
+  it("covers every medium with real questions", () => {
+    for (const id of MEDIUM_IDS) {
+      expect(MEDIUM_QUESTIONS[id].length).toBeGreaterThan(0);
+      for (const q of MEDIUM_QUESTIONS[id]) {
+        expect(q.endsWith("?")).toBe(true);
+      }
+    }
   });
 });
 

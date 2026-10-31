@@ -32,6 +32,13 @@ export async function createApp(
   }
   const clean: AppSpec = parsed.spec;
   const owned = opts.owner !== undefined ? { owner: opts.owner } : {};
+  const { data: top } = await client
+    .from("apps")
+    .select("position")
+    .eq("workshop_id", opts.workshopId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   const { data: app, error: appError } = await client
     .from("apps")
     .insert({
@@ -39,6 +46,7 @@ export async function createApp(
       spec: clean,
       version: 1,
       workshop_id: opts.workshopId,
+      position: (top?.position ?? -1) + 1,
       ...(opts.kind ? { kind: opts.kind } : {}),
       ...owned,
     })

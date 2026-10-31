@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { advanceStage } from "@/app/projects/[id]/actions";
+import { DataNotice } from "@/components/ui";
 import {
   askApprentice,
   buildFromAsk,
@@ -97,11 +99,8 @@ export default function TalkBar() {
     setProblem("");
     setThinking(true);
     try {
-      const data = await askApprentice(
-        clean,
-        turns,
-        contextFromPath(pathname),
-      );
+      const ctx = contextFromPath(pathname);
+      const data = await askApprentice(clean, turns, ctx);
       const say = data.say ?? "";
       setTurns((prior) => [
         ...prior,
@@ -119,6 +118,29 @@ export default function TalkBar() {
         sessionStorage.setItem("bottega:new-project", appId);
         router.push(`/projects/${appId}`);
         setTurns([]);
+        return;
+      }
+      if (data.advance && ctx.appId) {
+        const res = await advanceStage(ctx.appId);
+        if (!res.ok) {
+          setProblem("Couldn't move it forward. Try again.");
+          return;
+        }
+        router.refresh();
+        return;
+      }
+      if (data.sendoff) {
+        window.dispatchEvent(new Event("bottega:sendoff"));
+      }
+      if (data.editError) {
+        setProblem(data.editError);
+      }
+      if (data.edit && ctx.appId) {
+        window.dispatchEvent(
+          new CustomEvent("bottega:edit", {
+            detail: { appId: ctx.appId, edit: data.edit },
+          }),
+        );
       }
     } catch (e) {
       setProblem(
@@ -136,6 +158,9 @@ export default function TalkBar() {
         try {
           const transcript = await transcribeBlob(blob);
           if (!transcript.trim()) return;
+          // Voice in, voice out: mic use enables spoken replies for this
+          // session only (the persisted toggle is left alone).
+          setVoiceOn(true);
           void send(transcript.trim());
         } catch (e) {
           setProblem(
@@ -275,6 +300,9 @@ export default function TalkBar() {
               <span className="btn-text">Send</span>
             </button>
           </form>
+          <div className="small">
+            <DataNotice />
+          </div>
         </div>
       </section>
     </div>

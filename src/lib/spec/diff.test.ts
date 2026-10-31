@@ -119,4 +119,12 @@ describe("diffSpecs", () => {
       "Block moved: Open orders → Pantry",
     );
   });
+
+  test("look change", () => {
+    const base = specOf(maria);
+    const next = edited(base, [{ op: "updateLook", accent: "plum" }]);
+    expect(diffSpecs(base, next).changed).toContain(
+      "App accent: terracotta → plum",
+    );
+  });
 });

@@ -2,6 +2,7 @@
 
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { ACCENTS, type Accent } from "@/lib/accents";
 import {
   effectiveStage,
   isMediumId,
@@ -227,6 +228,92 @@ export async function setKind(
   }
 }
 
+export async function renameProject(
+  appId: string,
+  name: string,
+): Promise<Ok<{ name: string }> | Fail> {
+  const clean = name.trim().slice(0, 80);
+  if (!clean) return fail(new Error("Name the project."));
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("apps")
+      .update({ name: clean })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/projects/${appId}`);
+    return { ok: true, name: clean };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function moveProject(
+  appId: string,
+  dir: -1 | 1,
+): Promise<{ ok: true } | Fail> {
+  try {
+    const supabase = await createClient();
+    const { data: app, error: appError } = await supabase
+      .from("apps")
+      .select("workshop_id, position")
+      .eq("id", appId)
+      .single();
+    if (appError || !app) throw new Error("No such project.");
+    let query = supabase
+      .from("apps")
+      .select("id, position")
+      .eq("workshop_id", app.workshop_id);
+    query =
+      dir > 0
+        ? query.gt("position", app.position).order("position", {
+            ascending: true,
+          })
+        : query.lt("position", app.position).order("position", {
+            ascending: false,
+          });
+    const { data: sib } = await query.limit(1).maybeSingle();
+    if (!sib) throw new Error("Nothing to swap with.");
+    const { error: e1 } = await supabase
+      .from("apps")
+      .update({ position: sib.position })
+      .eq("id", appId);
+    if (e1) throw new Error(e1.message);
+    const { error: e2 } = await supabase
+      .from("apps")
+      .update({ position: app.position })
+      .eq("id", sib.id);
+    if (e2) throw new Error(e2.message);
+    revalidatePath(`/workshops/${app.workshop_id}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function setAccent(
+  appId: string,
+  baseVersion: number,
+  accent: string,
+): Promise<Ok<{ conflict: boolean }> | Fail> {
+  if (!(ACCENTS as readonly string[]).includes(accent)) {
+    return fail(new Error("Bad accent."));
+  }
+  try {
+    const supabase = await createClient();
+    const op: Op = { op: "updateLook", accent: accent as Accent };
+    const result = await saveVersion(supabase, appId, baseVersion, [op], {
+      source: "inline",
+      summary: `Changed the accent to ${accent}`,
+    });
+    if ("conflict" in result) return { ok: true, conflict: true };
+    revalidatePath(`/projects/${appId}`);
+    return { ok: true, conflict: false };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 async function loadStage(appId: string) {
   const supabase = await createClient();
   const { data: app, error } = await supabase
@@ -281,11 +368,16 @@ export async function placeOrder(
   }
 }
 
-async function arriveNow(appId: string) {
+async function arriveNow(appId: string, orderInfo?: Record<string, unknown>) {
   const { supabase } = await loadStage(appId);
   const { error } = await supabase
     .from("apps")
-    .update({ stage: "arrived", arrive_at: null, arrival_seen: false })
+    .update({
+      stage: "arrived",
+      arrive_at: null,
+      arrival_seen: false,
+      ...(orderInfo ? { order_info: orderInfo } : {}),
+    })
     .eq("id", appId);
   if (error) throw new Error(error.message);
   revalidatePath(`/projects/${appId}`);
@@ -293,9 +385,10 @@ async function arriveNow(appId: string) {
 
 export async function markInstalled(
   appId: string,
+  target?: string,
 ): Promise<{ ok: true } | Fail> {
   try {
-    await arriveNow(appId);
+    await arriveNow(appId, target ? { target } : undefined);
     return { ok: true };
   } catch (e) {
     return fail(e);
@@ -344,15 +437,22 @@ export type ProjectNote = {
   id: string;
   who: "you" | "apprentice";
   part: number | null;
+  topic: string | null;
   text: string;
 };
 
 export async function addProjectNote(
   appId: string,
-  note: { who: "you" | "apprentice"; text: string; part?: number | null },
+  note: {
+    who: "you" | "apprentice";
+    text: string;
+    part?: number | null;
+    topic?: string | null;
+  },
 ): Promise<Ok<{ note: ProjectNote }> | Fail> {
   const text = note.text.trim().slice(0, 2000);
   if (!text) return fail(new Error("Write something first."));
+  const topic = note.topic?.trim().slice(0, 32) || null;
   try {
     const supabase = await createClient();
     const { data: app, error: appError } = await supabase
@@ -368,8 +468,9 @@ export async function addProjectNote(
         who: note.who,
         text,
         part: note.part ?? null,
+        topic,
       })
-      .select("id, who, part, text")
+      .select("id, who, part, topic, text")
       .single();
     if (error || !data) throw new Error(error?.message ?? "Couldn't save.");
     revalidatePath(`/projects/${appId}`);
@@ -379,6 +480,7 @@ export async function addProjectNote(
         id: data.id,
         who: data.who === "apprentice" ? "apprentice" : "you",
         part: data.part,
+        topic: data.topic,
         text: data.text,
       },
     };

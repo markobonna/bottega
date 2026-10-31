@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   advanceStage,
@@ -14,6 +14,7 @@ import {
   type DesignMedium,
   type LiveStage,
 } from "@/lib/design/project-art";
+import { toolsFor } from "@/lib/design/tools";
 
 import "@/vendor/bottega/core.js";
 import "@/vendor/bottega/types.js";
@@ -57,6 +58,7 @@ export default function BoardPanel({
   arriveAt,
   showArrival,
   lines,
+  shipTarget,
   version,
 }: {
   appId: string;
@@ -71,19 +73,28 @@ export default function BoardPanel({
   arriveAt: string | null;
   showArrival: boolean;
   lines?: string[];
+  shipTarget?: string;
   version: string;
 }) {
   const B = window.B;
   const router = useRouter();
   const medium = B.MEDIUMS[project.medium] ?? B.MEDIUMS.hardware;
+  const tools = toolsFor(project.medium, medium.tools);
   const si = B.STAGES.indexOf(project.stage);
   const [mode, setMode] = useState<string | null>(null);
-  const [tool, setTool] = useState<string>(medium.tools[0][0]);
+  const [tool, setTool] = useState<string>(tools[0][0]);
   const [part, setPart] = useState<number>(1);
   const [sending, setSending] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [problem, setProblem] = useState("");
   const shown = mode ?? B.art.modeForStage(project.stage);
+
+  useEffect(() => {
+    if (si !== 2) return;
+    const onSendoff = () => setSending(true);
+    window.addEventListener("bottega:sendoff", onSendoff);
+    return () => window.removeEventListener("bottega:sendoff", onSendoff);
+  }, [si]);
 
   const artProject = useMemo(
     () => ({
@@ -327,13 +338,18 @@ export default function BoardPanel({
             aria-label={`${medium.label} tools`}
           >
             <span className="lab">{medium.label} tools</span>
-            {medium.tools.map(([id, label]) => (
+            {tools.map(([id, label]) => (
               <button
                 key={id}
                 type="button"
                 className="tool"
                 aria-pressed={tool === id}
-                onClick={() => setTool(id)}
+                onClick={() => {
+                  setTool(id);
+                  document
+                    .getElementById("margin-notes")
+                    ?.scrollIntoView({ block: "nearest" });
+                }}
               >
                 <BIcon svg={B.icon(id === "sketch" ? "pencil" : id, 18, 1.9)} />{" "}
                 {label}
@@ -404,6 +420,8 @@ export default function BoardPanel({
           onPart={setPart}
           partLabel={partLabel}
           locked={si >= 3}
+          topics={tools}
+          topicId={tool}
         />
       </section>
 
@@ -481,6 +499,7 @@ export default function BoardPanel({
           notes={notes.map((n) => ({
             who: n.who,
             part: n.part,
+            topic: n.topic,
             text: n.text,
           }))}
           drafts={drafts}
@@ -501,6 +520,7 @@ export default function BoardPanel({
             backTo.name,
             project.name,
             project.medium,
+            shipTarget,
           )}
           arrivedLabel={medium.arrivedLabel}
         />

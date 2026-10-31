@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import BoardPanel, { type BoardDraft } from "@/components/design/BoardPanel";
+import type { BoardDraft } from "@/components/design/BoardPanel";
+import BoardPanelMount from "@/components/design/BoardPanelMount";
 import ZoomMount from "@/components/design/ZoomMount";
 import AppRuntime from "@/components/runtime/AppRuntime";
 import { card } from "@/components/ui";
@@ -70,7 +71,7 @@ export default async function AppPage({
   const stage = effectiveStage(app.stage, app.version);
   const { data: noteRows } = await supabase
     .from("project_notes")
-    .select("id, who, part, text")
+    .select("id, who, part, topic, text")
     .eq("app_id", id)
     .order("created_at", { ascending: true });
   const notes = (noteRows ?? []).map((n) => ({
@@ -79,12 +80,14 @@ export default async function AppPage({
       | "you"
       | "apprentice",
     part: n.part,
+    topic: n.topic,
     text: n.text,
   }));
   const orderInfo = app.order_info as {
     vendor?: string;
     price?: number;
     lead?: number;
+    target?: string;
   } | null;
   const order =
     orderInfo?.vendor && typeof orderInfo.price === "number"
@@ -94,13 +97,15 @@ export default async function AppPage({
           lead: typeof orderInfo.lead === "number" ? orderInfo.lead : 2,
         }
       : null;
+  const shipTarget =
+    typeof orderInfo?.target === "string" ? orderInfo.target : undefined;
   const lines =
     medium === "print" ? menuLines(spec.collections, records) : undefined;
 
   return (
     <ZoomMount depth={3}>
       {workshop && app.workshop_id && (
-        <BoardPanel
+        <BoardPanelMount
           appId={app.id}
           project={{ name: app.name, medium, stage }}
           drafts={drafts}
@@ -113,6 +118,7 @@ export default async function AppPage({
           arriveAt={app.arrive_at}
           showArrival={stage === "arrived" && !app.arrival_seen}
           lines={lines}
+          shipTarget={shipTarget}
           version={`${app.id}@${app.version}@${app.stage ?? ""}`}
         />
       )}

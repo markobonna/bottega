@@ -1,29 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Atkinson_Hyperlegible_Next,
-  Caveat,
-  Fraunces,
-  IM_Fell_English,
-  Karla,
-} from "next/font/google";
+import { Caveat, IM_Fell_English, Karla } from "next/font/google";
 import type { ReactNode } from "react";
-import TalkBar from "@/components/design/TalkBar";
+import TalkBarMount from "@/components/design/TalkBarMount";
 import TopBar from "@/components/TopBar";
 import { createClient } from "@/lib/supabase/server";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  axes: ["SOFT", "opsz"],
-});
-
-const atkinson = Atkinson_Hyperlegible_Next({
-  variable: "--font-atkinson",
-  subsets: ["latin"],
-});
-
-// Design-prototype faces, used only inside .b-scope scenes.
+// The design's faces, used everywhere.
 const fell = IM_Fell_English({
   variable: "--font-fell",
   subsets: ["latin"],
@@ -43,10 +26,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f1e7" },
-    { media: "(prefers-color-scheme: dark)", color: "#16130f" },
-  ],
+  themeColor: "#f3e9d2",
 };
 
 export default async function RootLayout({
@@ -62,16 +42,23 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${atkinson.variable} ${fell.variable} ${karla.variable} ${caveat.variable}`}
+      className={`${fell.variable} ${karla.variable} ${caveat.variable}`}
     >
       <body className="font-sans">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-[8px] focus:bg-ink focus:px-4 focus:py-2 focus:text-paper"
+        >
+          Skip to content
+        </a>
         {user && <TopBar email={user.email ?? null} />}
         <main
-          className={`gutter mx-auto max-w-[720px] pt-5 ${user ? "pb-[calc(var(--talk-h)+24px)]" : "pb-24"}`}
+          id="main"
+          className={`gutter mx-auto max-w-[1180px] pt-5 ${user ? "pb-[calc(var(--talk-h)+24px)]" : "pb-24"}`}
         >
           {children}
         </main>
-        {user && <TalkBar />}
+        {user && <TalkBarMount />}
       </body>
     </html>
   );

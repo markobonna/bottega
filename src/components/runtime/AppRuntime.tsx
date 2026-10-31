@@ -84,6 +84,8 @@ export default function AppRuntime({
           appId={app.id}
           initialPriv={app.private}
           initialKind={app.kind}
+          initialName={app.name}
+          version={app.version}
           spec={spec}
         />
       </header>
@@ -131,7 +133,7 @@ export default function AppRuntime({
           aria-label="Screens"
           className="fixed inset-x-0 bottom-[var(--talk-h,0px)] z-20 border-t border-line bg-paper pt-1 pb-[max(8px,env(safe-area-inset-bottom))] sm:hidden"
         >
-          <div className="gutter mx-auto flex max-w-[720px]">{tabs(true)}</div>
+          <div className="gutter mx-auto flex max-w-[1180px]">{tabs(true)}</div>
         </nav>
       )}
     </div>
