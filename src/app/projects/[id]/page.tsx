@@ -11,6 +11,7 @@ import {
   menuLines,
   stageForVersion,
 } from "@/lib/design/project-art";
+import { signedUrls } from "@/lib/media";
 import { listRecords, type DbRecord } from "@/lib/records";
 import { parseSpec } from "@/lib/spec/schema";
 import { createClient } from "@/lib/supabase/server";
@@ -84,21 +85,39 @@ export default async function AppPage({
     text: n.text,
   }));
   const orderInfo = app.order_info as {
-    vendor?: string;
-    price?: number;
-    lead?: number;
+    vendors?: { name?: string; contact?: string; address?: string }[];
+    sent_at?: string;
+    arrival_photo?: string;
     target?: string;
   } | null;
+  const vendors = Array.isArray(orderInfo?.vendors)
+    ? orderInfo.vendors.filter(
+        (v): v is { name: string; contact: string; address: string } =>
+          typeof v?.name === "string",
+      )
+    : [];
   const order =
-    orderInfo?.vendor && typeof orderInfo.price === "number"
+    vendors.length > 0
       ? {
-          vendor: orderInfo.vendor,
-          price: orderInfo.price,
-          lead: typeof orderInfo.lead === "number" ? orderInfo.lead : 2,
+          vendors: vendors.map((v) => ({
+            name: v.name,
+            contact: typeof v.contact === "string" ? v.contact : "web",
+            address: typeof v.address === "string" ? v.address : "",
+          })),
+          sentAt:
+            typeof orderInfo?.sent_at === "string" ? orderInfo.sent_at : null,
         }
       : null;
   const shipTarget =
     typeof orderInfo?.target === "string" ? orderInfo.target : undefined;
+  const arrivalPhotoPath =
+    typeof orderInfo?.arrival_photo === "string"
+      ? orderInfo.arrival_photo
+      : null;
+  const arrivalPhotoUrl = arrivalPhotoPath
+    ? ((await signedUrls(supabase, [arrivalPhotoPath]))[arrivalPhotoPath] ??
+      null)
+    : null;
   const lines =
     medium === "print" ? menuLines(spec.collections, records) : undefined;
 
@@ -116,6 +135,7 @@ export default async function AppPage({
           workshopType={workshop.type ?? "other"}
           order={order}
           arriveAt={app.arrive_at}
+          arrivalPhotoUrl={arrivalPhotoUrl}
           showArrival={stage === "arrived" && !app.arrival_seen}
           lines={lines}
           shipTarget={shipTarget}

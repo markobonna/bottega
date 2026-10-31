@@ -126,6 +126,44 @@ export type Database = {
           },
         ]
       }
+      concierge_requests: {
+        Row: {
+          app_id: string | null
+          created_at: string | null
+          email: string
+          id: string
+          note: string
+          owner: string
+          status: string
+        }
+        Insert: {
+          app_id?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          note?: string
+          owner?: string
+          status?: string
+        }
+        Update: {
+          app_id?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          note?: string
+          owner?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concierge_requests_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           app_id: string | null

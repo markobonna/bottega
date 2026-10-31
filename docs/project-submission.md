@@ -30,8 +30,10 @@ drawing (AI pictures), and teaching — users train their own tiny
 quality-checker on their photos. The loop is describe → build → use →
 teach → grow: ask for changes in words or accept Muse Wonder
 suggestions; every change is a validated spec diff, never a rebuild.
-Hardware projects go further: CAD files, maker quotes, and a tracked
-request. Two demo worlds prove it — Maria's bakery and Cole's
+Hardware projects go further: a downloadable RFQ pack (brief, CAD,
+drawings) sent to real US shops, a promise-date countdown with overdue
+nudges, photo-proven arrival, and a human sourcing concierge when no
+supplier fits. Two demo worlds prove it — Maria's bakery and Cole's
 restoration bench — and every visitor gets a fresh private Try-as copy,
 no sign-up.
 

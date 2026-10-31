@@ -66,11 +66,18 @@ SAY:
 
 > "…and that note rides with the project all the way to the maker."
 
-DO: advance to sent, open send-off, walk Files → Find makers → Approve →
-Reach out → Quotes quickly (jump-cut allowed). On the done panel, SAY:
+DO: advance, open send-off. Files step — download the RFQ pack, SAY:
 
-> "Request sent to Mark's Manufacturer. Card ready — nothing orders
-> itself. That's the rule during the demo."
+> "One zip: the brief, the CAD, the drawings. Everything a real shop
+> needs to quote."
+
+DO: Find makers (SendCutSend, Xometry — real shops, jump-cut allowed) →
+Message draft → Send. Pack downloads, email draft opens, tick Sent,
+"RFQs are out." SAY:
+
+> "RFQs are out to real shops. They reply with a quote and a payment
+> link — card ready, because saying yes actually orders it. I just
+> won't do that part on camera."
 
 DO: cut to a software project (pre-built). Tap Preview — new tab with the
 working app. SAY:

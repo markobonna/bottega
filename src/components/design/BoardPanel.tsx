@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   advanceStage,
   markArrived,
+  savePromise,
   type ProjectNote,
 } from "@/app/projects/[id]/actions";
 import {
@@ -14,7 +21,7 @@ import {
   type DesignMedium,
   type LiveStage,
 } from "@/lib/design/project-art";
-import { sentLabelFor, toolIcon, toolsFor } from "@/lib/design/tools";
+import { stageLabelsFor, toolIcon, toolsFor } from "@/lib/design/tools";
 
 import "@/vendor/bottega/core.js";
 import "@/vendor/bottega/types.js";
@@ -22,6 +29,7 @@ import "@/vendor/bottega/art/common.js";
 import "@/vendor/bottega/art/room.js";
 import "@/vendor/bottega/art/board.js";
 import ArrivalDialog from "./ArrivalDialog";
+import ConciergeCard from "./ConciergeCard";
 import { BIcon } from "./Dialog";
 import MarginNotes from "./MarginNotes";
 import SendOffDialog from "./SendOffDialog";
@@ -36,7 +44,12 @@ const CRATE_SVG = `<svg width="44" height="40" viewBox="0 0 44 40" aria-hidden="
 
 function countdownTo(iso: string): string {
   const ms = new Date(iso).getTime() - Date.now();
-  if (Number.isNaN(ms) || ms <= 0) return "any day now";
+  if (Number.isNaN(ms)) return "any day now";
+  if (ms <= 0) {
+    const late = Math.floor(-ms / 86400000);
+    if (late < 1) return "any day now";
+    return `${late} day${late > 1 ? "s" : ""} overdue`;
+  }
   const days = Math.floor(ms / 86400000);
   if (days >= 2) return `in ${days} days`;
   if (days === 1) return "tomorrow";
@@ -56,6 +69,7 @@ export default function BoardPanel({
   workshopType,
   order,
   arriveAt,
+  arrivalPhotoUrl,
   showArrival,
   lines,
   shipTarget,
@@ -69,8 +83,12 @@ export default function BoardPanel({
   backTo: { id: string; name: string };
   newIn: string;
   workshopType: string;
-  order: { vendor: string; price: number; lead: number } | null;
+  order: {
+    vendors: { name: string; contact: string; address: string }[];
+    sentAt: string | null;
+  } | null;
   arriveAt: string | null;
+  arrivalPhotoUrl: string | null;
   showArrival: boolean;
   lines?: string[];
   shipTarget?: string;
@@ -87,6 +105,8 @@ export default function BoardPanel({
   const [sending, setSending] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [problem, setProblem] = useState("");
+  const [promise, setPromise] = useState("");
+  const [savingPromise, setSavingPromise] = useState(false);
   const shown = mode ?? B.art.modeForStage(project.stage);
 
   useEffect(() => {
@@ -123,13 +143,11 @@ export default function BoardPanel({
     [version],
   );
 
-  const labels = [
-    "Sketched",
-    "Shaped",
-    "Built",
-    sentLabelFor(project.medium, medium.sentLabel),
+  const labels = stageLabelsFor(
+    project.medium,
+    medium.sentLabel,
     medium.arrivedLabel,
-  ];
+  );
   const partsWithNotes = new Set(
     notes.filter((n) => n.part).map((n) => n.part as number),
   );
@@ -162,6 +180,46 @@ export default function BoardPanel({
       return;
     }
     router.refresh();
+  }
+
+  async function savePromiseDate(e: FormEvent) {
+    e.preventDefault();
+    if (!promise || savingPromise) return;
+    setSavingPromise(true);
+    setProblem("");
+    const res = await savePromise(appId, promise);
+    setSavingPromise(false);
+    if (!res.ok) {
+      setProblem("Couldn't save that date. Try again.");
+      return;
+    }
+    router.refresh();
+  }
+
+  function vendorLink(v: { name: string; contact: string; address: string }) {
+    if (v.contact === "email" && v.address.includes("@")) {
+      return (
+        <a
+          href={`mailto:${v.address}?subject=${encodeURIComponent(`Checking in: ${project.name}`)}`}
+        >
+          {v.name}
+        </a>
+      );
+    }
+    if (v.contact === "phone") {
+      return <a href={`tel:${v.address.replace(/[^+\d]/g, "")}`}>{v.name}</a>;
+    }
+    if (v.address) {
+      const href = v.address.startsWith("http")
+        ? v.address
+        : `https://${v.address}`;
+      return (
+        <a href={href} target="_blank" rel="noreferrer">
+          {v.name}
+        </a>
+      );
+    }
+    return <span>{v.name}</span>;
   }
 
   return (
@@ -226,7 +284,9 @@ export default function BoardPanel({
                       />
                     )}
                   </svg>
-                  {i === si && project.stage === "build"
+                  {i === si &&
+                  project.stage === "build" &&
+                  medium.flow !== "quote"
                     ? "Building, half way"
                     : l}
                 </li>
@@ -253,7 +313,8 @@ export default function BoardPanel({
                 disabled={advancing}
                 onClick={() => void advance()}
               >
-                <BIcon svg={B.icon("parts")} /> Start building
+                <BIcon svg={B.icon("parts")} />{" "}
+                {medium.flow === "quote" ? "Pack it up" : "Start building"}
               </button>
             </div>
           )}
@@ -286,14 +347,53 @@ export default function BoardPanel({
           <div className="grow">
             <strong>
               {medium.flow === "quote"
-                ? `On its way${order ? ` from ${order.vendor}` : ""}`
+                ? `RFQs out${order ? ` to ${order.vendors.map((v) => v.name).join(", ")}` : ""}`
                 : "Finishing up"}
             </strong>
             <div className="small">
-              {order
-                ? `$${order.price.toLocaleString()} · ${order.lead} week${order.lead > 1 ? "s" : ""} lead time. `
-                : ""}
-              {arriveAt ? `Arriving ${countdownTo(arriveAt)}.` : ""}
+              {medium.flow === "quote" && !arriveAt ? (
+                <form
+                  onSubmit={(e) => void savePromiseDate(e)}
+                  style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}
+                >
+                  <label htmlFor="promise-date">
+                    Their reply promised it by…
+                  </label>
+                  <input
+                    id="promise-date"
+                    type="date"
+                    value={promise}
+                    disabled={savingPromise}
+                    onChange={(e) => setPromise(e.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    className="btn"
+                    disabled={!promise || savingPromise}
+                  >
+                    {savingPromise ? "Saving…" : "Count it down"}
+                  </button>
+                </form>
+              ) : arriveAt ? (
+                <>
+                  Promised {countdownTo(arriveAt)}.{" "}
+                  {new Date(arriveAt).getTime() < Date.now() - 86400000 &&
+                    order && (
+                      <>
+                        Nudge them:{" "}
+                        {order.vendors.map((v, i) => (
+                          <Fragment key={v.name}>
+                            {i > 0 && ", "}
+                            {vendorLink(v)}
+                          </Fragment>
+                        ))}
+                        .
+                      </>
+                    )}
+                </>
+              ) : (
+                ""
+              )}
             </div>
           </div>
           <button
@@ -314,12 +414,19 @@ export default function BoardPanel({
           <BIcon svg={B.icon("check", 28)} />
           <div className="grow">
             <strong>
-              {medium.arrivedLabel}
-              {order ? ` — from ${order.vendor}` : ""}
+              {labels[4]}
+              {order ? ` — ${order.vendors.map((v) => v.name).join(", ")}` : ""}
             </strong>
             <div className="small">
               It&apos;s in {backTo.name} now, ready to use.
             </div>
+            {arrivalPhotoUrl && (
+              <img
+                src={arrivalPhotoUrl}
+                alt={`${project.name} arrived`}
+                style={{ width: "100%", maxWidth: 320, borderRadius: 8, marginTop: 8 }}
+              />
+            )}
           </div>
           <Link href={`/workshops/${backTo.id}`} className="btn">
             See it in the room
@@ -327,6 +434,23 @@ export default function BoardPanel({
           <Link href={`/new?workshop=${newIn}`} className="btn btn-primary">
             <BIcon svg={B.icon("plus")} /> Next project
           </Link>
+        </div>
+      )}
+      {medium.flow === "ship" && (
+        <div className="card statuscard" style={{ marginBottom: 16 }}>
+          <BIcon svg={B.sigil(40)} />
+          <div className="grow">
+            <strong>Need a hand running this?</strong>
+            <ConciergeCard
+              appId={appId}
+              idPrefix="board-ops"
+              headline="Help requested"
+              blurb="Bottega will operate this app for you — records in, changes made, day to day. Send this request and we'll reply within 48 hours."
+              actionLabel="Request help"
+              mailSubject={`Run it for me: ${project.name}`}
+              mailContext={`Project: ${project.name}\nKind: ${medium.label}\nWorkshop: ${backTo.name}`}
+            />
+          </div>
         </div>
       )}
 
@@ -533,7 +657,7 @@ export default function BoardPanel({
             project.medium,
             shipTarget,
           )}
-          arrivedLabel={medium.arrivedLabel}
+          arrivedLabel={labels[4]}
         />
       )}
     </div>

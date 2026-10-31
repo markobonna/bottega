@@ -37,6 +37,29 @@ export function sentLabelFor(medium: string, designLabel: string): string {
   return designLabel;
 }
 
+const STAGE_LABELS: Record<string, [string, string, string, string, string]> = {
+  hardware: ["Sketched", "Specified", "Packed", "Sent RFQ", "Landed"],
+  print: ["Sketched", "Specified", "Packed", "Sent RFQ", "Delivered"],
+  space: ["Sketched", "Specified", "Packed", "Sent RFQ", "Done"],
+};
+
+/** Drafts-wall stage names; the quote family uses real-world steps. */
+export function stageLabelsFor(
+  medium: string,
+  sentLabel: string,
+  arrivedLabel: string,
+): [string, string, string, string, string] {
+  return (
+    STAGE_LABELS[medium] ?? [
+      "Sketched",
+      "Shaped",
+      "Built",
+      sentLabelFor(medium, sentLabel),
+      arrivedLabel,
+    ]
+  );
+}
+
 /** Display label for a note topic; falls back to the capitalized id. */
 export function topicLabel(topics: ToolEntry[], id: string | null): string | null {
   if (!id) return null;

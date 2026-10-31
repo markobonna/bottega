@@ -12,10 +12,12 @@ import {
   addProjectNote,
   markFinished,
   markInstalled,
-  placeOrder,
+  recordRfqSent,
 } from "@/app/projects/[id]/actions";
 import type { DesignMedium } from "@/lib/design/project-art";
 import { brief, pack, scad, slug, stl } from "@/lib/design/cad";
+import { fabReadme, strBytes, zipStore } from "@/lib/design/fabpack";
+import { REAL_MAKERS } from "@/lib/design/makers";
 import { toolsFor } from "@/lib/design/tools";
 
 import "@/vendor/bottega/core.js";
@@ -23,7 +25,9 @@ import "@/vendor/bottega/types.js";
 import "@/vendor/bottega/art/common.js";
 import "@/vendor/bottega/art/room.js";
 import "@/vendor/bottega/art/board.js";
+import ConciergeCard from "./ConciergeCard";
 import Dialog, { BIcon } from "./Dialog";
+import PhotoCapture from "./PhotoCapture";
 
 interface Vendor {
   id: string;
@@ -31,22 +35,9 @@ interface Vendor {
   does: string;
   contact: string;
   address: string;
+  hint?: string;
+  real?: boolean;
 }
-
-interface Quote {
-  id: string;
-  vendor: string;
-  price: number;
-  lead: number;
-  note: string;
-}
-
-const QUOTE_NOTES = [
-  "Can do it as drawn.",
-  "Suggests a cheaper sheet-metal body.",
-  "Off-the-shelf parts only; you assemble.",
-  "Rush available for +25%.",
-];
 
 const CRATE_SVG = `<svg width="44" height="40" viewBox="0 0 44 40" aria-hidden="true"><path d="M4 14 L22 6 L40 14 V34 L22 39 L4 34 Z" fill="#D9B47A" stroke="#33261A" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 14 L22 20 L40 14 M22 20 V39" fill="none" stroke="#33261A" stroke-width="1.6"/></svg>`;
 
@@ -98,37 +89,64 @@ export default function SendOffDialog({
   const flow: string = medium.flow;
   const stepNames =
     flow === "quote"
-      ? ["Files", "Find makers", "Approve", "Reach out", "Quotes"]
+      ? ["Files", "Find makers", "Message", "Send"]
       : flow === "ship"
         ? ["Build", "Install"]
         : ["Files"];
 
   const [step, setStep] = useState(0);
   const [vendors, setVendors] = useState<Vendor[] | null>(null);
-  const [searching, setSearching] = useState(true);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [message, setMessage] = useState("");
   const [msgTouched, setMsgTouched] = useState(false);
-  const [reach, setReach] = useState<Record<string, number>>({});
-  const [quotes, setQuotes] = useState<Quote[] | null>(null);
-  const [pick, setPick] = useState<string | null>(null);
+  const [marked, setMarked] = useState<Record<string, boolean>>({});
   const [target, setTarget] = useState("tablet");
   const [started, setStarted] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [built, setBuilt] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
-  const [done, setDone] = useState<Quote | "installed" | "finished" | null>(
-    null,
-  );
+  const [done, setDone] = useState<
+    "installed" | "finished" | "rfqs-out" | "concierge" | null
+  >(null);
   const [addName, setAddName] = useState("");
   const [addAddr, setAddAddr] = useState("");
+  const [showSourcing, setShowSourcing] = useState(false);
+  const [concierge, setConcierge] = useState<{
+    email: string;
+    replyBy: string;
+  } | null>(null);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   const files = useMemo(() => {
     const s = slug(project.name);
-    const list: { name: string; what: string; make: () => string }[] = [];
+    type Entry = {
+      name: string;
+      what: string;
+      mime?: string;
+      make: () => string | Uint8Array;
+    };
+    const list: Entry[] = [];
+    const briefText = () =>
+      brief({
+        name: project.name,
+        workshopName,
+        kindLabel: medium.label,
+        stageLabel,
+        tagline: project.tagline,
+        notes,
+        drafts,
+        topics: tools,
+      });
+    const conceptSvg = () =>
+      B.art
+        .board(
+          { name: project.name, medium: project.medium, stage: "build" },
+          "render",
+          { thumb: true },
+        )
+        .svg.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ');
     if (project.medium === "hardware") {
       list.push({
         name: `${s}.scad`,
@@ -148,34 +166,63 @@ export default function SendOffDialog({
           project.medium === "print"
             ? "Print-ready artwork (SVG)"
             : "Drawing (SVG)",
-        make: () =>
-          B.art
-            .board(
-              { name: project.name, medium: project.medium, stage: "build" },
-              "render",
-              { thumb: true },
-            )
-            .svg.replace(
-              "<svg ",
-              '<svg xmlns="http://www.w3.org/2000/svg" ',
-            ),
+        make: conceptSvg,
       });
     }
     list.push({
       name: `${s}-brief.md`,
       what: "Project brief — every decision and note, for whoever builds it",
-      make: () =>
-        brief({
-          name: project.name,
-          workshopName,
-          kindLabel: medium.label,
-          stageLabel,
-          tagline: project.tagline,
-          notes,
-          drafts,
-          topics: tools,
-        }),
+      make: briefText,
     });
+    if (flow === "quote") {
+      list.push({
+        name: `${s}-fab-pack.zip`,
+        what: "RFQ pack — everything a real shop needs, in one zip",
+        mime: "application/zip",
+        make: () => {
+          const inner = [
+            {
+              name: `${s}-brief.md`,
+              what: "Requirements and decisions",
+              text: briefText(),
+            },
+            {
+              name: `${s}-concept.svg`,
+              what: "Concept drawing (not dimensioned)",
+              text: conceptSvg(),
+            },
+            ...(project.medium === "hardware"
+              ? [
+                  {
+                    name: `${s}.scad`,
+                    what: "Parametric CAD — opens in OpenSCAD (free)",
+                    text: scad(project.name),
+                  },
+                  {
+                    name: `${s}-envelope.stl`,
+                    what: "Envelope for size-check only",
+                    text: stl(project.name),
+                  },
+                ]
+              : []),
+          ];
+          return zipStore([
+            {
+              name: "README.txt",
+              data: strBytes(
+                fabReadme({
+                  name: project.name,
+                  workshopName,
+                  kindLabel: medium.label,
+                  files: inner,
+                }),
+              ),
+            },
+            ...inner.map((f) => ({ name: f.name, data: strBytes(f.text) })),
+          ]);
+        },
+      });
+    }
     const pkg = PACKS[project.medium];
     if (pkg) {
       list.push({
@@ -197,76 +244,25 @@ export default function SendOffDialog({
   // Makers appear after a beat, like a search.
   useEffect(() => {
     if (flow !== "quote" || vendors) return;
-    const kinds = B.MAKER_KINDS[project.medium] ?? B.MAKER_KINDS.hardware;
-    const found: Vendor[] = kinds.map((k, i) => ({
-      id: `v${i}`,
-      name: `${k.kind} (example)`,
-      does: k.does,
-      contact: k.contact,
-      address:
-        k.contact === "phone"
-          ? "[phone number]"
-          : k.contact === "email"
-            ? "[email address]"
-            : "[website]",
-    }));
-    found.push({
-      id: "mark",
-      name: "Mark's Manufacturer",
-      does: "CNC + assembly · Made in America",
-      contact: "email",
-      address: "quotes@marks.example",
-    });
+    const found: Vendor[] = (REAL_MAKERS[project.medium] ?? []).map(
+      (m, i) => ({
+        id: `real${i}`,
+        name: m.name,
+        does: m.does,
+        contact: m.contact,
+        address: m.address,
+        hint: m.hint,
+        real: true,
+      }),
+    );
     setVendors(found);
     const sel: Record<string, boolean> = {};
     found.forEach((v) => {
       sel[v.id] = true;
     });
     setSelected(sel);
-    const t = window.setTimeout(() => setSearching(false), 1400);
-    timers.current.push(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow]);
-
-  // Simulated outreach statuses.
-  useEffect(() => {
-    if (flow !== "quote" || step !== 3 || !vendors) return;
-    const chosen = vendors.filter((v) => selected[v.id]);
-    chosen.forEach((v, i) => {
-      [1, 2].forEach((stage) => {
-        const t = window.setTimeout(
-          () => setReach((r) => ({ ...r, [v.id]: stage })),
-          900 + i * 900 + stage * 1300,
-        );
-        timers.current.push(t);
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
-
-  // Quotes land when their step opens.
-  useEffect(() => {
-    if (flow !== "quote" || step !== 4 || quotes || !vendors) return;
-    const base =
-      ({ hardware: 900, print: 120, space: 4200 })[
-        project.medium as "hardware" | "print" | "space"
-      ] ?? 500;
-    const made: Quote[] = vendors
-      .filter((v) => selected[v.id])
-      .map((v, i) => {
-        const h = B.hash(project.name + v.id);
-        return {
-          id: v.id,
-          vendor: v.name,
-          price: Math.round((base * (0.75 + (h % 60) / 100)) / 10) * 10,
-          lead: [3, 2, 4, 5, 1][(h >> 3) % 5] + i,
-          note: QUOTE_NOTES[(h >> 5) % QUOTE_NOTES.length],
-        };
-      })
-      .sort((a, b) => a.price - b.price);
-    setQuotes(made);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
 
   // Simulated software build log.
   function runBuild() {
@@ -335,6 +331,7 @@ export default function SendOffDialog({
       }
     }
     const decided = blocks.join("\n");
+    const packName = `${slug(project.name)}-fab-pack.zip`;
     return `Hello,
 
 I'm an AI assistant writing on behalf of [YOUR NAME] at ${workshopName}. We're looking for a quote to make the following:
@@ -342,34 +339,50 @@ I'm an AI assistant writing on behalf of [YOUR NAME] at ${workshopName}. We're l
 ${project.name}${project.tagline ? " — " + project.tagline : ""}
 Quantity: 1.
 ${decided ? "\nKey requirements:\n" + decided + "\n" : ""}
-CAD files and a full brief are attached. Could you reply with a price, lead time, and anything you'd change to make it easier or cheaper to build?
+Our RFQ pack (${packName}) is attached: CAD, drawings, and a full brief. Could you reply with a price, lead time, and a payment link, plus anything you'd change to make it easier or cheaper to build?
 
 Thank you,
 [YOUR NAME] (sent by their assistant — replies go straight to them)`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId]);
 
-  async function order() {
-    const q = quotes?.find((x) => x.id === pick);
-    if (!q) return;
+  function mailtoFor(v: Vendor): string {
+    const packName = `${slug(project.name)}-fab-pack.zip`;
+    const body =
+      `Hello,\n\nI'm [YOUR NAME] at ${workshopName}. ` +
+      `Please quote the attached RFQ pack (${packName}): ${project.name}. ` +
+      `Full requirements are in the pack's brief.\n\n` +
+      `Please reply with a price, lead time, and a payment link.\n\nThank you,\n[YOUR NAME]`;
+    return `mailto:${v.address}?subject=${encodeURIComponent(`Request for quote: ${project.name}`)}&body=${encodeURIComponent(body)}`;
+  }
+
+  function webUrl(v: Vendor): string {
+    return v.address.startsWith("http") ? v.address : `https://${v.address}`;
+  }
+
+  async function sentOut(chosen: Vendor[]) {
+    if (!chosen.length || busy) return;
     setBusy(true);
     setProblem("");
-    const res = await placeOrder(appId, {
-      vendor: q.vendor,
-      price: q.price,
-      lead: q.lead,
-    });
+    const res = await recordRfqSent(
+      appId,
+      chosen.map((v) => ({
+        name: v.name,
+        contact: v.contact,
+        address: v.address,
+      })),
+    );
     if (!res.ok) {
       setBusy(false);
-      setProblem("Couldn't place the order. Try again.");
+      setProblem("Couldn't save that. Try again.");
       return;
     }
     await addProjectNote(appId, {
       who: "apprentice",
-      text: `Requested a build from ${q.vendor} (about $${q.price.toLocaleString()}, they said ${q.lead} week${q.lead > 1 ? "s" : ""}). I'll track it and tell you when it lands.`,
+      text: `RFQs went out to ${chosen.map((v) => v.name).join(", ")}. When they reply, tell me what they promised and I'll count it down.`,
     });
     setBusy(false);
-    setDone(q);
+    setDone("rfqs-out");
     router.refresh();
   }
 
@@ -421,6 +434,25 @@ Thank you,
   const contactIcon = (c: string) =>
     c === "phone" ? "phone" : c === "email" ? "mail" : "globe";
 
+function downloadFile(name: string, data: string | Uint8Array, mime?: string) {
+  if (typeof data === "string") {
+    window.B.download(name, data, mime);
+    return;
+  }
+  const blob = new Blob([data as unknown as BlobPart], {
+    type: mime ?? "application/octet-stream",
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 800);
+}
+
   function fileList() {
     return (
       <ul className="filelist">
@@ -434,7 +466,7 @@ Thank you,
             <button
               type="button"
               className="btn"
-              onClick={() => B.download(f.name, files[i].make())}
+              onClick={() => downloadFile(f.name, files[i].make(), f.mime)}
             >
               Download
             </button>
@@ -445,23 +477,47 @@ Thank you,
   }
 
   function quoteBody(): ReactNode {
-    if (done && typeof done === "object") {
-      const line =
-        project.medium === "hardware"
-          ? "Machine arrives in 2 weeks. Make sure to take a picture and add it to your Workshop!"
-          : `${project.name} arrives in 2 weeks. Make sure to take a picture and add it to your Workshop!`;
+    const packEntry = files.find((f) => f.name.endsWith("-fab-pack.zip"));
+    if (done === "rfqs-out") {
+      const names = (vendors ?? [])
+        .filter((v) => selected[v.id])
+        .map((v) => v.name)
+        .join(", ");
       return (
         <>
           <p className="hand" style={{ fontSize: 26, margin: 0, lineHeight: 1.2 }}>
-            Request sent to {done.vendor} — about $
-            {done.price.toLocaleString()}.
+            RFQs are out{names ? ` to ${names}` : ""}.
           </p>
           <p style={{ margin: 0 }}>
             They&apos;ll reply with payment details. Have your credit card
-            ready — nothing is ordered until you pay their reply.
+            ready — nothing is ordered until you pay their reply. When they
+            answer, tell me what they promised and I&apos;ll count it down.
           </p>
+          <div className="dialog-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={onClose}
+            >
+              Done
+            </button>
+          </div>
+        </>
+      );
+    }
+    if (done === "concierge" && concierge) {
+      const by = new Date(concierge.replyBy);
+      return (
+        <>
           <p className="hand" style={{ fontSize: 26, margin: 0, lineHeight: 1.2 }}>
-            {line}
+            Sourcing requested.
+          </p>
+          <p style={{ margin: 0 }}>
+            We&apos;ll reply to {concierge.email} by{" "}
+            {Number.isNaN(by.getTime())
+              ? "within 48 hours"
+              : by.toLocaleString()}{" "}
+            with a supplier — or to say we couldn&apos;t find one.
           </p>
           <div className="dialog-actions">
             <button
@@ -501,37 +557,22 @@ Thank you,
       );
     }
     if (step === 1) {
-      if (searching || !vendors) {
-        return (
-          <>
-            <p
-              style={{ margin: 0, display: "flex", alignItems: "center", gap: 10 }}
-            >
-              <BIcon svg={B.icon("search")} /> Looking for makers who can build
-              a {medium.thing} like this…{" "}
-              <span className="thinking" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-              </span>
-            </p>
-            <p className="sim">
-              Demo: in the real app this searches for actual shops near you.
-            </p>
-          </>
-        );
-      }
+      if (!vendors) return null;
       const any = Object.values(selected).some(Boolean);
+      const showConcierge = vendors.length === 0 || showSourcing;
       return (
         <>
           <p style={{ margin: 0 }}>
-            I found makers who can build this. Pick who should get the
-            request, or add someone you already know.
+            {vendors.length > 0
+              ? "These shops take this kind of work. Pick who should get the request, or add someone you already know."
+              : `Nothing in the database for this kind of ${medium.thing} yet — add a shop you know, or ask us to source one.`}
           </p>
-          <p className="sim">
-            Demo placeholders. A real build fills these with actual businesses
-            near you.
-          </p>
+          {vendors.length > 0 && (
+            <p className="sim">
+              Named shops take real orders — you send the RFQ pack yourself
+              in the last step.
+            </p>
+          )}
           <fieldset style={{ border: "none", margin: 0, padding: 0 }}>
             <legend className="sr-only">Who to ask</legend>
             <ul className="vendors">
@@ -597,6 +638,34 @@ Thank you,
               <BIcon svg={B.icon("plus")} /> Add
             </button>
           </form>
+          {showConcierge &&
+            (concierge ? (
+              <p className="sim">
+                Sourcing requested — we&apos;ll reply to {concierge.email}.
+              </p>
+            ) : (
+              <ConciergeCard
+                appId={appId}
+                idPrefix="so-src"
+                headline="Sourcing requested"
+                blurb="No supplier in our database for this yet. Send this request and Bottega will source one and reply within 48 hours."
+                actionLabel="Request sourcing"
+                mailSubject={`Sourcing request: ${project.name}`}
+                mailContext={`Project: ${project.name}\nKind: ${medium.label}\nWorkshop: ${workshopName}`}
+                onDone={(d) => setConcierge(d)}
+              />
+            ))}
+          {!showConcierge && (
+            <div>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setShowSourcing(true)}
+              >
+                My process isn&apos;t listed
+              </button>
+            </div>
+          )}
           <div className="dialog-actions">
             <button
               type="button"
@@ -608,10 +677,16 @@ Thank you,
             <button
               type="button"
               className="btn btn-primary"
-              disabled={!any}
-              onClick={() => setStep(2)}
+              disabled={!any && !concierge}
+              onClick={() => (any ? setStep(2) : setDone("concierge"))}
             >
-              Draft the message <BIcon svg={B.icon("fwd")} />
+              {any ? (
+                <>
+                  Draft the message <BIcon svg={B.icon("fwd")} />
+                </>
+              ) : (
+                "Done"
+              )}
             </button>
           </div>
         </>
@@ -624,8 +699,9 @@ Thank you,
       return (
         <>
           <p style={{ margin: 0 }}>
-            Here&apos;s what I&apos;ll send. Edit anything — nothing goes out
-            until you press approve.
+            Here&apos;s the full request — for web forms, paste it in. Email
+            vendors get a short version plus the pack. Edit anything; nothing
+            goes out until you send it yourself.
           </p>
           <label className="lbl" htmlFor="so-msg">
             Email and web-form message
@@ -666,7 +742,7 @@ Thank you,
               className="btn btn-primary"
               onClick={() => setStep(3)}
             >
-              <BIcon svg={B.icon("check")} /> Approve and send
+              Continue to sending <BIcon svg={B.icon("fwd")} />
             </button>
           </div>
         </>
@@ -674,25 +750,23 @@ Thank you,
     }
     if (step === 3) {
       const chosen = (vendors ?? []).filter((v) => selected[v.id]);
-      const label = (v: Vendor) => {
-        const r = reach[v.id] || 0;
-        const seq =
-          v.contact === "phone"
-            ? ["Calling…", "Spoke to the front desk", "Quote received"]
-            : v.contact === "web"
-              ? ["Filling in the form…", "Submitted", "Quote received"]
-              : ["Sending email…", "Delivered", "Quote received"];
-        return (
-          <span className={r >= 2 ? "status-ok" : "status-wait"}>
-            {seq[Math.min(r, 2)]}
-          </span>
-        );
+      const allMarked =
+        chosen.length > 0 && chosen.every((v) => marked[v.id]);
+      const sendPack = (v: Vendor) => {
+        if (packEntry) {
+          downloadFile(packEntry.name, packEntry.make(), packEntry.mime);
+        }
+        if (v.contact === "email") {
+          window.location.href = mailtoFor(v);
+        } else if (v.contact === "web") {
+          window.open(webUrl(v), "_blank", "noreferrer");
+        }
       };
-      const allDone = chosen.every((v) => (reach[v.id] || 0) >= 2);
       return (
         <>
           <p style={{ margin: 0 }}>
-            Reaching out now. I&apos;ll let you know the moment quotes come in.
+            Two taps per shop: take the pack, then send it. Mark each one as
+            you go — I can&apos;t see your outbox, so this runs on trust.
           </p>
           <ul className="reach">
             {chosen.map((v) => (
@@ -700,98 +774,66 @@ Thank you,
                 <BIcon svg={B.icon(contactIcon(v.contact), 20)} />
                 <div className="grow">
                   <strong>{v.name}</strong>
+                  <div className="small">
+                    {v.contact === "phone"
+                      ? `Call ${v.address} with the script from the last step.`
+                      : (v.hint ?? "Send them the RFQ pack.")}
+                  </div>
                 </div>
-                {label(v)}
+                {v.contact !== "phone" && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => sendPack(v)}
+                  >
+                    <BIcon svg={B.icon("download", 18)} />{" "}
+                    {v.contact === "email" ? "Pack + email" : "Pack + site"}
+                  </button>
+                )}
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={!!marked[v.id]}
+                    onChange={(e) =>
+                      setMarked((m) => ({ ...m, [v.id]: e.target.checked }))
+                    }
+                  />
+                  <span className="small">Sent</span>
+                </label>
               </li>
             ))}
           </ul>
-          <p className="sim">
-            Simulated. Connect email, phone and web-form services to make this
-            real.
+          <p className="small" style={{ margin: 0 }}>
+            Email can&apos;t carry attachments by itself — attach the
+            downloaded pack before you hit send. Replace [YOUR NAME] first.
           </p>
+          {problem !== "" && (
+            <p className="small" style={{ margin: 0, color: "var(--red)" }}>
+              {problem}
+            </p>
+          )}
           <div className="dialog-actions">
             <button
               type="button"
-              className="btn btn-primary"
-              disabled={!allDone}
-              onClick={() => setStep(4)}
+              className="btn"
+              onClick={() => setStep(2)}
             >
-              See the quotes <BIcon svg={B.icon("fwd")} />
+              Back
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!allMarked || busy}
+              onClick={() => void sentOut(chosen)}
+            >
+              <BIcon svg={B.icon("check")} />{" "}
+              {busy ? "Saving…" : "RFQs are out"}
             </button>
           </div>
         </>
       );
     }
-    const best = quotes?.[0];
-    return (
-      <>
-        <p style={{ margin: 0 }}>
-          Quotes are in.{" "}
-          {best
-            ? `${best.vendor} is cheapest at $${best.price.toLocaleString()}.`
-            : ""}
-        </p>
-        <div className="quotes-wrap">
-          <table className="quotes">
-            <thead>
-              <tr>
-                <th scope="col">Maker</th>
-                <th scope="col">Price</th>
-                <th scope="col">Lead time</th>
-                <th scope="col">Their note</th>
-                <th scope="col">
-                  <span className="sr-only">Choose</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {(quotes ?? []).map((q) => (
-                <tr key={q.id}>
-                  <td>
-                    <strong>{q.vendor}</strong>
-                  </td>
-                  <td>${q.price.toLocaleString()}</td>
-                  <td>
-                    {q.lead} week{q.lead > 1 ? "s" : ""}
-                  </td>
-                  <td className="small">{q.note}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className={`btn${pick === q.id ? " btn-dark" : ""}`}
-                      aria-pressed={pick === q.id}
-                      onClick={() => setPick(q.id)}
-                    >
-                      {pick === q.id ? "Chosen" : "Choose"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="sim">Example quotes for the demo — not real prices.</p>
-        {problem !== "" && (
-          <p className="small" style={{ margin: 0, color: "var(--red)" }}>
-            {problem}
-          </p>
-        )}
-        <div className="dialog-actions">
-          <button type="button" className="btn" onClick={onClose}>
-            Decide later
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!pick || busy}
-            onClick={() => void order()}
-          >
-            <BIcon svg={B.icon("send")} />{" "}
-            {busy ? "Sending…" : "Send the request"}
-          </button>
-        </div>
-      </>
-    );
+    return null;
   }
 
   function shipBody(): ReactNode {
@@ -942,6 +984,11 @@ Thank you,
             {medium.arrivedLabel}.{" "}
             {EXPORT_DONE[project.medium] ?? "It's out in the world."}
           </p>
+          <PhotoCapture
+            appId={appId}
+            id="so-photo"
+            label="Prove it — add a photo"
+          />
           <div className="dialog-actions">
             <button
               type="button"

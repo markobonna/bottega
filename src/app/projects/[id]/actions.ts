@@ -19,6 +19,12 @@ import {
 } from "@/lib/records";
 import type { Op } from "@/lib/spec/ops";
 import { createClient } from "@/lib/supabase/server";
+import {
+  ConciergeInput,
+  forwardConciergeRequest,
+  MailConfigError,
+  replyBy,
+} from "@/lib/concierge-mail";
 import type { Json } from "@/lib/supabase/types";
 import { listVersions, saveVersion, type VersionRow } from "@/lib/versions";
 import { logEvent as writeEvent } from "@/lib/events";
@@ -344,24 +350,88 @@ export async function advanceStage(
   }
 }
 
-export async function placeOrder(
+export async function recordRfqSent(
   appId: string,
-  order: { vendor: string; price: number; lead: number },
+  vendors: { name: string; contact: string; address: string }[],
 ): Promise<{ ok: true } | Fail> {
   try {
+    if (!vendors.length) throw new Error("Pick at least one maker.");
     const { supabase } = await loadStage(appId);
-    const arriveAt = new Date(Date.now() + 14 * 86400000).toISOString();
     const { error } = await supabase
       .from("apps")
       .update({
         stage: "sent",
-        arrive_at: arriveAt,
+        arrive_at: null,
         arrival_seen: false,
-        order_info: order,
+        order_info: {
+          vendors: vendors.map((v) => ({
+            name: v.name.slice(0, 120),
+            contact: v.contact.slice(0, 20),
+            address: v.address.slice(0, 200),
+          })),
+          sent_at: new Date().toISOString(),
+        },
       })
       .eq("id", appId);
     if (error) throw new Error(error.message);
     revalidatePath(`/projects/${appId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+async function mergeOrderInfo(
+  appId: string,
+  set: Record<string, unknown>,
+): Promise<void> {
+  const supabase = await createClient();
+  const { data: app, error: loadError } = await supabase
+    .from("apps")
+    .select("order_info")
+    .eq("id", appId)
+    .maybeSingle();
+  if (loadError || !app) throw new Error("No such project.");
+  const current =
+    app.order_info && typeof app.order_info === "object"
+      ? (app.order_info as Record<string, unknown>)
+      : {};
+  const { error } = await supabase
+    .from("apps")
+    .update({ order_info: { ...current, ...set } })
+    .eq("id", appId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/projects/${appId}`);
+}
+
+/** The vendor's promised date, transcribed by the user from their reply. */
+export async function savePromise(
+  appId: string,
+  date: string,
+): Promise<{ ok: true } | Fail> {
+  try {
+    const at = new Date(`${date}T12:00:00Z`);
+    if (Number.isNaN(at.getTime())) throw new Error("Pick a real date.");
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("apps")
+      .update({ arrive_at: at.toISOString(), arrival_seen: false })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/projects/${appId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function saveArrivalPhoto(
+  appId: string,
+  path: string,
+): Promise<{ ok: true } | Fail> {
+  try {
+    if (!path) throw new Error("No photo.");
+    await mergeOrderInfo(appId, { arrival_photo: path.slice(0, 300) });
     return { ok: true };
   } catch (e) {
     return fail(e);
@@ -428,6 +498,63 @@ export async function dismissArrival(
       .eq("id", appId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function submitConciergeRequest(
+  appId: string,
+  input: { email: string; note?: string },
+): Promise<Ok<{ replyBy: string; notified: boolean; inbox: string }> | Fail> {
+  const parsed = ConciergeInput.safeParse({
+    email: input.email,
+    note: input.note ?? "",
+  });
+  if (!parsed.success) {
+    return fail(new Error(parsed.error.issues[0]?.message ?? "Bad input."));
+  }
+  try {
+    const supabase = await createClient();
+    const { data: app, error: loadError } = await supabase
+      .from("apps")
+      .select("id, name, kind, workshops ( name )")
+      .eq("id", appId)
+      .maybeSingle();
+    if (loadError || !app) throw new Error("No such project.");
+    const { error: insertError } = await supabase
+      .from("concierge_requests")
+      .insert({
+        app_id: appId,
+        email: parsed.data.email,
+        note: parsed.data.note,
+      });
+    if (insertError) throw new Error(insertError.message);
+    const by = replyBy();
+    const inbox = process.env.CONCIERGE_INBOX || "";
+    if (!inbox) {
+      return { ok: true, replyBy: by, notified: false, inbox: "" };
+    }
+    try {
+      const workshop = app.workshops as { name?: string } | null;
+      await forwardConciergeRequest({
+        to: inbox,
+        replyTo: parsed.data.email,
+        appName: app.name,
+        workshopName:
+          typeof workshop?.name === "string" ? workshop.name : "a workshop",
+        kindLabel: app.kind ?? "project",
+        note: parsed.data.note,
+      });
+    } catch (e) {
+      // The queued row is the durable record; a failed forward still gets
+      // seen in the table. Say so honestly.
+      if (e instanceof MailConfigError) {
+        return { ok: true, replyBy: by, notified: false, inbox };
+      }
+      throw e;
+    }
+    return { ok: true, replyBy: by, notified: true, inbox };
   } catch (e) {
     return fail(e);
   }

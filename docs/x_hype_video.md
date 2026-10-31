@@ -26,10 +26,11 @@ seconds, captions burned in (most X views are muted), one idea per
 | 3 | Talk bar: "I want to make a cake stand" | "Just say what you want to make" | [FILL] |
 | 4 | Ink-in reveal → board drawing | "It designs it in front of you" | [FILL] |
 | 5 | Measure tap → margin note | "Every measurement rides along" | [FILL] |
-| 6 | "Request sent to Mark's Manufacturer" | "Hardware goes to a real maker" | [FILL] |
-| 7 | Preview tab: working app | "Software just… runs" | [FILL] |
-| 8 | Closing line | "What will civilization build?" | [FILL] |
-| 9 | End card | "Try it live: [URL]" | — |
+| 6 | RFQ pack downloads | "One zip a real shop can quote" | [FILL] |
+| 7 | "RFQs are out" + SendCutSend/Xometry | "Hardware goes to real makers" | [FILL] |
+| 8 | Preview tab: working app | "Software just… runs" | [FILL] |
+| 9 | Closing line | "What will civilization build?" | [FILL] |
+| 10 | End card | "Try it live: [URL]" | — |
 
 ## Post copy (draft, under 280 chars)
 

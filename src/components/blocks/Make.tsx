@@ -264,6 +264,7 @@ export default function Make({ block, app }: BlockProps) {
       </div>
       <p className="text-sm text-muted">
         Send the STL to a 3D printer or the DXF to a CNC or panel-cutting shop.
+        The DXF quotes instantly at SendCutSend (US).
       </p>
 
       {!describeOff && (

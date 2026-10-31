@@ -12,6 +12,7 @@ import "@/vendor/bottega/art/room.js";
 import "@/vendor/bottega/art/board.js";
 import Dialog, { BIcon } from "./Dialog";
 import NewProjectDialog from "./NewProjectDialog";
+import PhotoCapture from "./PhotoCapture";
 
 export default function ArrivalDialog({
   appId,
@@ -94,6 +95,11 @@ export default function ArrivalDialog({
       >
         {line}
       </p>
+      <PhotoCapture
+        appId={appId}
+        id="arr-photo"
+        label="Prove it landed — add a photo"
+      />
       <div className="dialog-actions" style={{ justifyContent: "center" }}>
         <Link href={`/workshops/${workshop.id}`} className="btn">
           See it in {workshop.name}
