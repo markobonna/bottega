@@ -73,6 +73,8 @@ export type Database = {
           photos: string[]
           position: number
           private: boolean
+          room_x: number | null
+          room_y: number | null
           spec: Json
           stage: string | null
           updated_at: string | null
@@ -93,6 +95,8 @@ export type Database = {
           photos?: string[]
           position?: number
           private?: boolean
+          room_x?: number | null
+          room_y?: number | null
           spec: Json
           stage?: string | null
           updated_at?: string | null
@@ -113,6 +117,8 @@ export type Database = {
           photos?: string[]
           position?: number
           private?: boolean
+          room_x?: number | null
+          room_y?: number | null
           spec?: Json
           stage?: string | null
           updated_at?: string | null

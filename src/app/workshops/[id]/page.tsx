@@ -53,7 +53,7 @@ export default async function WorkshopPage({
   const { data: apps, error } = await supabase
     .from("apps")
     .select(
-      "id, name, version, updated_at, spec, kind, stage, look_path, blueprint_path",
+      "id, name, version, updated_at, spec, kind, stage, look_path, blueprint_path, photos, room_x, room_y",
     )
     .eq("workshop_id", id)
     .order("position", { ascending: true })
@@ -70,14 +70,29 @@ export default async function WorkshopPage({
       ] ?? null)
     : null;
 
+  const galleryPaths = (apps ?? []).flatMap((a) =>
+    (a.photos ?? []).length > 0 ? [(a.photos ?? []).slice(-1)[0]] : [],
+  );
+  const galleryUrls =
+    galleryPaths.length > 0
+      ? await signedUrls(supabase, galleryPaths)
+      : ({} as Record<string, string>);
   const roomProjects = (apps ?? []).map((a) => {
     const parsed = parseSpec(a.spec);
+    const newest = (a.photos ?? []).slice(-1)[0];
+    const imageUrl =
+      (newest ? galleryUrls[newest] : undefined) ??
+      (a.look_path ? urls[a.look_path] : undefined) ??
+      null;
     return {
       id: a.id,
       name: a.name,
       medium: mediumForKind(a.kind ?? "software"),
       stage: effectiveStage(a.stage, a.version),
       tagline: parsed.ok ? parsed.spec.tagline : "",
+      imageUrl,
+      roomX: a.room_x ?? null,
+      roomY: a.room_y ?? null,
     };
   });
   const sceneVersion = `${workshop.id}:${(apps ?? []).map((a, i) => `${i}:${a.id}@${a.version}`).join(",")}`;

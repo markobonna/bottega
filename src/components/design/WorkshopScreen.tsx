@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import "@/vendor/bottega/core.js";
 import "@/vendor/bottega/types.js";
 import "@/vendor/bottega/art/common.js";
 import "@/vendor/bottega/art/room.js";
+import { moveRoomCard } from "@/app/projects/[id]/actions";
 import { say } from "@/lib/apprentice-client";
 import type { DesignMedium, LiveStage } from "@/lib/design/project-art";
 import NewProjectDialog from "./NewProjectDialog";
+import RoomCard from "./RoomCard";
 import RoomPhotoButton from "./RoomPhotoButton";
 
 export interface RoomProject {
@@ -18,6 +20,9 @@ export interface RoomProject {
   medium: DesignMedium;
   stage: LiveStage;
   tagline: string;
+  imageUrl: string | null;
+  roomX: number | null;
+  roomY: number | null;
 }
 
 function Icon({ svg }: { svg: string }) {
@@ -93,6 +98,60 @@ export default function WorkshopScreen({
     [version],
   );
 
+  const sceneRef = useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = useState<Record<string, { x: number; y: number }>>(
+    {},
+  );
+  const [moveProblem, setMoveProblem] = useState("");
+  const byId = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
+  const tagDefault = useMemo(() => {
+    const out: Record<string, { x: number; y: number }> = {};
+    for (const t of rm.tags as { p: { id?: string; name: string }; x: string; y: string }[]) {
+      out[t.p.id ?? t.p.name] = { x: parseFloat(t.x), y: parseFloat(t.y) };
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [version]);
+
+  function cardPos(p: RoomProject): { x: number; y: number } | null {
+    return (
+      pos[p.id] ??
+      (p.roomX !== null && p.roomY !== null
+        ? { x: p.roomX, y: p.roomY }
+        : (tagDefault[p.id] ?? null))
+    );
+  }
+
+  async function onCardMove(p: RoomProject, x: number, y: number) {
+    setPos((m) => ({ ...m, [p.id]: { x, y } }));
+    setMoveProblem("");
+    const res = await moveRoomCard(
+      p.id,
+      Math.round(x * 100) / 100,
+      Math.round(y * 100) / 100,
+    );
+    if (!res.ok) {
+      setMoveProblem("Couldn't save that spot — it jumped back.");
+      setPos((m) => {
+        const next = { ...m };
+        delete next[p.id];
+        return next;
+      });
+    }
+  }
+
+  function cardMeta(p: RoomProject): string {
+    const medium = B.MEDIUMS[p.medium] ?? B.MEDIUMS.hardware;
+    const tag = (
+      rm.tags as {
+        p: { id?: string; name: string; medium: string; stage: string };
+      }[]
+    ).find((t) => (t.p.id ?? t.p.name) === p.id);
+    return tag
+      ? `${medium.label} · ${B.stageLabel(tag.p).toLowerCase()}`
+      : medium.label;
+  }
+
   return (
     <div className="b-scope">
       <section className="intro">
@@ -137,7 +196,11 @@ export default function WorkshopScreen({
       {view === "room" ? (
         <div>
           <div className="scene-pan">
-            <div className="scene framed" style={{ aspectRatio: "16/9" }}>
+            <div
+              ref={sceneRef}
+              className="scene framed"
+              style={{ aspectRatio: "16/9" }}
+            >
               <div
                 style={{ display: "contents" }}
                 dangerouslySetInnerHTML={{ __html: rm.svg }}
@@ -154,6 +217,7 @@ export default function WorkshopScreen({
               {rm.tags.map(({ p, x, y }) => {
                 const medium = B.MEDIUMS[p.medium] ?? B.MEDIUMS.hardware;
                 const pid = p.id ?? p.name;
+                if (byId.get(pid)?.imageUrl) return null;
                 return (
                   <Link
                     key={pid}
@@ -209,6 +273,24 @@ export default function WorkshopScreen({
                   </figcaption>
                 </figure>
               )}
+              {projects.map((p) => {
+                if (!p.imageUrl) return null;
+                const at = cardPos(p);
+                if (!at) return null;
+                return (
+                  <RoomCard
+                    key={`card-${p.id}`}
+                    id={p.id}
+                    name={p.name}
+                    meta={cardMeta(p)}
+                    imageUrl={p.imageUrl}
+                    x={at.x}
+                    y={at.y}
+                    sceneRef={sceneRef}
+                    onMove={(x, y) => void onCardMove(p, x, y)}
+                  />
+                );
+              })}
               {rm.newSpot && (
                 <button
                   type="button"
@@ -249,7 +331,15 @@ export default function WorkshopScreen({
               )}
             </div>
           </div>
-          <p className="pan-hint">Drag sideways to look around the room.</p>
+          <p className="pan-hint">
+            Drag sideways to look around the room. Drag a photo card to
+            hang it somewhere else.
+          </p>
+          {moveProblem !== "" && (
+            <p className="small" style={{ color: "var(--red)" }}>
+              {moveProblem}
+            </p>
+          )}
         </div>
       ) : (
         <ul className="grid-cards">

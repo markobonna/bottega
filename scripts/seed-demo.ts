@@ -10,6 +10,8 @@ import { readFileSync } from "node:fs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { answer, createBrain, snapshot, train } from "@/lib/brain";
+import { MissingKeyError } from "@/lib/meta";
+import { renderLook } from "@/lib/project-look";
 import { addRecord } from "@/lib/records";
 import { segment } from "@/lib/sam";
 import coleFixture from "@/lib/spec/fixtures/cole.json";
@@ -115,13 +117,54 @@ async function makeWorkshop(
   return data.id;
 }
 
+let looksSkipped = false;
+
+/** createApp plus the same look render a built project gets (or a clean
+ * skip without a model key, so keyless seeds keep working). */
+async function createSeedApp(
+  client: Client,
+  uid: string,
+  spec: unknown,
+  opts: {
+    source: "build";
+    summary: string;
+    workshopId: string;
+    kind?: "hardware" | "software" | "music" | "dance" | "print" | "recipe" | "space";
+  },
+): Promise<string> {
+  const id = await createApp(client, spec, opts);
+  if (looksSkipped) return id;
+  try {
+    const { lookPath, blueprintPath } = await renderLook(client, uid, {
+      id,
+      spec,
+      kind: opts.kind ?? "software",
+    });
+    const { error } = await client
+      .from("apps")
+      .update({ look_path: lookPath, blueprint_path: blueprintPath })
+      .eq("id", id);
+    if (error) throw new Error(`look paths: ${error.message}`);
+    console.log(`look: ${(spec as { name?: string }).name ?? id}`);
+  } catch (e) {
+    if (e instanceof MissingKeyError) {
+      looksSkipped = true;
+      console.log("looks skipped (no model key)");
+      return id;
+    }
+    throw e;
+  }
+  return id;
+}
+
 async function seedMaria(client: Client, uid: string): Promise<string> {
   const cafeId = await makeWorkshop(client, "The Café", "cafe");
   const studioId = await makeWorkshop(client, "Dance Studio", "studio");
   await makeWorkshop(client, "Music Room", "music");
   await makeWorkshop(client, "Classroom", "classroom");
-  const appId = await createApp(
+  const appId = await createSeedApp(
     client,
+    uid,
     { ...mariaFixture, name: "Bakery orders" },
     { source: "build", summary: "Demo seed", workshopId: cafeId },
   );
@@ -132,14 +175,16 @@ async function seedMaria(client: Client, uid: string): Promise<string> {
     ["Loyalty app", "software"],
     ["Autumn menu board", "print"],
   ] as const) {
-    await createApp(
+    await createSeedApp(
       client,
+      uid,
       { ...mariaFixture, name },
       { source: "build", summary: "Demo seed", workshopId: cafeId, kind },
     );
   }
-  await createApp(
+  await createSeedApp(
     client,
+    uid,
     { ...mariaFixture, name: "Spring showcase routine" },
     {
       source: "build",
@@ -285,8 +330,9 @@ async function seedCole(client: Client, uid: string): Promise<string> {
   const garageId = await makeWorkshop(client, "The Garage", "garage");
   await makeWorkshop(client, "The Kitchen", "kitchen");
   await makeWorkshop(client, "Classroom", "classroom");
-  const appId = await createApp(
+  const appId = await createSeedApp(
     client,
+    uid,
     { ...coleFixture, name: "Restoration Bench" },
     {
       source: "build",
@@ -300,8 +346,9 @@ async function seedCole(client: Client, uid: string): Promise<string> {
     ["Bike wall rack", "hardware"],
     ["Workbench lamp", "hardware"],
   ] as const) {
-    await createApp(
+    await createSeedApp(
       client,
+      uid,
       { ...coleFixture, name },
       { source: "build", summary: "Demo seed", workshopId: garageId, kind },
     );

@@ -484,6 +484,35 @@ export async function addBoardPhoto(
   }
 }
 
+export async function moveRoomCard(
+  appId: string,
+  x: number,
+  y: number,
+): Promise<{ ok: true } | Fail> {
+  try {
+    if (
+      !Number.isFinite(x) ||
+      !Number.isFinite(y) ||
+      x < 0 ||
+      x > 100 ||
+      y < 0 ||
+      y > 100
+    ) {
+      throw new Error("Bad position.");
+    }
+    const supabase = await createClient();
+    await needApp(supabase, appId);
+    const { error } = await supabase
+      .from("apps")
+      .update({ room_x: x, room_y: y })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function saveArrivalPhoto(
   appId: string,
   path: string,

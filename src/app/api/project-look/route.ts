@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 import { fail, readJson, requireUser } from "@/lib/api";
-import { downloadAsDataUrl } from "@/lib/media";
-import { image, json, type MetaMessage } from "@/lib/meta";
+import { describePrototype, renderLook } from "@/lib/project-look";
 import { parseSpec } from "@/lib/spec/schema";
 
 export const runtime = "nodejs";
@@ -12,8 +11,6 @@ const BodySchema = z.object({
   appId: z.string().min(1),
   photoPath: z.string().min(1).optional(),
 });
-
-const SUFFIX = "no text, no logos, no people's faces";
 
 export async function POST(req: Request): Promise<Response> {
   const auth = await requireUser();
@@ -27,15 +24,10 @@ export async function POST(req: Request): Promise<Response> {
     .maybeSingle();
   if (!app || app.owner !== auth.user.id)
     return Response.json({ error: "No such project." }, { status: 404 });
-  const parsed = parseSpec(app.spec);
-  if (!parsed.ok)
+  if (!parseSpec(app.spec).ok)
     return Response.json({ error: "Bad project spec." }, { status: 404 });
 
-  const blocks = parsed.spec.screens
-    .flatMap((s) => s.blocks.map((b) => `${b.type}: ${b.title}`))
-    .join("; ")
-    .slice(0, 400);
-  let base = `${parsed.spec.name}: ${parsed.spec.tagline}. It has ${blocks}.`;
+  let extra: string | undefined;
   let fromPhoto = false;
   try {
     if (body.photoPath) {
@@ -45,71 +37,20 @@ export async function POST(req: Request): Promise<Response> {
           { status: 403 },
         );
       }
-      const dataUrl = await downloadAsDataUrl(
+      const description = await describePrototype(
         auth.supabase,
         body.photoPath,
+        app.name,
       );
-      const messages: MetaMessage[] = [
-        {
-          role: "system",
-          content:
-            "Describe this prototype photo in one dense paragraph for a product photographer: materials, colors, proportions, construction details. Judge only what is visible.",
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: `Prototype of: ${base}` },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ];
-      const seen = await json(
-        messages,
-        z.object({ description: z.string() }),
-        { reasoning: "minimal", maxTokens: 800 },
-      );
-      base += ` It looks like this: ${seen.description.slice(0, 600)}`;
+      extra = ` It looks like this: ${description.slice(0, 600)}`;
       fromPhoto = true;
     }
-    const jobs: Promise<Uint8Array>[] = [
-      image(
-        app.kind === "hardware"
-          ? `A product photo of ${base}, warm light, ${SUFFIX}`
-          : `A clean app design mockup for ${base}, ${SUFFIX}`,
-      ),
-    ];
-    if (app.kind === "hardware") {
-      jobs.push(
-        image(
-          `A technical blueprint schematic drawing of ${base}, white lines on blue background, ${SUFFIX}`,
-        ),
-      );
-    }
-    const [look, blueprint] = await Promise.all(jobs);
-    const uid = auth.user.id;
-    const lookPath = `${uid}/${app.id}/look.png`;
-    const up1 = await auth.supabase.storage
-      .from("media")
-      .upload(lookPath, new Blob([look as BlobPart], { type: "image/png" }), {
-        contentType: "image/png",
-        upsert: true,
-      });
-    if (up1.error) throw new Error(up1.error.message);
-    let blueprintPath: string | null = null;
-    if (blueprint) {
-      blueprintPath = `${uid}/${app.id}/blueprint.png`;
-      const up2 = await auth.supabase.storage
-        .from("media")
-        .upload(
-          blueprintPath,
-          new Blob([blueprint as BlobPart], { type: "image/png" }),
-          {
-            contentType: "image/png",
-            upsert: true,
-          },
-        );
-      if (up2.error) throw new Error(up2.error.message);
-    }
+    const { lookPath, blueprintPath } = await renderLook(
+      auth.supabase,
+      auth.user.id,
+      { id: app.id, spec: app.spec, kind: app.kind ?? "software" },
+      extra,
+    );
     const { error: upError } = await auth.supabase
       .from("apps")
       .update({ look_path: lookPath, blueprint_path: blueprintPath })
