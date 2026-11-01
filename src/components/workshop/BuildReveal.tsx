@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { btn, card } from "@/components/ui";
+import LookPainter from "@/components/design/LookPainter";
 import type { AppSpec, BlockType } from "@/lib/spec/schema";
 
 const BLOCK_ICON: Record<BlockType, string> = {
@@ -93,6 +94,9 @@ export default function BuildReveal({
               ? "Built with Muse Spark Open from your words."
               : "Built with Muse Spark from your words."}
           </p>
+          <div className="text-center">
+            <LookPainter appId={appId} lookMissing />
+          </div>
         </div>
       )}
     </div>

@@ -301,6 +301,21 @@ export async function transcribe(
   return body.transcript;
 }
 
+async function imageBytesFrom(res: Response, timeoutMs: number): Promise<Uint8Array> {
+  const body = (await res.json()) as {
+    data?: { b64_json?: unknown; url?: unknown }[];
+  };
+  const first = body.data?.[0];
+  if (typeof first?.b64_json === 'string' && first.b64_json !== '') {
+    return Uint8Array.from(Buffer.from(first.b64_json, 'base64'));
+  }
+  if (typeof first?.url === 'string' && first.url !== '') {
+    const dl = await request(first.url, {}, timeoutMs);
+    return new Uint8Array(await dl.arrayBuffer());
+  }
+  throw new ModelError(502, 'empty image');
+}
+
 export async function image(
   prompt: string,
   timeoutMs = 55000,
@@ -317,16 +332,26 @@ export async function image(
     },
     timeoutMs,
   );
-  const body = (await res.json()) as {
-    data?: { b64_json?: unknown; url?: unknown }[];
-  };
-  const first = body.data?.[0];
-  if (typeof first?.b64_json === 'string' && first.b64_json !== '') {
-    return Uint8Array.from(Buffer.from(first.b64_json, 'base64'));
-  }
-  if (typeof first?.url === 'string' && first.url !== '') {
-    const dl = await request(first.url, {}, timeoutMs);
-    return new Uint8Array(await dl.arrayBuffer());
-  }
-  throw new ModelError(502, 'empty image');
+  return imageBytesFrom(res, timeoutMs);
+}
+
+export async function editImage(
+  prompt: string,
+  imageBytes: Uint8Array<ArrayBuffer>,
+  size: '1024x1024' | '1536x1024' | '1600x1200' = '1024x1024',
+  timeoutMs = 120000,
+): Promise<Uint8Array> {
+  const cfg = config();
+  const form = new FormData();
+  form.set('model', cfg.image);
+  form.set('prompt', prompt);
+  form.set('size', size);
+  form.set('n', '1');
+  form.append(
+    'image',
+    new Blob([imageBytes], { type: 'image/png' }),
+    'source.png',
+  );
+  const res = await postForm('/images/edits', form, timeoutMs);
+  return imageBytesFrom(res, timeoutMs);
 }

@@ -39,6 +39,16 @@
       s += A.line(up(L), up(L, h + 34), cl) + A.line(up(K), up(K, h + 38), cl) + A.line(up(R), up(R, h + 34), cl);
       s += A.line(up(L), [L[0] - 40, L[1] - h + 23], cl) + A.line(R, [R[0] + 40, R[1] + 23], cl);
     }
+    if (!ink) {
+      // A real diorama cutout instead of the drawing. The PNGs have their
+      // studio backdrops removed, keeping only the soft contact shadow.
+      // Bottom-anchored so every type sits on the same ground plane.
+      const PHOTO = { cafe: 'cafe', garage: 'garage', studio: 'studio', store: 'store', kitchen: 'kitchen', music: 'music', classroom: 'classroom' }[ws.type] || 'other';
+      const iw = 270, ix = Math.round(cx - iw / 2), iy = Math.round(cy + HH + 8 - iw);
+      s += `<image href="/buildings/${PHOTO}.png" x="${ix}" y="${iy}" width="${iw}" height="${iw}" preserveAspectRatio="xMidYMid meet"/>`;
+      const cls0 = opts && opts.sketching ? ' class="sketching"' : '';
+      return { svg: `<g${cls0}>${s}</g>`, anchor: [cx, cy - HH - h - (ws.type === 'classroom' ? 4 : 12)], y: cy };
+    }
     // shadow
     s += A.poly([F, R, [R[0] + 30, R[1] + 18], [F[0] + 30, F[1] + 18]], { fill: C.ink, opacity: 0.08 });
     // faces

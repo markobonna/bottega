@@ -35,6 +35,17 @@ function Icon({ svg }: { svg: string }) {
   );
 }
 
+const ROOM_PHOTO: Record<string, string> = {
+  cafe: "cafe",
+  garage: "garage",
+  studio: "studio",
+  store: "store",
+  kitchen: "kitchen",
+  music: "music",
+  classroom: "classroom",
+  other: "other",
+};
+
 const KEY_ICON: Record<string, string> = {
   hardware: "parts",
   software: "screen",
@@ -201,9 +212,18 @@ export default function WorkshopScreen({
               className="scene framed"
               style={{ aspectRatio: "16/9" }}
             >
-              <div
-                style={{ display: "contents" }}
-                dangerouslySetInnerHTML={{ __html: rm.svg }}
+              <img
+                src={`/rooms/${ROOM_PHOTO[workshop.type] ?? "other"}.jpg`}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
               />
               {rm.spots.map(({ p, x, y, w, h }) => (
                 <Link

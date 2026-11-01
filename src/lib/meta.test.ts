@@ -6,6 +6,7 @@ vi.mock('server-only', () => ({}));
 import {
   chat,
   config,
+  editImage,
   json,
   jsonWithFallback,
   MissingKeyError,
@@ -248,6 +249,36 @@ describe('meta', () => {
       (e: unknown) => e,
     );
     expect(err).toBeInstanceOf(MissingKeyError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('editImage posts multipart to /images/edits and decodes b64', async () => {
+    const png = Buffer.from('fakepng').toString('base64');
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [{ b64_json: png }] }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const out = await editImage('make it real', new Uint8Array([1, 2, 3]), '1536x1024');
+    expect(Buffer.from(out).toString()).toBe('fakepng');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://models.test/v1/images/edits');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-key');
+    const form = init.body as FormData;
+    expect(form.get('model')).toBe('muse-image-1.0');
+    expect(form.get('prompt')).toBe('make it real');
+    expect(form.get('size')).toBe('1536x1024');
+    expect(form.get('n')).toBe('1');
+    expect((form.get('image') as Blob).size).toBe(3);
+  });
+
+  it('editImage throws MissingKeyError without a key', async () => {
+    delete process.env.MODEL_API_KEY;
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(editImage('x', new Uint8Array([1]))).rejects.toBeInstanceOf(MissingKeyError);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

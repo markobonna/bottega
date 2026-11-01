@@ -26,7 +26,7 @@ export default async function AppPage({
   const { data: app, error } = await supabase
     .from("apps")
     .select(
-      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, owner, photos, workshop_id, workshops ( name, type )",
+      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, owner, photos, look_path, workshop_id, workshops ( name, type )",
     )
     .eq("id", id)
     .single();
@@ -148,6 +148,7 @@ export default async function AppPage({
           shipTarget={shipTarget}
           photoUrls={photoUrls}
           photoPaths={galleryPaths}
+          lookMissing={!app.look_path}
           version={`${app.id}@${app.version}@${app.stage ?? ""}`}
         />
       )}

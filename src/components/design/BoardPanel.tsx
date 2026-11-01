@@ -33,6 +33,7 @@ import BuildGallery from "./BuildGallery";
 import ConciergeCard from "./ConciergeCard";
 import { BIcon } from "./Dialog";
 import MarginNotes from "./MarginNotes";
+import LookPainter from "./LookPainter";
 import SendOffDialog from "./SendOffDialog";
 
 export interface BoardDraft {
@@ -76,6 +77,7 @@ export default function BoardPanel({
   shipTarget,
   photoUrls,
   photoPaths,
+  lookMissing,
   version,
 }: {
   appId: string;
@@ -97,6 +99,7 @@ export default function BoardPanel({
   shipTarget?: string;
   photoUrls: string[];
   photoPaths: string[];
+  lookMissing: boolean;
   version: string;
 }) {
   const B = window.B;
@@ -441,7 +444,7 @@ export default function BoardPanel({
           </Link>
         </div>
       )}
-      {medium.flow === "ship" && (
+      {medium.flow === "ship" && arrived && (
         <div className="card statuscard" style={{ marginBottom: 16 }}>
           <BIcon svg={B.sigil(40)} />
           <div className="grow">
@@ -459,6 +462,7 @@ export default function BoardPanel({
         </div>
       )}
 
+      <LookPainter appId={appId} lookMissing={lookMissing} />
       <BuildGallery
         appId={appId}
         medium={project.medium}

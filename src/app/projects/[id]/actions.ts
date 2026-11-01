@@ -519,7 +519,27 @@ export async function saveArrivalPhoto(
 ): Promise<{ ok: true } | Fail> {
   try {
     if (!path) throw new Error("No photo.");
-    await mergeOrderInfo(appId, { arrival_photo: path.slice(0, 300) });
+    const supabase = await createClient();
+    const uid = await needApp(supabase, appId);
+    if (!path.startsWith(`${uid}/${appId}/`)) {
+      throw new Error("That photo doesn't belong to this project.");
+    }
+    // The arrival photo also becomes the project's newest photo, so the
+    // room polaroid shows the real thing from here on.
+    const { data: app, error: loadError } = await supabase
+      .from("apps")
+      .select("photos")
+      .eq("id", appId)
+      .maybeSingle();
+    if (loadError || !app) throw new Error("No such project.");
+    const clean = path.slice(0, 300);
+    const photos = [...(app.photos ?? []).filter((p) => p !== clean), clean].slice(-24);
+    const { error } = await supabase
+      .from("apps")
+      .update({ photos })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    await mergeOrderInfo(appId, { arrival_photo: clean });
     return { ok: true };
   } catch (e) {
     return fail(e);
