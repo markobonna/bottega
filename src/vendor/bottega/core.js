@@ -112,7 +112,17 @@
   B.STAGES = ['sketch', 'shape', 'build', 'sent', 'arrived'];
   B.stageLabel = (p) => {
     const m = B.MEDIUMS[p.medium] || B.MEDIUMS.hardware;
-    return { sketch: 'Sketched', shape: 'Shaped', build: 'Being built', sent: m.sentLabel, arrived: m.arrivedLabel }[p.stage] || p.stage;
+    // First three steps per medium (keep in sync with stageLabelsFor);
+    // the last two come from the medium's sent/arrived labels.
+    const first = {
+      hardware: ['Sketch', 'Design', 'Pack'],
+      software: ['Sketch', 'Prototype', 'Build'],
+      print: ['Sketch', 'Design', 'Proof'],
+      music: ['Sketch', 'Write', 'Record'],
+      dance: ['Sketch', 'Choreograph', 'Preview'],
+      recipe: ['Sketch', 'Develop', 'Cost'],
+    }[p.medium] || ['Sketch', 'Shape', 'Build'];
+    return { sketch: first[0], shape: first[1], build: first[2], sent: m.sentLabel, arrived: m.arrivedLabel }[p.stage] || p.stage;
   };
   // How much color a drawing gets: 'ink' | 'half' | 'full'
   B.fillLevel = (stage) => (stage === 'build' ? 'half' : stage === 'sent' || stage === 'arrived' ? 'full' : 'ink');

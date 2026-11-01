@@ -32,7 +32,6 @@ describe("mediumForKind", () => {
       "dance",
       "print",
       "recipe",
-      "space",
     ]) {
       expect(mediumForKind(k)).toBe(k);
     }
@@ -126,12 +125,11 @@ describe("detectMedium", () => {
     expect(detectMedium("a loyalty app for regulars")).toBe("software");
     expect(detectMedium("an online ordering page")).toBe("software");
   });
-  it("detects the other five mediums", () => {
+  it("detects the other four mediums", () => {
     expect(detectMedium("a song for my sister's wedding")).toBe("music");
     expect(detectMedium("a routine for the spring show")).toBe("dance");
     expect(detectMedium("an autumn menu board")).toBe("print");
     expect(detectMedium("a new house sauce")).toBe("recipe");
-    expect(detectMedium("a seating layout for the room")).toBe("space");
   });
   it("defaults to software when nothing matches", () => {
     expect(detectMedium("I keep a list of things I keep losing")).toBe(

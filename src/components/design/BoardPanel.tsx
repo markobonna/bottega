@@ -242,6 +242,10 @@ export default function BoardPanel({
             {medium.label} · Draft {drafts.length}
             {tagline ? ` · ${tagline}` : ""}
           </p>
+          <p className="small" style={{ marginTop: 6 }}>
+            Say what you want below and your apprentice builds it — or walk
+            the steps with the buttons.
+          </p>
         </div>
         <div
           className="actions"
@@ -292,11 +296,7 @@ export default function BoardPanel({
                       />
                     )}
                   </svg>
-                  {i === si &&
-                  project.stage === "build" &&
-                  medium.flow !== "quote"
-                    ? "Building, half way"
-                    : l}
+                  {l}
                 </li>
               </Fragment>
             ))}
@@ -309,7 +309,7 @@ export default function BoardPanel({
                 disabled={advancing}
                 onClick={() => void advance()}
               >
-                <BIcon svg={B.icon("check")} /> Looks good — firm it up
+                <BIcon svg={B.icon("check")} /> Looks good — {labels[1]}
               </button>
             </div>
           )}
@@ -321,8 +321,7 @@ export default function BoardPanel({
                 disabled={advancing}
                 onClick={() => void advance()}
               >
-                <BIcon svg={B.icon("parts")} />{" "}
-                {medium.flow === "quote" ? "Pack it up" : "Start building"}
+                <BIcon svg={B.icon("check")} /> Next: {labels[2]}
               </button>
             </div>
           )}
@@ -479,15 +478,18 @@ export default function BoardPanel({
             <span className="lab">{medium.label} tools</span>
             {tools.map(([id, label]) =>
               id === "preview" ? (
-                <a
+                <button
                   key={id}
+                  type="button"
                   className="tool"
-                  href={`/apps/${appId}`}
-                  target="_blank"
-                  rel="noreferrer"
+                  onClick={() => {
+                    document
+                      .getElementById("app-preview")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
                 >
                   <BIcon svg={B.icon(toolIcon(id), 18, 1.9)} /> {label}
-                </a>
+                </button>
               ) : (
                 <button
                   key={id}

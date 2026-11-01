@@ -159,7 +159,7 @@ export default function SendOffDialog({
         make: () => stl(project.name),
       });
     }
-    if (["print", "space", "music", "dance"].includes(project.medium)) {
+    if (["print", "music", "dance"].includes(project.medium)) {
       list.push({
         name: `${s}.svg`,
         what:

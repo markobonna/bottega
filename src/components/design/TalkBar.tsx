@@ -20,7 +20,7 @@ function placeholderFor(pathname: string): string {
   const first = pathname.split("/").filter(Boolean)[0];
   const ex =
     first === "projects"
-      ? "\u201Copen the \u2026\u201D \u00B7 \u201Cgo back\u201D"
+      ? "\u201Cadd a \u2026\u201D \u00B7 \u201Clooks good\u201D \u00B7 \u201Cship it\u201D"
       : first === "workshops"
         ? "\u201CI want to make\u2026\u201D \u00B7 \u201Copen the \u2026\u201D \u00B7 \u201Cgo outside\u201D"
         : "\u201Copen the caf\u00E9\u201D \u00B7 \u201CI also have a garage\u2026\u201D";

@@ -152,6 +152,7 @@ export default async function AppPage({
           version={`${app.id}@${app.version}@${app.stage ?? ""}`}
         />
       )}
+      <div id="app-preview" style={{ scrollMarginTop: 12 }}>
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <AppRuntime
           app={{
@@ -168,6 +169,7 @@ export default async function AppPage({
           records={records}
         />
       </Suspense>
+      </div>
     </ZoomMount>
   );
 }

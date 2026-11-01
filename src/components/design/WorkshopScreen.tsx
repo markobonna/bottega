@@ -51,7 +51,6 @@ const KEY_ICON: Record<string, string> = {
   software: "screen",
   print: "pencil",
   recipe: "pot",
-  space: "plan",
   music: "note",
   dance: "feet",
 };
@@ -61,7 +60,6 @@ const KEY_BLURB: Record<string, string> = {
   software: "apps, sites, the till",
   print: "menus, signs, posters",
   recipe: "drinks, dishes, specials",
-  space: "layouts and fit-outs",
   music: "songs and jingles",
   dance: "routines and pieces",
 };

@@ -13,7 +13,6 @@ export const MEDIUM_IDS = [
   "dance",
   "print",
   "recipe",
-  "space",
 ] as const;
 export type DesignMedium = (typeof MEDIUM_IDS)[number];
 
@@ -67,7 +66,6 @@ export function arrivalHead(medium: DesignMedium): string {
       hardware: "It's here!",
       software: "It's installed!",
       print: "Delivered!",
-      space: "All done!",
       music: "Released!",
       dance: "Showtime!",
       recipe: "On the menu!",
@@ -93,8 +91,6 @@ export function arrivalLine(
       return `${projectName} is installed and running. It's on the ${target || "tablet"} in ${workshopName}. What should we make next?`;
     case "print":
       return `${projectName} just came back from the printer — I hung it up in ${workshopName}. What's next?`;
-    case "space":
-      return `The new layout for ${workshopName} is done. Want to plan the next thing?`;
     case "music":
       return `${projectName} is mixed and released. Want to start another?`;
     case "dance":
@@ -183,12 +179,6 @@ export const MEDIUM_QUESTIONS: Record<DesignMedium, string[]> = {
     "Any allergens to avoid?",
     "Is it for every day or a special?",
   ],
-  space: [
-    "How big is the room, roughly?",
-    "How many people at the busiest moment?",
-    "What can't move — plumbing, doors, windows?",
-    "What's your budget range?",
-  ],
 };
 
 // Keyword lists ported from the design prototype's B.MEDIUMS so the server
@@ -222,10 +212,6 @@ const MEDIUM_KEYWORDS: Record<DesignMedium, string[]> = {
   recipe: [
     "recipe", "drink", "dish", "latte", "cake", "sauce", "cocktail",
     "bread", "special", "pastry", "soup",
-  ],
-  space: [
-    "layout", "floor plan", "seating", "redesign", "remodel", "space",
-    "room layout", "renovation",
   ],
 };
 

@@ -533,7 +533,7 @@ export async function saveArrivalPhoto(
       .maybeSingle();
     if (loadError || !app) throw new Error("No such project.");
     const clean = path.slice(0, 300);
-    const photos = [...(app.photos ?? []).filter((p) => p !== clean), clean].slice(-24);
+    const photos = [...(app.photos ?? []).filter((p: string) => p !== clean), clean].slice(-24);
     const { error } = await supabase
       .from("apps")
       .update({ photos })

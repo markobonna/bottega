@@ -21,7 +21,6 @@ const BodySchema = z.object({
       "dance",
       "print",
       "recipe",
-      "space",
     ])
     .optional(),
 });

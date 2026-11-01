@@ -129,7 +129,7 @@ async function createSeedApp(
     source: "build";
     summary: string;
     workshopId: string;
-    kind?: "hardware" | "software" | "music" | "dance" | "print" | "recipe" | "space";
+    kind?: "hardware" | "software" | "music" | "dance" | "print" | "recipe";
   },
 ): Promise<string> {
   const id = await createApp(client, spec, opts);

@@ -8,35 +8,35 @@
       label: 'Café', article: 'The Café',
       keywords: ['café', 'cafe', 'coffee', 'espresso', 'bakery', 'tea room', 'coffee shop', 'barista'],
       walls: { L: '#EAD7B0', R: '#D4BB8E', roof: '#6E8B7F' }, height: 110,
-      defaultMedium: 'hardware', mediums: ['hardware', 'software', 'print', 'recipe', 'space'],
+      defaultMedium: 'hardware', mediums: ['hardware', 'software', 'print', 'recipe'],
       examples: ['a cold-brew tower that fits under the counter', 'a loyalty app for regulars', 'a new seasonal menu board']
     },
     garage: {
       label: 'Garage', article: 'The Garage',
       keywords: ['garage', 'shed', 'workbench', 'woodshop', 'car', 'bike', 'maker space', 'makerspace'],
       walls: { L: '#D9B47A', R: '#BE9660', roof: '#7E6650' }, height: 96,
-      defaultMedium: 'hardware', mediums: ['hardware', 'software', 'space'],
+      defaultMedium: 'hardware', mediums: ['hardware', 'software'],
       examples: ['a wall rack for three bikes', 'a dust collector for the table saw', 'a parts inventory app']
     },
     studio: {
       label: 'Dance studio', article: 'The Dance Studio',
       keywords: ['dance', 'ballet', 'studio', 'yoga', 'choreograph', 'pilates'],
       walls: { L: '#E3D3C4', R: '#CBB6A2', roof: '#8C5E58' }, height: 128,
-      defaultMedium: 'dance', mediums: ['dance', 'music', 'software', 'print', 'space'],
+      defaultMedium: 'dance', mediums: ['dance', 'music', 'software', 'print'],
       examples: ['a new routine for the spring show', 'a class booking app', 'a poster for open house']
     },
     store: {
       label: 'Store', article: 'The Store',
       keywords: ['store', 'shop', 'boutique', 'market', 'retail', 'grocery', 'corner store'],
       walls: { L: '#DCCFA6', R: '#C4B488', roof: '#5E6E8C' }, height: 104,
-      defaultMedium: 'hardware', mediums: ['hardware', 'software', 'print', 'space'],
+      defaultMedium: 'hardware', mediums: ['hardware', 'software', 'print'],
       examples: ['a register that doesn\'t jam', 'a stock-count app', 'window signage for the sale']
     },
     kitchen: {
       label: 'Kitchen', article: 'The Kitchen',
       keywords: ['kitchen', 'restaurant', 'diner', 'catering', 'food truck', 'bistro', 'pizzeria'],
       walls: { L: '#E6D9C3', R: '#CDBEA4', roof: '#8B4E3A' }, height: 100,
-      defaultMedium: 'recipe', mediums: ['recipe', 'hardware', 'software', 'print', 'space'],
+      defaultMedium: 'recipe', mediums: ['recipe', 'hardware', 'software', 'print'],
       examples: ['a new house sauce', 'a better pass shelf', 'an online ordering page']
     },
     music: {
@@ -57,7 +57,7 @@
       label: 'Workshop', article: 'The Workshop',
       keywords: ['workshop', 'office', 'lab', 'warehouse', 'salon', 'clinic', 'farm', 'home'],
       walls: { L: '#E2D4B4', R: '#C9B892', roof: '#6B5A48' }, height: 104,
-      defaultMedium: 'hardware', mediums: ['hardware', 'software', 'print', 'space'],
+      defaultMedium: 'hardware', mediums: ['hardware', 'software', 'print'],
       examples: ['a gadget that solves a daily annoyance', 'a small tool for the team', 'a sign for the door']
     }
   };
@@ -66,7 +66,7 @@
     hardware: {
       label: 'Hardware', keywords: ['machine', 'maker', 'device', 'register', 'grinder', 'rack', 'lamp', 'fix', 'repair', 'gadget', 'hardware', 'motor', 'sensor', 'cabinet', 'table', 'chair', 'shelf', 'stand', 'holder', 'tower', 'brewer', 'kettle', 'oven', 'cart', 'bracket', 'mount', 'case', 'enclosure', 'collector', 'pedalboard', 'drawer', 'kit', 'robot', 'printer'],
       tools: [['sketch', 'Sketch'], ['measure', 'Measure'], ['parts', 'Parts'], ['materials', 'Materials'], ['gauge', 'Stress test'], ['layers', 'Explode']],
-      flow: 'quote', sentLabel: 'Ordered', arrivedLabel: 'Arrived', thing: 'machine',
+      flow: 'quote', sentLabel: 'Send RFQ', arrivedLabel: 'Ship', thing: 'machine',
       questions: [
         'Where does it live — what does it sit on, and how much room is there?',
         'What has to plug into it: power, water, air, anything else?',
@@ -78,7 +78,7 @@
     software: {
       label: 'Software', keywords: ['app', 'website', 'site', 'software', 'program', 'system', 'dashboard', 'bot', 'booking', 'tracker', 'portal', 'page', 'online', 'ordering', 'inventory', 'quiz', 'calculator', 'spreadsheet', 'automation'],
       tools: [['screen', 'Screens'], ['flow', 'Flows'], ['data', 'Data'], ['test', 'Test'], ['play', 'Preview']],
-      flow: 'ship', sentLabel: 'Building', arrivedLabel: 'Installed', thing: 'app',
+      flow: 'ship', sentLabel: 'Test', arrivedLabel: 'Go live', thing: 'app',
       questions: [
         'Who uses it first — you, your staff, or customers?',
         'What will it run on: a phone, a tablet, a computer, or the web?',
@@ -90,32 +90,26 @@
     music: {
       label: 'Music', keywords: ['song', 'music', 'track', 'melody', 'beat', 'playlist', 'jingle', 'tune', 'lyrics', 'score'],
       tools: [['note', 'Melody'], ['layers', 'Chords'], ['lyrics', 'Lyrics'], ['tempo', 'Tempo'], ['play', 'Listen']],
-      flow: 'export', sentLabel: 'Mixing', arrivedLabel: 'Released', thing: 'song',
+      flow: 'export', sentLabel: 'Mix', arrivedLabel: 'Release', thing: 'song',
       questions: ['What should it feel like in the first ten seconds?', 'Roughly how fast — slow dance, walking pace, or running?', 'Is there a line or phrase that has to be in it?', 'Who sings or plays it?']
     },
     dance: {
       label: 'Dance', keywords: ['dance', 'routine', 'choreograph', 'combo', 'piece', 'number', 'showcase', 'recital'],
       tools: [['feet', 'Counts'], ['group', 'Formations'], ['note', 'Music'], ['video', 'Video'], ['play', 'Rehearse']],
-      flow: 'export', sentLabel: 'Rehearsing', arrivedLabel: 'Performed', thing: 'routine',
+      flow: 'export', sentLabel: 'Rehearse', arrivedLabel: 'Perform', thing: 'routine',
       questions: ['How many dancers, and what level?', 'What\'s the music, or should I suggest some?', 'How long is the piece?', 'Is there a moment you already see in your head?']
     },
     print: {
       label: 'Print', keywords: ['menu', 'sign', 'poster', 'flyer', 'label', 'logo', 'card', 'banner', 'board', 'worksheet', 'brochure', 'sticker', 'signage'],
       tools: [['layout', 'Layout'], ['type', 'Type'], ['materials', 'Color'], ['proof', 'Proof']],
-      flow: 'quote', sentLabel: 'At the printer', arrivedLabel: 'Delivered', thing: 'print job',
+      flow: 'quote', sentLabel: 'Send RFQ', arrivedLabel: 'Collect', thing: 'print job',
       questions: ['Where will it hang or be handed out?', 'What\'s the one thing people should read first?', 'How big, and how many copies?', 'Any colors or fonts it has to match?']
     },
     recipe: {
       label: 'Recipe', keywords: ['recipe', 'drink', 'dish', 'latte', 'cake', 'sauce', 'cocktail', 'bread', 'special', 'pastry', 'soup'],
       tools: [['pot', 'Ingredients'], ['list', 'Steps'], ['coin', 'Cost'], ['taste', 'Taste test']],
-      flow: 'export', sentLabel: 'Testing', arrivedLabel: 'On the menu', thing: 'recipe',
+      flow: 'export', sentLabel: 'Recipe card', arrivedLabel: 'Cook', thing: 'recipe',
       questions: ['How many portions at a time?', 'What should it cost you per serving, at most?', 'Any allergens to avoid?', 'Is it for every day or a special?']
-    },
-    space: {
-      label: 'Space', keywords: ['layout', 'floor plan', 'seating', 'redesign', 'remodel', 'space', 'room layout', 'renovation'],
-      tools: [['plan', 'Plan'], ['measure', 'Measure'], ['chair', 'Furniture'], ['walk', 'Walk through']],
-      flow: 'quote', sentLabel: 'Ordered', arrivedLabel: 'Done', thing: 'new layout',
-      questions: ['How big is the room, roughly?', 'How many people at the busiest moment?', 'What can\'t move — plumbing, doors, windows?', 'What\'s your budget range?']
     }
   };
 
@@ -132,11 +126,6 @@
       { kind: 'Print shop', does: 'Large-format and short runs', contact: 'email' },
       { kind: 'Sign maker', does: 'Boards, vinyl, window graphics', contact: 'phone' },
       { kind: 'Online print service', does: 'Bulk prints, shipped', contact: 'web' }
-    ],
-    space: [
-      { kind: 'Carpenter', does: 'Counters, benches, built-ins', contact: 'phone' },
-      { kind: 'Furniture supplier', does: 'Tables, chairs, stools', contact: 'email' },
-      { kind: 'General contractor', does: 'Walls, electrics, permits', contact: 'email' }
     ]
   };
 

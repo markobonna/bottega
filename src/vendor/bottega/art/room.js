@@ -434,7 +434,7 @@
   B.art.object = function (p, x, y, id, opts) {
     opts = opts || {};
     const lv = B.fillLevel(p.stage);
-    const physical = ['hardware', 'print', 'space'].includes(p.medium);
+    const physical = ['hardware', 'print'].includes(p.medium);
     if (p.stage === 'sent' && physical) return O.crate(x, y, p);
     const kind = B.art.drawingFor(p);
     const fn = O[kind] || O[p.medium] || O.device;

@@ -19,7 +19,6 @@ const PLACEHOLDERS: Record<string, string> = {
   dance: "Add a canon on counts 9–16",
   print: "Make the headline readable from the door",
   recipe: "Make it work with oat milk too",
-  space: "We need room for a queue of 10",
 };
 
 export default function MarginNotes({

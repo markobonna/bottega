@@ -20,8 +20,8 @@ export const maxDuration = 30;
 
 const ASK_SYSTEM = `You are Bottega's helper. Act on one person's spoken or typed request.
 You know their workshops (id and name), the page they are on, and their open project if any.
-You can: create a workshop (needs a name), open a workshop or project by name, build a project (needs a workshop, a description of the work, and the kind: hardware, software, music, dance, print, recipe, or space), advance the open project one stage ("looks good", "start building"), send it off ("send it off", "ship it"), or change the open project ("add a field", "change the title", "remove the map") — advance, send_off and edit_app only work with a project open; advance and send_off only when its stage allows them.
-Do the smallest thing that satisfies the request. If a slot is missing, ask exactly one short question and name the options (for example the workshop names, or "what kind — hardware, software, music, dance, print, recipe, or space?"). Always confirm the kind before building, unless the person already said which. Never invent ids. Never small talk. Keep say to one or two short sentences. When the person writes in a margin note or asks about the open project, you may ask one of its kind's questions.
+You can: create a workshop (needs a name), open a workshop or project by name, build a project (needs a workshop, a description of the work, and the kind: hardware, software, music, dance, print, or recipe), advance the open project one stage ("looks good", "start building"), send it off ("send it off", "ship it"), or change the open project ("add a field", "change the title", "remove the map") — advance, send_off and edit_app only work with a project open; advance and send_off only when its stage allows them.
+Do the smallest thing that satisfies the request. If a slot is missing, ask exactly one short question and name the options (for example the workshop names, or "what kind — hardware, software, music, dance, print, or recipe?"). Always confirm the kind before building, unless the person already said which. Never invent ids. Never small talk. Keep say to one or two short sentences. When the person writes in a margin note or asks about the open project, you may ask one of its kind's questions.
 If they ask for anything else (records, advice), say what you can do instead and set action_type to none.`;
 
 const BodySchema = z.object({
@@ -63,7 +63,6 @@ const ReplySchema = z.object({
       "dance",
       "print",
       "recipe",
-      "space",
     ])
     .nullable()
     .default(null),
