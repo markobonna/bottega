@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { saveArrivalPhoto } from "@/app/projects/[id]/actions";
-import { resizeToJpeg, uploadPhoto } from "@/lib/media";
+import { uploadPhoto } from "@/lib/media";
+import SmartPhotoInput from "./SmartPhotoInput";
 
 /** Prove it happened: capture a photo, upload it, pin it to the project. */
 export default function PhotoCapture({
@@ -18,12 +19,12 @@ export default function PhotoCapture({
   const [saved, setSaved] = useState(false);
   const [problem, setProblem] = useState("");
 
-  async function onPhoto(file: File | undefined) {
-    if (!file || uploading) return;
+  async function onPhoto(blob: Blob) {
+    if (uploading) return;
     setUploading(true);
     setProblem("");
     try {
-      const path = await uploadPhoto(appId, await resizeToJpeg(file));
+      const path = await uploadPhoto(appId, blob);
       const res = await saveArrivalPhoto(appId, path);
       if (!res.ok) throw new Error("save failed");
       setSaved(true);
@@ -36,18 +37,13 @@ export default function PhotoCapture({
 
   return (
     <div>
-      <label className="lbl" htmlFor={id}>
-        {label}
-      </label>
-      <input
+      <SmartPhotoInput
         id={id}
-        type="file"
-        accept="image/*"
-        capture="environment"
+        label={label}
+        buttonLabel={uploading ? "Uploading…" : "Take or choose a photo"}
+        onPhoto={(blob) => void onPhoto(blob)}
         disabled={uploading || saved}
-        onChange={(e) => void onPhoto(e.target.files?.[0])}
       />
-      {uploading && <p className="small">Uploading…</p>}
       {saved && (
         <p className="small">Saved — it&apos;s pinned to your project.</p>
       )}

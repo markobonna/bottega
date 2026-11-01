@@ -70,6 +70,7 @@ export type Database = {
           name: string
           order_info: Json | null
           owner: string
+          photos: string[]
           position: number
           private: boolean
           spec: Json
@@ -89,6 +90,7 @@ export type Database = {
           name: string
           order_info?: Json | null
           owner?: string
+          photos?: string[]
           position?: number
           private?: boolean
           spec: Json
@@ -108,6 +110,7 @@ export type Database = {
           name?: string
           order_info?: Json | null
           owner?: string
+          photos?: string[]
           position?: number
           private?: boolean
           spec?: Json
@@ -459,6 +462,7 @@ export type Database = {
           id: string
           name: string
           owner: string
+          photo_path: string | null
           type: string
           updated_at: string | null
         }
@@ -467,6 +471,7 @@ export type Database = {
           id?: string
           name: string
           owner?: string
+          photo_path?: string | null
           type?: string
           updated_at?: string | null
         }
@@ -475,6 +480,7 @@ export type Database = {
           id?: string
           name?: string
           owner?: string
+          photo_path?: string | null
           type?: string
           updated_at?: string | null
         }

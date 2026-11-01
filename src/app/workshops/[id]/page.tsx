@@ -8,6 +8,7 @@ import ProjectMoveButtons from "@/components/workshop/ProjectMoveButtons";
 import RenameWorkshop from "@/components/workshop/RenameWorkshop";
 import WorkshopTypePicker from "@/components/workshop/WorkshopTypePicker";
 import { effectiveStage, mediumForKind } from "@/lib/design/project-art";
+import { signedUrls } from "@/lib/media";
 import { parseSpec } from "@/lib/spec/schema";
 import { createClient } from "@/lib/supabase/server";
 import DeleteWorkshopButton from "../../DeleteWorkshopButton";
@@ -41,7 +42,7 @@ export default async function WorkshopPage({
   const supabase = await createClient();
   const { data: workshop } = await supabase
     .from("workshops")
-    .select("id, name, type, owner")
+    .select("id, name, type, owner, photo_path")
     .eq("id", id)
     .maybeSingle();
   if (!workshop) notFound();
@@ -63,6 +64,11 @@ export default async function WorkshopPage({
   );
   const signed = await signPhotoPaths(artPaths);
   const urls = signed.ok ? signed.urls : {};
+  const roomPhotoUrl = workshop.photo_path
+    ? ((await signedUrls(supabase, [workshop.photo_path]))[
+        workshop.photo_path
+      ] ?? null)
+    : null;
 
   const roomProjects = (apps ?? []).map((a) => {
     const parsed = parseSpec(a.spec);
@@ -86,6 +92,7 @@ export default async function WorkshopPage({
         }}
         projects={roomProjects}
         version={sceneVersion}
+        roomPhotoUrl={roomPhotoUrl}
       />
 
       <h2 className="font-display mt-4 text-xl">Manage workshop</h2>

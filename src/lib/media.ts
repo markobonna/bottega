@@ -49,6 +49,24 @@ export async function uploadPhoto(
   return path;
 }
 
+/** One room photo per workshop; re-uploading replaces it. */
+export async function uploadRoomPhoto(
+  workshopId: string,
+  blob: Blob,
+): Promise<string> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("sign in to add a photo");
+  const path = `${user.id}/${workshopId}/room.jpg`;
+  const { error } = await supabase.storage
+    .from("media")
+    .upload(path, blob, { contentType: "image/jpeg", upsert: true });
+  if (error) throw new Error(error.message);
+  return path;
+}
+
 export async function signedUrls(
   client: SupabaseClient,
   paths: string[],

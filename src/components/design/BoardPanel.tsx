@@ -29,6 +29,7 @@ import "@/vendor/bottega/art/common.js";
 import "@/vendor/bottega/art/room.js";
 import "@/vendor/bottega/art/board.js";
 import ArrivalDialog from "./ArrivalDialog";
+import BuildGallery from "./BuildGallery";
 import ConciergeCard from "./ConciergeCard";
 import { BIcon } from "./Dialog";
 import MarginNotes from "./MarginNotes";
@@ -73,6 +74,8 @@ export default function BoardPanel({
   showArrival,
   lines,
   shipTarget,
+  photoUrls,
+  photoPaths,
   version,
 }: {
   appId: string;
@@ -92,6 +95,8 @@ export default function BoardPanel({
   showArrival: boolean;
   lines?: string[];
   shipTarget?: string;
+  photoUrls: string[];
+  photoPaths: string[];
   version: string;
 }) {
   const B = window.B;
@@ -454,6 +459,12 @@ export default function BoardPanel({
         </div>
       )}
 
+      <BuildGallery
+        appId={appId}
+        medium={project.medium}
+        photoUrls={photoUrls}
+        photoPaths={photoPaths}
+      />
       <section className="bench">
         <div className="boardcol">
           <div

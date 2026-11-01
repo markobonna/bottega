@@ -454,6 +454,36 @@ export async function savePromise(
   }
 }
 
+export async function addBoardPhoto(
+  appId: string,
+  path: string,
+): Promise<{ ok: true } | Fail> {
+  try {
+    if (!path) throw new Error("No photo.");
+    const supabase = await createClient();
+    const uid = await needApp(supabase, appId);
+    if (!path.startsWith(`${uid}/${appId}/`)) {
+      throw new Error("That photo doesn't belong to this project.");
+    }
+    const { data: app, error: loadError } = await supabase
+      .from("apps")
+      .select("photos")
+      .eq("id", appId)
+      .maybeSingle();
+    if (loadError || !app) throw new Error("No such project.");
+    const photos = [...(app.photos ?? []), path.slice(0, 300)].slice(-24);
+    const { error } = await supabase
+      .from("apps")
+      .update({ photos })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/projects/${appId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function saveArrivalPhoto(
   appId: string,
   path: string,

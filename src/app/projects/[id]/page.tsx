@@ -26,7 +26,7 @@ export default async function AppPage({
   const { data: app, error } = await supabase
     .from("apps")
     .select(
-      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, owner, workshop_id, workshops ( name, type )",
+      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, owner, photos, workshop_id, workshops ( name, type )",
     )
     .eq("id", id)
     .single();
@@ -124,6 +124,9 @@ export default async function AppPage({
     : null;
   const lines =
     medium === "print" ? menuLines(spec.collections, records) : undefined;
+  const galleryPaths: string[] = app.photos ?? [];
+  const gallerySigned = await signedUrls(supabase, galleryPaths);
+  const photoUrls = galleryPaths.map((p) => gallerySigned[p] ?? "");
 
   return (
     <ZoomMount depth={3}>
@@ -143,6 +146,8 @@ export default async function AppPage({
           showArrival={stage === "arrived" && !app.arrival_seen}
           lines={lines}
           shipTarget={shipTarget}
+          photoUrls={photoUrls}
+          photoPaths={galleryPaths}
           version={`${app.id}@${app.version}@${app.stage ?? ""}`}
         />
       )}

@@ -89,6 +89,23 @@ export async function createSample(
   redirect(`/projects/${id}`);
 }
 
+export async function saveRoomPhoto(
+  workshopId: string,
+  path: string,
+): Promise<void> {
+  const supabase = await createClient();
+  const uid = await needWorkshop(supabase, workshopId);
+  if (!path.startsWith(`${uid}/${workshopId}/`)) {
+    throw new Error("That photo doesn't belong to this workshop.");
+  }
+  const { error } = await supabase
+    .from("workshops")
+    .update({ photo_path: path.slice(0, 300) })
+    .eq("id", workshopId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/workshops/${workshopId}`);
+}
+
 export async function deleteApp(appId: string): Promise<void> {
   const supabase = await createClient();
   await needApp(supabase, appId);

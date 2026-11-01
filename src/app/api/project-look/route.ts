@@ -1,13 +1,17 @@
 import { z } from "zod";
 
 import { fail, readJson, requireUser } from "@/lib/api";
-import { image } from "@/lib/meta";
+import { downloadAsDataUrl } from "@/lib/media";
+import { image, json, type MetaMessage } from "@/lib/meta";
 import { parseSpec } from "@/lib/spec/schema";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const BodySchema = z.object({ appId: z.string().min(1) });
+const BodySchema = z.object({
+  appId: z.string().min(1),
+  photoPath: z.string().min(1).optional(),
+});
 
 const SUFFIX = "no text, no logos, no people's faces";
 
@@ -31,8 +35,42 @@ export async function POST(req: Request): Promise<Response> {
     .flatMap((s) => s.blocks.map((b) => `${b.type}: ${b.title}`))
     .join("; ")
     .slice(0, 400);
-  const base = `${parsed.spec.name}: ${parsed.spec.tagline}. It has ${blocks}.`;
+  let base = `${parsed.spec.name}: ${parsed.spec.tagline}. It has ${blocks}.`;
+  let fromPhoto = false;
   try {
+    if (body.photoPath) {
+      if (!body.photoPath.startsWith(`${auth.user.id}/${body.appId}/`)) {
+        return Response.json(
+          { error: "That photo doesn't belong to this project." },
+          { status: 403 },
+        );
+      }
+      const dataUrl = await downloadAsDataUrl(
+        auth.supabase,
+        body.photoPath,
+      );
+      const messages: MetaMessage[] = [
+        {
+          role: "system",
+          content:
+            "Describe this prototype photo in one dense paragraph for a product photographer: materials, colors, proportions, construction details. Judge only what is visible.",
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: `Prototype of: ${base}` },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ];
+      const seen = await json(
+        messages,
+        z.object({ description: z.string() }),
+        { reasoning: "minimal", maxTokens: 800 },
+      );
+      base += ` It looks like this: ${seen.description.slice(0, 600)}`;
+      fromPhoto = true;
+    }
     const jobs: Promise<Uint8Array>[] = [
       image(
         app.kind === "hardware"
@@ -77,7 +115,7 @@ export async function POST(req: Request): Promise<Response> {
       .update({ look_path: lookPath, blueprint_path: blueprintPath })
       .eq("id", app.id);
     if (upError) throw new Error(upError.message);
-    return Response.json({ lookPath, blueprintPath });
+    return Response.json({ lookPath, blueprintPath, fromPhoto });
   } catch (e) {
     return fail(e);
   }

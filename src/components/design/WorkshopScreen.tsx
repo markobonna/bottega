@@ -10,6 +10,7 @@ import "@/vendor/bottega/art/room.js";
 import { say } from "@/lib/apprentice-client";
 import type { DesignMedium, LiveStage } from "@/lib/design/project-art";
 import NewProjectDialog from "./NewProjectDialog";
+import RoomPhotoButton from "./RoomPhotoButton";
 
 export interface RoomProject {
   id: string;
@@ -53,10 +54,12 @@ export default function WorkshopScreen({
   workshop,
   projects,
   version,
+  roomPhotoUrl,
 }: {
   workshop: { id: string; name: string; type: string };
   projects: RoomProject[];
   version: string;
+  roomPhotoUrl: string | null;
 }) {
   const [view, setView] = useState<"room" | "list">("room");
   const [creating, setCreating] = useState(false);
@@ -124,6 +127,10 @@ export default function WorkshopScreen({
           >
             <Icon svg={B.icon("plus", 18, 2.4)} /> New project
           </button>
+          <RoomPhotoButton
+            workshopId={workshop.id}
+            hasPhoto={roomPhotoUrl !== null}
+          />
         </div>
       </section>
 
@@ -165,6 +172,43 @@ export default function WorkshopScreen({
                   </Link>
                 );
               })}
+              {view === "room" && roomPhotoUrl !== null && (
+                <figure
+                  aria-label="A photo of your real room"
+                  style={{
+                    position: "absolute",
+                    top: "4%",
+                    right: "3%",
+                    width: "17%",
+                    margin: 0,
+                    padding: "6px 6px 2px",
+                    background: "var(--card)",
+                    border: "1.5px solid var(--line)",
+                    borderRadius: 4,
+                    transform: "rotate(2.5deg)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <img
+                    src={roomPhotoUrl}
+                    alt=""
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      aspectRatio: "4/3",
+                      objectFit: "cover",
+                      borderRadius: 2,
+                    }}
+                  />
+                  <figcaption
+                    className="small"
+                    style={{ textAlign: "center", margin: "2px 0" }}
+                  >
+                    your real room
+                  </figcaption>
+                </figure>
+              )}
               {rm.newSpot && (
                 <button
                   type="button"
