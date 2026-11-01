@@ -15,8 +15,12 @@ import {
   recordRfqSent,
 } from "@/app/projects/[id]/actions";
 import type { DesignMedium } from "@/lib/design/project-art";
-import { brief, pack, scad, slug, stl } from "@/lib/design/cad";
-import { fabReadme, strBytes, zipStore } from "@/lib/design/fabpack";
+import { slug } from "@/lib/design/cad";
+import {
+  buildPackFiles,
+  downloadPackFile,
+  packLabelFor,
+} from "@/lib/design/pack-files";
 import { REAL_MAKERS } from "@/lib/design/makers";
 import { toolsFor } from "@/lib/design/tools";
 
@@ -27,6 +31,7 @@ import "@/vendor/bottega/art/room.js";
 import "@/vendor/bottega/art/board.js";
 import ConciergeCard from "./ConciergeCard";
 import Dialog, { BIcon } from "./Dialog";
+import PackFileList from "./PackFileList";
 import PhotoCapture from "./PhotoCapture";
 
 interface Vendor {
@@ -40,24 +45,6 @@ interface Vendor {
 }
 
 const CRATE_SVG = `<svg width="44" height="40" viewBox="0 0 44 40" aria-hidden="true"><path d="M4 14 L22 6 L40 14 V34 L22 39 L4 34 Z" fill="#D9B47A" stroke="#33261A" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 14 L22 20 L40 14 M22 20 V39" fill="none" stroke="#33261A" stroke-width="1.6"/></svg>`;
-
-const PACKS: Record<string, { file: string; label: string; what: string }> = {
-  music: {
-    file: "song-pack.md",
-    label: "Song pack",
-    what: "Lyrics, chords and notes — ready to play or share",
-  },
-  dance: {
-    file: "rehearsal-pack.md",
-    label: "Rehearsal pack",
-    what: "Counts, formations and music notes — ready to rehearse",
-  },
-  recipe: {
-    file: "recipe-card.md",
-    label: "Recipe card",
-    what: "Ingredients, steps and cost — ready for the kitchen",
-  },
-};
 
 const EXPORT_DONE: Record<string, string> = {
   music: "Go play it — and add a photo when you do.",
@@ -119,127 +106,23 @@ export default function SendOffDialog({
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  const files = useMemo(() => {
-    const s = slug(project.name);
-    type Entry = {
-      name: string;
-      what: string;
-      mime?: string;
-      make: () => string | Uint8Array;
-    };
-    const list: Entry[] = [];
-    const briefText = () =>
-      brief({
+  const files = useMemo(
+    () =>
+      buildPackFiles({
         name: project.name,
-        workshopName,
-        kindLabel: medium.label,
-        stageLabel,
+        medium: project.medium,
         tagline: project.tagline,
+        workshopName,
+        stageLabel,
         notes,
         drafts,
-        topics: tools,
-      });
-    const conceptSvg = () =>
-      B.art
-        .board(
-          { name: project.name, medium: project.medium, stage: "build" },
-          "render",
-          { thumb: true },
-        )
-        .svg.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ');
-    if (project.medium === "hardware") {
-      list.push({
-        name: `${s}.scad`,
-        what: "Parametric CAD model — opens in OpenSCAD (free), exports STL",
-        make: () => scad(project.name),
-      });
-      list.push({
-        name: `${s}-envelope.stl`,
-        what: "STL of the outer envelope — for a quick 3D-print size check",
-        make: () => stl(project.name),
-      });
-    }
-    if (["print", "music", "dance"].includes(project.medium)) {
-      list.push({
-        name: `${s}.svg`,
-        what:
-          project.medium === "print"
-            ? "Print-ready artwork (SVG)"
-            : "Drawing (SVG)",
-        make: conceptSvg,
-      });
-    }
-    list.push({
-      name: `${s}-brief.md`,
-      what: "Project brief — every decision and note, for whoever builds it",
-      make: briefText,
-    });
-    if (flow === "quote") {
-      list.push({
-        name: `${s}-fab-pack.zip`,
-        what: "RFQ pack — everything a real shop needs, in one zip",
-        mime: "application/zip",
-        make: () => {
-          const inner = [
-            {
-              name: `${s}-brief.md`,
-              what: "Requirements and decisions",
-              text: briefText(),
-            },
-            {
-              name: `${s}-concept.svg`,
-              what: "Concept drawing (not dimensioned)",
-              text: conceptSvg(),
-            },
-            ...(project.medium === "hardware"
-              ? [
-                  {
-                    name: `${s}.scad`,
-                    what: "Parametric CAD — opens in OpenSCAD (free)",
-                    text: scad(project.name),
-                  },
-                  {
-                    name: `${s}-envelope.stl`,
-                    what: "Envelope for size-check only",
-                    text: stl(project.name),
-                  },
-                ]
-              : []),
-          ];
-          return zipStore([
-            {
-              name: "README.txt",
-              data: strBytes(
-                fabReadme({
-                  name: project.name,
-                  workshopName,
-                  kindLabel: medium.label,
-                  files: inner,
-                }),
-              ),
-            },
-            ...inner.map((f) => ({ name: f.name, data: strBytes(f.text) })),
-          ]);
-        },
-      });
-    }
-    const pkg = PACKS[project.medium];
-    if (pkg) {
-      list.push({
-        name: `${s}-${pkg.file}`,
-        what: pkg.what,
-        make: () =>
-          pack({
-            name: project.name,
-            packLabel: pkg.label,
-            notes,
-            topics: tools,
-          }),
-      });
-    }
-    return list;
+        tools,
+        flow,
+        kindLabel: medium.label,
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appId]);
+    [appId],
+  );
 
   // Makers appear after a beat, like a search.
   useEffect(() => {
@@ -434,48 +317,6 @@ Thank you,
   const contactIcon = (c: string) =>
     c === "phone" ? "phone" : c === "email" ? "mail" : "globe";
 
-function downloadFile(name: string, data: string | Uint8Array, mime?: string) {
-  if (typeof data === "string") {
-    window.B.download(name, data, mime);
-    return;
-  }
-  const blob = new Blob([data as unknown as BlobPart], {
-    type: mime ?? "application/octet-stream",
-  });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    URL.revokeObjectURL(a.href);
-    a.remove();
-  }, 800);
-}
-
-  function fileList() {
-    return (
-      <ul className="filelist">
-        {files.map((f, i) => (
-          <li key={f.name}>
-            <BIcon svg={B.icon("download", 20)} />
-            <div className="grow">
-              <strong>{f.name}</strong>
-              <div className="small">{f.what}</div>
-            </div>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => downloadFile(f.name, files[i].make(), f.mime)}
-            >
-              Download
-            </button>
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
   function quoteBody(): ReactNode {
     const packEntry = files.find((f) => f.name.endsWith("-fab-pack.zip"));
     if (done === "rfqs-out") {
@@ -540,7 +381,7 @@ function downloadFile(name: string, data: string | Uint8Array, mime?: string) {
               ? "The CAD model is parametric — change a number at the top and it regenerates."
               : ""}
           </p>
-          {fileList()}
+          <PackFileList files={files} />
           <div className="dialog-actions">
             <button type="button" className="btn" onClick={onClose}>
               Not yet
@@ -754,7 +595,7 @@ function downloadFile(name: string, data: string | Uint8Array, mime?: string) {
         chosen.length > 0 && chosen.every((v) => marked[v.id]);
       const sendPack = (v: Vendor) => {
         if (packEntry) {
-          downloadFile(packEntry.name, packEntry.make(), packEntry.mime);
+          downloadPackFile(packEntry);
         }
         if (v.contact === "email") {
           window.location.href = mailtoFor(v);
@@ -1001,15 +842,15 @@ function downloadFile(name: string, data: string | Uint8Array, mime?: string) {
         </>
       );
     }
-    const pkg = PACKS[project.medium];
+    const pkgLabel = packLabelFor(project.medium);
     return (
       <>
         <p style={{ margin: 0 }}>
-          {pkg
-            ? `Here's your ${pkg.label.toLowerCase()} and the brief — ready to share.`
+          {pkgLabel
+            ? `Here's your ${pkgLabel.toLowerCase()} and the brief — ready to share.`
             : "Here's everything, ready to share."}
         </p>
-        {fileList()}
+        <PackFileList files={files} />
         {problem !== "" && (
           <p className="small" style={{ margin: 0, color: "var(--red)" }}>
             {problem}

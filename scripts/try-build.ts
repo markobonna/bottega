@@ -19,7 +19,7 @@ async function main() {
       { role: "user", content: description },
     ],
     WireSpecSchema,
-    { reasoning: "medium", maxTokens: 4000 },
+    { reasoning: "minimal", maxTokens: 4000, timeoutMs: 60000 },
   );
   let parsed = parseSpec(draft);
   if (!parsed.ok) {
@@ -33,7 +33,7 @@ async function main() {
         },
       ],
       WireSpecSchema,
-      { reasoning: "medium", maxTokens: 4000 },
+      { reasoning: "minimal", maxTokens: 4000, timeoutMs: 60000 },
     );
     parsed = parseSpec(draft);
   }

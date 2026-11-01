@@ -8,6 +8,12 @@ import "@/vendor/bottega/types.js";
 import "@/vendor/bottega/art/common.js";
 import "@/vendor/bottega/art/room.js";
 import { moveRoomCard } from "@/app/projects/[id]/actions";
+import DeleteAppButton from "@/app/DeleteAppButton";
+import DeleteWorkshopButton from "@/app/DeleteWorkshopButton";
+import ProjectBuildButton from "@/components/workshop/ProjectBuildButton";
+import ProjectMoveButtons from "@/components/workshop/ProjectMoveButtons";
+import RenameWorkshop from "@/components/workshop/RenameWorkshop";
+import WorkshopTypePicker from "@/components/workshop/WorkshopTypePicker";
 import { say } from "@/lib/apprentice-client";
 import type { DesignMedium, LiveStage } from "@/lib/design/project-art";
 import NewProjectDialog from "./NewProjectDialog";
@@ -88,8 +94,8 @@ export default function WorkshopScreen({
   const n = projects.length;
   const busy = projects.find((p) => p.stage === "build");
   const lede = n
-    ? `${n} project${n === 1 ? "" : "s"}.${busy ? ` Your apprentice is at the ${busy.name.toLowerCase()}.` : ""}`
-    : "An empty room, ready for work. Tell your apprentice what you want to make here.";
+    ? `${n} project${n === 1 ? "" : "s"}.${busy ? ` Bottega is at the ${busy.name.toLowerCase()}.` : ""}`
+    : "An empty room, ready for work. Tell Bottega what you want to make here.";
 
   const rm = useMemo(
     () =>
@@ -342,7 +348,7 @@ export default function WorkshopScreen({
                     className="hand"
                     style={{ fontSize: 26, margin: "8px 0 0", lineHeight: 1.2 }}
                   >
-                    This room is ready. Tell me what you want to make — or tap
+                    This room is empty. Tell me what you want to make — or tap
                     the dashed spot on the bench.
                   </p>
                 </div>
@@ -360,8 +366,38 @@ export default function WorkshopScreen({
           )}
         </div>
       ) : (
-        <ul className="grid-cards">
-          {projects.map((p) => {
+        <>
+          <div className="card" style={{ marginBottom: 16, padding: 16 }}>
+            <p className="eyebrow" style={{ margin: 0 }}>
+              Manage workshop
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 8,
+              }}
+            >
+              <strong>{workshop.name}</strong>
+              <RenameWorkshop
+                workshopId={workshop.id}
+                initial={workshop.name}
+              />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <WorkshopTypePicker
+                workshopId={workshop.id}
+                initial={workshop.type}
+              />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <DeleteWorkshopButton workshopId={workshop.id} />
+            </div>
+          </div>
+          <ul className="grid-cards">
+          {projects.map((p, i) => {
             const medium = B.MEDIUMS[p.medium] ?? B.MEDIUMS.hardware;
             return (
               <li key={p.id}>
@@ -390,6 +426,22 @@ export default function WorkshopScreen({
                     {B.stageLabel(p)}
                   </span>
                 </Link>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    marginTop: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <ProjectBuildButton appId={p.id} />
+                  <ProjectMoveButtons
+                    appId={p.id}
+                    isFirst={i === 0}
+                    isLast={i === projects.length - 1}
+                  />
+                  <DeleteAppButton appId={p.id} />
+                </div>
               </li>
             );
           })}
@@ -402,7 +454,8 @@ export default function WorkshopScreen({
               <Icon svg={B.icon("plus", 28)} /> New project
             </button>
           </li>
-        </ul>
+          </ul>
+        </>
       )}
 
       <section className="below">
@@ -410,7 +463,7 @@ export default function WorkshopScreen({
           <Icon svg={B.sigil(48)} />
           <div style={{ minWidth: 0 }}>
             <p className="eyebrow">
-              Your apprentice
+              Bottega
               {busy ? ` · at the ${busy.name.toLowerCase()}` : ""}
             </p>
             <p className="said">

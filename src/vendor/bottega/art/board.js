@@ -171,7 +171,7 @@
   };
 
   A.MODES = { ink: { b: 0, r: 0, h: 1, sp: 0 }, built: { b: 1, r: 0, h: 1, sp: 1 }, render: { b: 1, r: 1, h: 0.15, sp: 0 } };
-  A.modeForStage = (stage) => ({ sketch: 'ink', shape: 'ink', build: 'built', sent: 'render', arrived: 'render' }[stage] || 'ink');
+  A.modeForStage = (stage) => ({ sketch: 'ink', shape: 'render', build: 'render', sent: 'render', arrived: 'render' }[stage] || 'ink');
 
   A.board = function (p, mode, opts) {
     opts = opts || {};

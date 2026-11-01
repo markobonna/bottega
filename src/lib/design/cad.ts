@@ -40,7 +40,7 @@ export function scad(name: string, s: CadSpecs = DEFAULT_SPECS): string {
   } else if (kind === "register") {
     body += `drawer_h = 70;\nslide_len = depth - 40;   // ball-bearing slides, 20 kg\n\ndifference() { cube([width, depth, height]); translate([20, -1, 15]) cube([width - 40, depth - 20, drawer_h]); }\ntranslate([24, 0, 17]) cube([width - 48, slide_len, drawer_h - 6]); // drawer\nfor (x = [12, width - 16]) translate([x, 20, 30]) cube([4, slide_len, 12]);  // slides\n`;
   } else {
-    body += `difference() {\n  cube([width, depth, height]);\n  translate([wall, wall, wall]) cube([width - 2*wall, depth - 2*wall, height]); // hollow shell, open top\n}\n// TODO: your apprentice adds detailed parts here as the design firms up.\n`;
+    body += `difference() {\n  cube([width, depth, height]);\n  translate([wall, wall, wall]) cube([width - 2*wall, depth - 2*wall, height]); // hollow shell, open top\n}\n// TODO: Bottega adds detailed parts here as the design firms up.\n`;
   }
   return body;
 }

@@ -66,7 +66,7 @@
     hardware: {
       label: 'Hardware', keywords: ['machine', 'maker', 'device', 'register', 'grinder', 'rack', 'lamp', 'fix', 'repair', 'gadget', 'hardware', 'motor', 'sensor', 'cabinet', 'table', 'chair', 'shelf', 'stand', 'holder', 'tower', 'brewer', 'kettle', 'oven', 'cart', 'bracket', 'mount', 'case', 'enclosure', 'collector', 'pedalboard', 'drawer', 'kit', 'robot', 'printer'],
       tools: [['sketch', 'Sketch'], ['measure', 'Measure'], ['parts', 'Parts'], ['materials', 'Materials'], ['gauge', 'Stress test'], ['layers', 'Explode']],
-      flow: 'quote', sentLabel: 'Send RFQ', arrivedLabel: 'Ship', thing: 'machine',
+      flow: 'quote', sentLabel: 'Send RFQ', arrivedLabel: 'It arrived', thing: 'machine',
       questions: [
         'Where does it live — what does it sit on, and how much room is there?',
         'What has to plug into it: power, water, air, anything else?',

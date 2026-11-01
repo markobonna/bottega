@@ -45,7 +45,7 @@ export async function POST(req: Request): Promise<Response> {
         { role: "user", content: body.description },
       ],
       WireSpecSchema,
-      { reasoning: "medium", maxTokens: 4000 },
+      { reasoning: "minimal", maxTokens: 4000, timeoutMs: 60000 },
     );
     viaOpen = viaOpen || first.via === "open";
     let draft = first.data;
@@ -60,7 +60,7 @@ export async function POST(req: Request): Promise<Response> {
           },
         ],
         WireSpecSchema,
-        { reasoning: "medium", maxTokens: 4000 },
+        { reasoning: "minimal", maxTokens: 4000, timeoutMs: 60000 },
       );
       viaOpen = viaOpen || second.via === "open";
       draft = second.data;

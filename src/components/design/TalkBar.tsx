@@ -24,7 +24,7 @@ function placeholderFor(pathname: string): string {
       : first === "workshops"
         ? "\u201CI want to make\u2026\u201D \u00B7 \u201Copen the \u2026\u201D \u00B7 \u201Cgo outside\u201D"
         : "\u201Copen the caf\u00E9\u201D \u00B7 \u201CI also have a garage\u2026\u201D";
-  return `Talk to your apprentice \u2014 ${ex}`;
+  return `Talk to Bottega \u2014 ${ex}`;
 }
 
 function loadVoice(): boolean {
@@ -199,7 +199,7 @@ export default function TalkBar() {
     <div className="b-scope">
       <section
         ref={barRef}
-        aria-label="Talk to your apprentice"
+        aria-label="Talk to Bottega"
         className={`talk${open ? " open" : ""}`}
       >
         <div className="talk-inner">
@@ -256,7 +256,7 @@ export default function TalkBar() {
           >
             <BIcon svg={B.sigil(36)} />
             <label htmlFor="talk-input" className="sr-only">
-              Talk to your apprentice
+              Talk to Bottega
             </label>
             <input
               id="talk-input"

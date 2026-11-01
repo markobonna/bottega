@@ -377,6 +377,32 @@ export async function advanceStage(
   }
 }
 
+const PREV_STAGE: Record<string, string> = {
+  shape: "sketch",
+  build: "shape",
+  sent: "build",
+  arrived: "sent",
+};
+
+export async function goBackStage(
+  appId: string,
+): Promise<Ok<{ stage: string }> | Fail> {
+  try {
+    const { supabase, app } = await loadStage(appId);
+    const prev = PREV_STAGE[effectiveStage(app.stage, app.version)];
+    if (!prev) throw new Error("Already at the start.");
+    const { error } = await supabase
+      .from("apps")
+      .update({ stage: prev })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/projects/${appId}`);
+    return { ok: true, stage: prev };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function recordRfqSent(
   appId: string,
   vendors: { name: string; contact: string; address: string }[],

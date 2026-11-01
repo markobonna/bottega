@@ -16,7 +16,8 @@ import { addRecord } from "@/lib/records";
 import { segment } from "@/lib/sam";
 import coleFixture from "@/lib/spec/fixtures/cole.json";
 import mariaFixture from "@/lib/spec/fixtures/maria.json";
-import type { AppSpec } from "@/lib/spec/schema";
+import type { AppSpec, Block, Field } from "@/lib/spec/schema";
+import { parseSpec } from "@/lib/spec/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/types";
 import {
@@ -119,8 +120,49 @@ async function makeWorkshop(
 
 let looksSkipped = false;
 
-/** createApp plus the same look render a built project gets (or a clean
- * skip without a model key, so keyless seeds keep working). */
+interface PendingLook {
+  client: Client;
+  uid: string;
+  id: string;
+  spec: unknown;
+  kind: "hardware" | "software" | "music" | "dance" | "print" | "recipe";
+}
+
+/** Look renders are slow (one Muse Image call each), so they queue up and
+ * run last: any bad spec or record fails the seed in seconds, before a
+ * single render burns time or money. */
+const pendingLooks: PendingLook[] = [];
+
+async function renderPendingLooks(): Promise<void> {
+  for (;;) {
+    const p = pendingLooks.shift();
+    if (!p) return;
+    if (looksSkipped) continue;
+    try {
+      const { lookPath, blueprintPath } = await renderLook(p.client, p.uid, {
+        id: p.id,
+        spec: p.spec,
+        kind: p.kind,
+      });
+      const { error } = await p.client
+        .from("apps")
+        .update({ look_path: lookPath, blueprint_path: blueprintPath })
+        .eq("id", p.id);
+      if (error) throw new Error(`look paths: ${error.message}`);
+      console.log(`look: ${(p.spec as { name?: string }).name ?? p.id}`);
+    } catch (e) {
+      if (e instanceof MissingKeyError) {
+        looksSkipped = true;
+        console.log("looks skipped (no model key)");
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
+/** createApp plus a queued look render (see pendingLooks). Fails fast when
+ * the spec doesn't parse. */
 async function createSeedApp(
   client: Client,
   uid: string,
@@ -132,66 +174,349 @@ async function createSeedApp(
     kind?: "hardware" | "software" | "music" | "dance" | "print" | "recipe";
   },
 ): Promise<string> {
-  const id = await createApp(client, spec, opts);
-  if (looksSkipped) return id;
-  try {
-    const { lookPath, blueprintPath } = await renderLook(client, uid, {
-      id,
-      spec,
-      kind: opts.kind ?? "software",
-    });
-    const { error } = await client
-      .from("apps")
-      .update({ look_path: lookPath, blueprint_path: blueprintPath })
-      .eq("id", id);
-    if (error) throw new Error(`look paths: ${error.message}`);
-    console.log(`look: ${(spec as { name?: string }).name ?? id}`);
-  } catch (e) {
-    if (e instanceof MissingKeyError) {
-      looksSkipped = true;
-      console.log("looks skipped (no model key)");
-      return id;
-    }
-    throw e;
+  const parsed = parseSpec(spec);
+  if (!parsed.ok) {
+    throw new Error(
+      `seed spec ${(spec as { name?: string }).name}: ${parsed.issues.join("; ")}`,
+    );
   }
+  const id = await createApp(client, spec, opts);
+  pendingLooks.push({ client, uid, id, spec, kind: opts.kind ?? "software" });
   return id;
+}
+
+type Accent = AppSpec["look"]["accent"];
+type StatAgg = "count" | "sum" | "latest" | "avg";
+
+/** One-collection tracker: a list + form screen and a numbers screen. */
+function trackerSpec(o: {
+  name: string;
+  tagline: string;
+  accent: Accent;
+  icon: string;
+  collection: string;
+  collName: string;
+  fields: Field[];
+  show: string[];
+  sortField: string;
+  sortDir: "asc" | "desc";
+  submit: string;
+  statsTitle: string;
+  stats: { title: string; field: string; agg: StatAgg }[];
+}): AppSpec {
+  const c = o.collection;
+  const main: Block[] = [
+    {
+      id: `${c}_list`,
+      title: `All ${o.collName.toLowerCase()}`,
+      type: "list",
+      collection: c,
+      show: o.show,
+      sort: { field: o.sortField, dir: o.sortDir },
+    },
+    {
+      id: `${c}_form`,
+      title: "Add one",
+      type: "form",
+      collection: c,
+      fields: o.fields.map((f) => f.id),
+      submitLabel: o.submit,
+    },
+  ];
+  const numbers: Block[] = o.stats.map(
+    (s, i): Block => ({
+      id: `${c}_stat_${i}`,
+      title: s.title,
+      type: "stat",
+      collection: c,
+      field: s.field,
+      agg: s.agg,
+      chart: "none",
+    }),
+  );
+  return {
+    version: 1,
+    name: o.name,
+    tagline: o.tagline,
+    look: { accent: o.accent, icon: o.icon },
+    collections: [{ id: c, name: o.collName, fields: o.fields }],
+    screens: [
+      { id: "main", title: o.collName, icon: o.icon, blocks: main },
+      { id: "numbers", title: o.statsTitle, icon: "📈", blocks: numbers },
+    ],
+  };
+}
+
+/** Print project: items to lay out plus a draw board for the artwork. */
+function printSpec(o: {
+  name: string;
+  tagline: string;
+  accent: Accent;
+  icon: string;
+  collection: string;
+  collName: string;
+  fields: Field[];
+  show: string[];
+  titleField: string;
+  imageField: string;
+  promptTemplate: string;
+  drawTitle: string;
+}): AppSpec {
+  const c = o.collection;
+  const main: Block[] = [
+    {
+      id: `${c}_form`,
+      title: "Add one",
+      type: "form",
+      collection: c,
+      fields: o.fields.map((f) => f.id).filter((id) => id !== o.imageField),
+      submitLabel: "Add",
+    },
+    {
+      id: `${c}_list`,
+      title: `All ${o.collName.toLowerCase()}`,
+      type: "list",
+      collection: c,
+      show: o.show,
+    },
+  ];
+  const art: Block[] = [
+    {
+      id: `${c}_draw`,
+      title: o.drawTitle,
+      type: "draw",
+      collection: c,
+      titleField: o.titleField,
+      imageField: o.imageField,
+      promptTemplate: o.promptTemplate,
+    },
+  ];
+  return {
+    version: 1,
+    name: o.name,
+    tagline: o.tagline,
+    look: { accent: o.accent, icon: o.icon },
+    collections: [{ id: c, name: o.collName, fields: o.fields }],
+    screens: [
+      { id: "main", title: o.collName, icon: o.icon, blocks: main },
+      { id: "art", title: o.drawTitle, icon: "🎨", blocks: art },
+    ],
+  };
+}
+
+/** Hardware parts list shared by the garage-style builds. */
+function partsSpec(
+  name: string,
+  tagline: string,
+  accent: Accent,
+  icon: string,
+): AppSpec {
+  return trackerSpec({
+    name,
+    tagline,
+    accent,
+    icon,
+    collection: "parts",
+    collName: "Parts",
+    fields: [
+      { id: "part", name: "Part", type: "text" },
+      { id: "qty", name: "Qty", type: "number" },
+      { id: "cost", name: "Cost", type: "number" },
+      {
+        id: "status",
+        name: "Status",
+        type: "choice",
+        options: ["needed", "ordered", "arrived"],
+      },
+    ],
+    show: ["part", "qty", "status"],
+    sortField: "part",
+    sortDir: "asc",
+    submit: "Add part",
+    statsTitle: "Budget",
+    stats: [
+      { title: "Parts cost", field: "cost", agg: "sum" },
+      { title: "Line items", field: "part", agg: "count" },
+    ],
+  });
+}
+
+async function addRecords(
+  client: Client,
+  appId: string,
+  collection: string,
+  rows: Record<string, unknown>[],
+): Promise<void> {
+  for (const data of rows) await addRecord(client, appId, collection, data);
+}
+
+async function setStage(
+  client: Client,
+  appId: string,
+  stage: string,
+): Promise<void> {
+  const { error } = await client.from("apps").update({ stage }).eq("id", appId);
+  if (error) throw new Error(`stage ${appId}: ${error.message}`);
 }
 
 async function seedMaria(client: Client, uid: string): Promise<string> {
   const cafeId = await makeWorkshop(client, "The Café", "cafe");
   const studioId = await makeWorkshop(client, "Dance Studio", "studio");
-  await makeWorkshop(client, "Music Room", "music");
-  await makeWorkshop(client, "Classroom", "classroom");
+  const musicId = await makeWorkshop(client, "Music Room", "music");
   const appId = await createSeedApp(
     client,
     uid,
     { ...mariaFixture, name: "Bakery orders" },
     { source: "build", summary: "Demo seed", workshopId: cafeId },
   );
-  // The design's example projects live in the café alongside the working app.
-  for (const [name, kind] of [
-    ["Espresso machine v2", "hardware"],
-    ["Register drawer fix", "hardware"],
-    ["Loyalty app", "software"],
-    ["Autumn menu board", "print"],
-  ] as const) {
-    await createSeedApp(
-      client,
-      uid,
-      { ...mariaFixture, name },
-      { source: "build", summary: "Demo seed", workshopId: cafeId, kind },
-    );
-  }
-  await createSeedApp(
+  const seedOpts = (workshopId: string, kind: "hardware" | "software" | "music" | "dance" | "print" | "recipe") => ({
+    source: "build" as const,
+    summary: "Demo seed",
+    workshopId,
+    kind,
+  });
+  const espressoId = await createSeedApp(
     client,
     uid,
-    { ...mariaFixture, name: "Spring showcase routine" },
-    {
-      source: "build",
-      summary: "Demo seed",
-      workshopId: studioId,
-      kind: "dance",
-    },
+    partsSpec(
+      "Espresso machine v2",
+      "Rebuilding the café's second espresso machine.",
+      "ochre",
+      "🔧",
+    ),
+    seedOpts(cafeId, "hardware"),
+  );
+  const registerId = await createSeedApp(
+    client,
+    uid,
+    trackerSpec({
+      name: "Register drawer fix",
+      tagline: "Getting the old drawer to slide and ring again.",
+      accent: "teal",
+      icon: "🧰",
+      collection: "fixes",
+      collName: "Fixes",
+      fields: [
+        { id: "issue", name: "Issue", type: "text" },
+        { id: "tried", name: "Tried", type: "text" },
+        { id: "cost", name: "Cost", type: "number" },
+        { id: "fixed", name: "Fixed", type: "bool" },
+      ],
+      show: ["issue", "fixed"],
+      sortField: "issue",
+      sortDir: "asc",
+      submit: "Log fix",
+      statsTitle: "Costs",
+      stats: [{ title: "Fix costs", field: "cost", agg: "sum" }],
+    }),
+    seedOpts(cafeId, "hardware"),
+  );
+  const loyaltyId = await createSeedApp(
+    client,
+    uid,
+    trackerSpec({
+      name: "Loyalty app",
+      tagline: "Regulars earn free coffee and pastry.",
+      accent: "plum",
+      icon: "☕",
+      collection: "members",
+      collName: "Members",
+      fields: [
+        { id: "name", name: "Name", type: "text" },
+        { id: "visits", name: "Visits", type: "number" },
+        {
+          id: "reward",
+          name: "Reward",
+          type: "choice",
+          options: ["none", "free coffee", "free pastry"],
+        },
+      ],
+      show: ["name", "visits", "reward"],
+      sortField: "name",
+      sortDir: "asc",
+      submit: "Add member",
+      statsTitle: "Visits",
+      stats: [
+        { title: "Total visits", field: "visits", agg: "sum" },
+        { title: "Members", field: "name", agg: "count" },
+      ],
+    }),
+    seedOpts(cafeId, "software"),
+  );
+  const menuId = await createSeedApp(
+    client,
+    uid,
+    printSpec({
+      name: "Autumn menu board",
+      tagline: "Fall flavors on the big chalkboard.",
+      accent: "olive",
+      icon: "🪧",
+      collection: "items",
+      collName: "Items",
+      fields: [
+        { id: "name", name: "Name", type: "text" },
+        { id: "description", name: "Description", type: "text" },
+        { id: "price", name: "Price", type: "number" },
+        { id: "picture", name: "Picture", type: "photo" },
+      ],
+      show: ["name", "price"],
+      titleField: "name",
+      imageField: "picture",
+      promptTemplate:
+        "a chalkboard café menu illustration of {name}: {description}, autumn colors",
+      drawTitle: "Board",
+    }),
+    seedOpts(cafeId, "print"),
+  );
+  const showcaseId = await createSeedApp(
+    client,
+    uid,
+    trackerSpec({
+      name: "Spring showcase routine",
+      tagline: "Six minutes, twelve dancers, one gym floor.",
+      accent: "indigo",
+      icon: "💃",
+      collection: "rehearsals",
+      collName: "Rehearsals",
+      fields: [
+        { id: "date", name: "Date", type: "date" },
+        { id: "section", name: "Section", type: "text" },
+        { id: "notes", name: "Notes", type: "text" },
+        { id: "clean", name: "Clean", type: "bool" },
+      ],
+      show: ["date", "section", "clean"],
+      sortField: "date",
+      sortDir: "desc",
+      submit: "Log rehearsal",
+      statsTitle: "Sessions",
+      stats: [{ title: "Sessions", field: "date", agg: "count" }],
+    }),
+    seedOpts(studioId, "dance"),
+  );
+  const sonataId = await createSeedApp(
+    client,
+    uid,
+    trackerSpec({
+      name: "New Sonata",
+      tagline: "A new rendition of the Midnight Sonata.",
+      accent: "terracotta",
+      icon: "🎵",
+      collection: "movements",
+      collName: "Movements",
+      fields: [
+        { id: "name", name: "Name", type: "text" },
+        { id: "tempo", name: "Tempo", type: "number" },
+        { id: "notes", name: "Notes", type: "text" },
+        { id: "polished", name: "Polished", type: "bool" },
+      ],
+      show: ["name", "tempo", "polished"],
+      sortField: "name",
+      sortDir: "asc",
+      submit: "Add movement",
+      statsTitle: "Progress",
+      stats: [{ title: "Movements", field: "name", agg: "count" }],
+    }),
+    seedOpts(musicId, "music"),
   );
   const spec = mariaFixture as AppSpec;
   const see = spec.screens
@@ -261,6 +586,45 @@ async function seedMaria(client: Client, uid: string): Promise<string> {
       picture: sellPaths[i],
     });
   }
+  await addRecords(client, espressoId, "parts", [
+    { part: "Group head gasket", qty: 1, cost: 18, status: "arrived" },
+    { part: "Portafilter basket", qty: 2, cost: 24, status: "ordered" },
+    { part: "Steam wand tip", qty: 1, cost: 12, status: "needed" },
+    { part: "Descaler", qty: 3, cost: 9, status: "arrived" },
+  ]);
+  await addRecords(client, registerId, "fixes", [
+    { issue: "Drawer sticks", tried: "Cleaned the rails", cost: 6, fixed: false },
+    { issue: "Bell too quiet", tried: "Tightened the hammer", cost: 0, fixed: true },
+    { issue: "Receipts jam", tried: "Fitted a new roller", cost: 14, fixed: true },
+  ]);
+  await addRecords(client, loyaltyId, "members", [
+    { name: "Ana", visits: 9, reward: "free coffee" },
+    { name: "Ben", visits: 4, reward: "none" },
+    { name: "Cara", visits: 12, reward: "free pastry" },
+  ]);
+  await addRecords(client, menuId, "items", [
+    { name: "Maple oat latte", description: "Espresso, oat milk, maple", price: 5.25 },
+    { name: "Harvest salad", description: "Apple, walnut, cider dressing", price: 9.5 },
+    { name: "Cider donut", description: "Warm, cinnamon sugar", price: 3 },
+  ]);
+  await addRecords(client, showcaseId, "rehearsals", [
+    { date: dayAgo(2), section: "Opening lift", notes: "Timing off on the turn", clean: false },
+    { date: dayAgo(5), section: "Finale line", notes: "Spacing fixed", clean: true },
+    { date: dayAgo(9), section: "Duet", notes: "Needs one more run", clean: false },
+  ]);
+  await addRecords(client, sonataId, "movements", [
+    { name: "First movement", tempo: 60, notes: "Slow and even", polished: true },
+    { name: "Second movement", tempo: 90, notes: "Lighten the left hand", polished: false },
+    { name: "Third movement", tempo: 160, notes: "Build speed gradually", polished: false },
+  ]);
+  await setStage(client, appId, "arrived");
+  await setStage(client, espressoId, "arrived");
+  await setStage(client, registerId, "arrived");
+  await setStage(client, loyaltyId, "arrived");
+  await setStage(client, menuId, "arrived");
+  await setStage(client, showcaseId, "arrived");
+  await setStage(client, sonataId, "arrived");
+  await renderPendingLooks();
   return appId;
 }
 
@@ -326,10 +690,9 @@ async function seedMariaTeach(
 }
 
 async function seedCole(client: Client, uid: string): Promise<string> {
-  await makeWorkshop(client, "The Store", "store");
+  const storeId = await makeWorkshop(client, "The Store", "store");
   const garageId = await makeWorkshop(client, "The Garage", "garage");
-  await makeWorkshop(client, "The Kitchen", "kitchen");
-  await makeWorkshop(client, "Classroom", "classroom");
+  const kitchenId = await makeWorkshop(client, "The Kitchen", "kitchen");
   const appId = await createSeedApp(
     client,
     uid,
@@ -341,18 +704,125 @@ async function seedCole(client: Client, uid: string): Promise<string> {
       kind: "hardware",
     },
   );
-  // The design's example projects live in the garage alongside the working app.
-  for (const [name, kind] of [
-    ["Bike wall rack", "hardware"],
-    ["Workbench lamp", "hardware"],
-  ] as const) {
-    await createSeedApp(
-      client,
-      uid,
-      { ...coleFixture, name },
-      { source: "build", summary: "Demo seed", workshopId: garageId, kind },
-    );
-  }
+  const seedOpts = (workshopId: string, kind: "hardware" | "software" | "music" | "dance" | "print" | "recipe") => ({
+    source: "build" as const,
+    summary: "Demo seed",
+    workshopId,
+    kind,
+  });
+  const rackId = await createSeedApp(
+    client,
+    uid,
+    partsSpec(
+      "Bike wall rack",
+      "Bikes off the floor, onto the wall.",
+      "indigo",
+      "🚲",
+    ),
+    seedOpts(garageId, "hardware"),
+  );
+  const lampId = await createSeedApp(
+    client,
+    uid,
+    partsSpec(
+      "Workbench lamp",
+      "A bright arm for the workbench.",
+      "ochre",
+      "🔦",
+    ),
+    seedOpts(garageId, "hardware"),
+  );
+  const neonId = await createSeedApp(
+    client,
+    uid,
+    printSpec({
+      name: "Neon Sign",
+      tagline: "Cole's General Store in glowing glass tubes.",
+      accent: "plum",
+      icon: "💡",
+      collection: "proofs",
+      collName: "Proofs",
+      fields: [
+        { id: "version", name: "Version", type: "text" },
+        { id: "notes", name: "Notes", type: "text" },
+        { id: "price", name: "Price", type: "number" },
+        { id: "picture", name: "Picture", type: "photo" },
+      ],
+      show: ["version", "price"],
+      titleField: "version",
+      imageField: "picture",
+      promptTemplate:
+        "a glowing neon sign mockup for a general store: {notes}, night, storefront window",
+      drawTitle: "Sign",
+    }),
+    seedOpts(storeId, "print"),
+  );
+  const tipsId = await createSeedApp(
+    client,
+    uid,
+    trackerSpec({
+      name: "Quick Repair Tips",
+      tagline: "Look up the fix before you call for help.",
+      accent: "teal",
+      icon: "🪛",
+      collection: "tips",
+      collName: "Tips",
+      fields: [
+        { id: "item", name: "Item", type: "text" },
+        { id: "problem", name: "Problem", type: "text" },
+        { id: "fix", name: "Fix", type: "text" },
+        {
+          id: "difficulty",
+          name: "Difficulty",
+          type: "choice",
+          options: ["easy", "medium", "tricky"],
+        },
+      ],
+      show: ["item", "problem", "difficulty"],
+      sortField: "item",
+      sortDir: "asc",
+      submit: "Add tip",
+      statsTitle: "Library",
+      stats: [{ title: "Tips", field: "item", agg: "count" }],
+    }),
+    seedOpts(storeId, "software"),
+  );
+  const spaghettiId = await createSeedApp(
+    client,
+    uid,
+    trackerSpec({
+      name: "Grandma's Spaghetti",
+      tagline: "Nonna's 1920s recipe, batch by batch.",
+      accent: "terracotta",
+      icon: "🍝",
+      collection: "batches",
+      collName: "Batches",
+      fields: [
+        { id: "cooked", name: "Cooked", type: "date" },
+        { id: "tweaks", name: "Tweaks", type: "text" },
+        { id: "servings", name: "Servings", type: "number" },
+        { id: "cost", name: "Cost", type: "number" },
+      ],
+      show: ["cooked", "servings"],
+      sortField: "cooked",
+      sortDir: "desc",
+      submit: "Log batch",
+      statsTitle: "Cost",
+      stats: [{ title: "Average cost", field: "cost", agg: "avg" }],
+    }),
+    seedOpts(kitchenId, "recipe"),
+  );
+  const stoolId = await createSeedApp(
+    client,
+    uid,
+    partsSpec(
+      "Movable Stool",
+      "A wheeled stool that locks where you leave it.",
+      "olive",
+      "🪑",
+    ),
+    seedOpts(kitchenId, "hardware"),
+  );
   const spec = coleFixture as AppSpec;
   const see = spec.screens
     .flatMap((s) => s.blocks)
@@ -392,6 +862,43 @@ async function seedCole(client: Client, uid: string): Promise<string> {
     notes: "Two shelves sagging",
     status: "quoted",
   });
+  await addRecords(client, rackId, "parts", [
+    { part: "Steel arms", qty: 2, cost: 44, status: "arrived" },
+    { part: "Wall anchors", qty: 8, cost: 12, status: "arrived" },
+    { part: "Rubber cradles", qty: 2, cost: 18, status: "ordered" },
+  ]);
+  await addRecords(client, lampId, "parts", [
+    { part: "Shade", qty: 1, cost: 22, status: "arrived" },
+    { part: "LED panel", qty: 1, cost: 35, status: "ordered" },
+    { part: "Gooseneck arm", qty: 1, cost: 19, status: "needed" },
+  ]);
+  await addRecords(client, neonId, "proofs", [
+    { version: "v1 script", notes: "Cursive Cole's, warm white", price: 180 },
+    { version: "v2 block", notes: "Block letters, amber glow", price: 220 },
+  ]);
+  await addRecords(client, tipsId, "tips", [
+    { item: "Faucet", problem: "Drips all night", fix: "Replace the washer", difficulty: "easy" },
+    { item: "Door", problem: "Squeaks", fix: "Oil the hinges", difficulty: "easy" },
+    { item: "Dryer", problem: "No heat", fix: "Check the vent for lint", difficulty: "medium" },
+  ]);
+  await addRecords(client, spaghettiId, "batches", [
+    { cooked: dayAgo(1), tweaks: "Extra garlic, less salt", servings: 6, cost: 14 },
+    { cooked: dayAgo(8), tweaks: "San Marzano tomatoes", servings: 8, cost: 18 },
+    { cooked: dayAgo(15), tweaks: "First try, followed the card", servings: 4, cost: 11 },
+  ]);
+  await addRecords(client, stoolId, "parts", [
+    { part: "Caster wheels", qty: 4, cost: 32, status: "arrived" },
+    { part: "Oak seat blank", qty: 1, cost: 28, status: "ordered" },
+    { part: "Lock levers", qty: 4, cost: 16, status: "needed" },
+  ]);
+  await setStage(client, appId, "arrived");
+  await setStage(client, rackId, "arrived");
+  await setStage(client, lampId, "arrived");
+  await setStage(client, neonId, "arrived");
+  await setStage(client, tipsId, "arrived");
+  await setStage(client, spaghettiId, "arrived");
+  await setStage(client, stoolId, "arrived");
+  await renderPendingLooks();
   return appId;
 }
 
@@ -445,7 +952,7 @@ async function main(): Promise<void> {
 
   console.log("---");
   console.log("maria@example.com / cole@example.com reseeded");
-  console.log("orders=8 pantry=2 specials=3 pieces=3 loaf examples=6");
+  console.log("projects=14 orders=8 pantry=2 specials=3 pieces=3 loaf examples=6");
   console.log(`TEMPLATE_MARIA_UID=${ids.maria}`);
   console.log(`TEMPLATE_COLE_UID=${ids.cole}`);
   console.log("SEED PASS");

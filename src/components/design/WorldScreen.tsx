@@ -34,7 +34,7 @@ export default function WorldScreen({
     (w) => B.isLit(w) && w.stage !== "sketch",
   );
   const lede = empty
-    ? "Tell your apprentice about a place where you make things — type or talk below — or tap the empty lot."
+    ? "Tell Bottega about a place where you make things — type or talk below — or tap the empty lot."
     : `${workshops.length} workshop${workshops.length === 1 ? "" : "s"}.${lit.length ? ` ${lit.map((w) => w.name).join(" and ")}${lit.length === 1 ? " is" : " are"} lit.` : ""}`;
 
   const firstProject = workshops.flatMap((w) =>
@@ -137,7 +137,7 @@ export default function WorldScreen({
         <div className="main card apprentice-card">
           <BIcon svg={B.sigil(48)} />
           <div style={{ minWidth: 0 }}>
-            <p className="eyebrow">Talk to your apprentice</p>
+            <p className="eyebrow">Talk to Bottega</p>
             <p className="said">
               {empty
                 ? "Just say what you do and what bugs you. I'll draw the place and get to work."

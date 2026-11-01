@@ -44,7 +44,7 @@ export function sentLabelFor(medium: string, designLabel: string): string {
 }
 
 const STAGE_LABELS: Record<string, [string, string, string, string, string]> = {
-  hardware: ["Sketch", "Design", "Pack", "Send RFQ", "Ship"],
+  hardware: ["Sketch", "Design", "Pack", "Send RFQ", "It arrived"],
   software: ["Sketch", "Prototype", "Build", "Test", "Go live"],
   print: ["Sketch", "Design", "Proof", "Send RFQ", "Collect"],
   music: ["Sketch", "Write", "Record", "Mix", "Release"],

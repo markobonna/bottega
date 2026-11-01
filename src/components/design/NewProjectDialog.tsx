@@ -30,6 +30,20 @@ export default function NewProjectDialog({
   const meds = def.mediums.concat(
     Object.keys(B.MEDIUMS).filter((k) => !def.mediums.includes(k)),
   );
+  const topKinds = ["hardware", "software"].filter((k) => meds.includes(k));
+  const restKinds = meds.filter((k) => k !== "hardware" && k !== "software");
+  const kindChip = (k: string) => (
+    <button
+      key={k}
+      type="button"
+      className="chip"
+      aria-pressed={medium === k}
+      disabled={busy}
+      onClick={() => setMedium((cur) => (cur === k ? "" : k))}
+    >
+      {B.MEDIUMS[k].label}
+    </button>
+  );
 
   useEffect(() => {
     if (!busy) return;
@@ -107,7 +121,7 @@ export default function NewProjectDialog({
           </button>
         </div>
         <label className="lbl" htmlFor="np-desc">
-          Say it plainly. Your apprentice picks the right bench and tools for
+          Say it plainly. Bottega picks the right bench and tools for
           it in {workshop.name}.
         </label>
         <textarea
@@ -123,22 +137,16 @@ export default function NewProjectDialog({
         <p className="eyebrow" style={{ margin: 0 }}>
           It&apos;s mostly
         </p>
-        <div className="chips" role="group" aria-label="Kind of project">
-          {meds.map((k) => (
-            <button
-              key={k}
-              type="button"
-              className="chip"
-              aria-pressed={medium === k}
-              disabled={busy}
-              onClick={() => setMedium((cur) => (cur === k ? "" : k))}
-            >
-              {B.MEDIUMS[k].label}
-            </button>
-          ))}
+        <div
+          role="group"
+          aria-label="Kind of project"
+          style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        >
+          <div className="chips">{topKinds.map(kindChip)}</div>
+          <div className="chips">{restKinds.map(kindChip)}</div>
         </div>
         <p className="small" style={{ margin: 0 }}>
-          Not sure? Leave it — your apprentice will guess from what you wrote.
+          Not sure? Leave it — Bottega will guess from what you wrote.
         </p>
         {busy && (
           <p className="small" style={{ margin: 0 }}>

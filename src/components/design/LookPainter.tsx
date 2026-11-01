@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * Paints a project's portrait automatically: fires POST /api/project-look
- * once per project (guarded by sessionStorage so the reveal screen and the
- * project page never double-fire), with honest elapsed progress while slow.
- * Renders nothing when the portrait already exists.
+ * Paints a project's portrait automatically in the background: fires POST
+ * /api/project-look once per project (guarded by sessionStorage so the
+ * reveal screen and the project page never double-fire). The sketch is
+ * already on screen; this never blocks it and shows no timer, so a slow
+ * render never reads as stuck. Renders nothing when the portrait exists.
  */
 export default function LookPainter({
   appId,
@@ -20,7 +21,6 @@ export default function LookPainter({
   const [phase, setPhase] = useState<"busy" | "done" | "failed" | "off" | null>(
     null,
   );
-  const [elapsed, setElapsed] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const firing = useRef(false);
 
@@ -35,7 +35,6 @@ export default function LookPainter({
     }
     firing.current = true;
     setPhase("busy");
-    setElapsed(0);
     (async () => {
       try {
         const res = await fetch("/api/project-look", {
@@ -58,22 +57,13 @@ export default function LookPainter({
     })();
   }, [appId, lookMissing, attempt, router]);
 
-  useEffect(() => {
-    if (phase !== "busy") return;
-    const t0 = Date.now();
-    const tick = setInterval(
-      () => setElapsed(Math.floor((Date.now() - t0) / 1000)),
-      1000,
-    );
-    return () => clearInterval(tick);
-  }, [phase]);
-
   if (!lookMissing || phase === null) return null;
 
   if (phase === "busy") {
     return (
       <p className="text-muted text-sm" role="status" aria-live="polite">
-        Muse Image is painting this project&apos;s portrait… {elapsed}s
+        Painting your portrait in the background — keep working, it&apos;ll
+        pop in when it&apos;s done.
       </p>
     );
   }

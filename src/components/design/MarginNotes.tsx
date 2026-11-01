@@ -97,7 +97,7 @@ export default function MarginNotes({
             Margin notes
           </h2>
           <p className="small" style={{ margin: "2px 0 0" }}>
-            You and your apprentice, pinned to the parts
+            You and Bottega, pinned to the parts
           </p>
         </div>
       </div>

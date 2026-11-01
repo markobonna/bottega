@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import {
   advanceStage,
+  goBackStage,
   markArrived,
   savePromise,
   type ProjectNote,
@@ -21,6 +22,7 @@ import {
   type DesignMedium,
   type LiveStage,
 } from "@/lib/design/project-art";
+import { buildPackFiles } from "@/lib/design/pack-files";
 import { stageLabelsFor, toolIcon, toolsFor } from "@/lib/design/tools";
 
 import "@/vendor/bottega/core.js";
@@ -34,6 +36,7 @@ import ConciergeCard from "./ConciergeCard";
 import { BIcon } from "./Dialog";
 import MarginNotes from "./MarginNotes";
 import LookPainter from "./LookPainter";
+import PackFileList from "./PackFileList";
 import SendOffDialog from "./SendOffDialog";
 
 export interface BoardDraft {
@@ -156,6 +159,23 @@ export default function BoardPanel({
     medium.sentLabel,
     medium.arrivedLabel,
   );
+  const packFiles = useMemo(
+    () =>
+      buildPackFiles({
+        name: project.name,
+        medium: project.medium,
+        tagline,
+        workshopName: backTo.name,
+        stageLabel: labels[si] ?? labels[0],
+        notes,
+        drafts,
+        tools,
+        flow: medium.flow,
+        kindLabel: medium.label,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [version],
+  );
   const partsWithNotes = new Set(
     notes.filter((n) => n.part).map((n) => n.part as number),
   );
@@ -173,6 +193,19 @@ export default function BoardPanel({
     setAdvancing(false);
     if (!res.ok) {
       setProblem("Couldn't move it forward. Try again.");
+      return;
+    }
+    router.refresh();
+  }
+
+  async function goBack() {
+    if (advancing) return;
+    setAdvancing(true);
+    setProblem("");
+    const res = await goBackStage(appId);
+    setAdvancing(false);
+    if (!res.ok) {
+      setProblem("Couldn't move it back. Try again.");
       return;
     }
     router.refresh();
@@ -243,7 +276,7 @@ export default function BoardPanel({
             {tagline ? ` · ${tagline}` : ""}
           </p>
           <p className="small" style={{ marginTop: 6 }}>
-            Say what you want below and your apprentice builds it — or walk
+            Say what you want below and Bottega builds it — or walk
             the steps with the buttons.
           </p>
         </div>
@@ -314,7 +347,15 @@ export default function BoardPanel({
             </div>
           )}
           {si === 1 && (
-            <div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={advancing}
+                onClick={() => void goBack()}
+              >
+                ← {labels[0]}
+              </button>
               <button
                 type="button"
                 className="btn btn-dark"
@@ -326,7 +367,15 @@ export default function BoardPanel({
             </div>
           )}
           {si === 2 && (
-            <div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={advancing}
+                onClick={() => void goBack()}
+              >
+                ← {labels[1]}
+              </button>
               <button
                 type="button"
                 className="btn btn-primary btn-lg"
@@ -403,14 +452,24 @@ export default function BoardPanel({
               )}
             </div>
           </div>
-          <button
-            type="button"
-            className="btn"
-            disabled={advancing}
-            onClick={() => void arrivedTap()}
-          >
-            It arrived
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              className="btn"
+              disabled={advancing}
+              onClick={() => void goBack()}
+            >
+              ← {labels[2]}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={advancing}
+              onClick={() => void arrivedTap()}
+            >
+              It arrived
+            </button>
+          </div>
         </div>
       )}
       {arrived && (
@@ -435,6 +494,14 @@ export default function BoardPanel({
               />
             )}
           </div>
+          <button
+            type="button"
+            className="btn"
+            disabled={advancing}
+            onClick={() => void goBack()}
+          >
+            ← {labels[3]}
+          </button>
           <Link href={`/workshops/${backTo.id}`} className="btn">
             See it in the room
           </Link>
@@ -576,6 +643,17 @@ export default function BoardPanel({
           topicId={tool}
         />
       </section>
+
+      {si === 2 && (
+        <section className="card" style={{ marginBottom: 16 }}>
+          <h2 className="h2">Your pack</h2>
+          <p className="small" style={{ marginTop: 4 }}>
+            The design turned into files. They go out with the send-off —
+            or download them now.
+          </p>
+          <PackFileList files={packFiles} />
+        </section>
+      )}
 
       <section style={{ paddingTop: 36, paddingBottom: 40 }}>
         <div

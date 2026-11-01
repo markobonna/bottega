@@ -74,7 +74,7 @@ export default function NewWorkshopDialog({
           </button>
         </div>
         <label className="lbl" htmlFor="nw-desc">
-          Describe it like you&apos;d tell a friend. Your apprentice will
+          Describe it like you&apos;d tell a friend. Bottega will
           sketch it onto the lot.
         </label>
         <textarea
