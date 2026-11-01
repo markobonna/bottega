@@ -359,6 +359,21 @@ async function setStage(
   if (error) throw new Error(`stage ${appId}: ${error.message}`);
 }
 
+/** Polaroid spot on the workshop wall (0-100), arranged by hand once and
+ * kept here so reseeds reproduce the layout. */
+async function setPosition(
+  client: Client,
+  appId: string,
+  x: number,
+  y: number,
+): Promise<void> {
+  const { error } = await client
+    .from("apps")
+    .update({ room_x: x, room_y: y })
+    .eq("id", appId);
+  if (error) throw new Error(`position ${appId}: ${error.message}`);
+}
+
 async function seedMaria(client: Client, uid: string): Promise<string> {
   const cafeId = await makeWorkshop(client, "The Café", "cafe");
   const studioId = await makeWorkshop(client, "Dance Studio", "studio");
@@ -618,12 +633,19 @@ async function seedMaria(client: Client, uid: string): Promise<string> {
     { name: "Third movement", tempo: 160, notes: "Build speed gradually", polished: false },
   ]);
   await setStage(client, appId, "arrived");
+  await setPosition(client, appId, 74.56, 2.54);
   await setStage(client, espressoId, "arrived");
+  await setPosition(client, espressoId, 39.81, 39.43);
   await setStage(client, registerId, "arrived");
+  await setPosition(client, registerId, 61.79, 39.12);
   await setStage(client, loyaltyId, "arrived");
+  await setPosition(client, loyaltyId, 20.29, 39.1);
   await setStage(client, menuId, "arrived");
+  await setPosition(client, menuId, 45.87, 1);
   await setStage(client, showcaseId, "arrived");
+  await setPosition(client, showcaseId, 50.71, 9.67);
   await setStage(client, sonataId, "arrived");
+  await setPosition(client, sonataId, 26.32, 31.54);
   await renderPendingLooks();
   return appId;
 }
@@ -892,12 +914,19 @@ async function seedCole(client: Client, uid: string): Promise<string> {
     { part: "Lock levers", qty: 4, cost: 16, status: "needed" },
   ]);
   await setStage(client, appId, "arrived");
+  await setPosition(client, appId, 25.5, 33.46);
   await setStage(client, rackId, "arrived");
+  await setPosition(client, rackId, 76.87, 4.28);
   await setStage(client, lampId, "arrived");
+  await setPosition(client, lampId, 51.74, 34.87);
   await setStage(client, neonId, "arrived");
+  await setPosition(client, neonId, 46.95, 6.19);
   await setStage(client, tipsId, "arrived");
+  await setPosition(client, tipsId, 68.33, 29.67);
   await setStage(client, spaghettiId, "arrived");
+  await setPosition(client, spaghettiId, 73.17, 9.73);
   await setStage(client, stoolId, "arrived");
+  await setPosition(client, stoolId, 24.83, 34.01);
   await renderPendingLooks();
   return appId;
 }

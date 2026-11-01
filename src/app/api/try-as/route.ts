@@ -111,6 +111,12 @@ export async function POST(req: Request): Promise<Response> {
           kind: app.kind,
           position: app.position,
           workshop_id: workshopId,
+          stage: app.stage,
+          order_info: app.order_info,
+          arrive_at: app.arrive_at,
+          arrival_seen: app.arrival_seen,
+          room_x: app.room_x,
+          room_y: app.room_y,
         })
         .select("id")
         .single();
@@ -119,7 +125,8 @@ export async function POST(req: Request): Promise<Response> {
     }
     const rewrite = rewriter(templateUid, guestUid, appMap);
     for (const app of apps) {
-      if (!app.look_path && !app.blueprint_path) continue;
+      if (!app.look_path && !app.blueprint_path && !app.photos?.length)
+        continue;
       const { error } = await db
         .from("apps")
         .update({
@@ -127,6 +134,9 @@ export async function POST(req: Request): Promise<Response> {
           blueprint_path: app.blueprint_path
             ? rewrite(app.blueprint_path)
             : null,
+          photos: ((app.photos ?? []) as string[])
+            .map((p: string) => rewrite(p))
+            .filter((p): p is string => p !== null),
         })
         .eq("id", appMap.get(app.id)!);
       if (error) throw new Error(`copy art paths: ${error.message}`);
