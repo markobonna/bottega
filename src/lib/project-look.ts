@@ -61,14 +61,39 @@ function promptBase(spec: {
   return `${spec.name}: ${spec.tagline}. It has ${blocks}.`;
 }
 
+/** The app's real screens, so the wireframe draws this app — not four
+ *  generic phones. Pure so tests can lock the contract. */
+export function specScreenLine(spec: {
+  screens: { title: string; blocks: { type: string; title: string }[] }[];
+}): string {
+  const parts = spec.screens.map(
+    (s) =>
+      `${s.title} (${s.blocks.map((b) => `${b.type}: ${b.title}`).join(", ")})`,
+  );
+  return `Screens: ${parts.join("; ")}`.slice(0, 500);
+}
+
 /**
  * The sketch prompt: a black and white bare-bones image, nothing else.
- * Pure so tests can lock the contract.
+ * Software draws one frame per real screen (screenCount from the spec),
+ * so the sketch mirrors the app it will become. Pure so tests can lock
+ * the contract.
  */
-export function sketchPrompt(kind: string, base: string): string {
-  return kind === "hardware"
-    ? `A black and white pencil concept sketch of ${base}, bare-bones, minimal lines, white background, ${SUFFIX}`
-    : `A black and white wireframe sketch of a phone app for ${base}, one dynamic composition filling the view, one phone screen or two overlapping phone screens, bare-bones UI boxes buttons and text lines, everything fully inside the frame, no icon grid, white background, ${SUFFIX}`;
+export function sketchPrompt(
+  kind: string,
+  base: string,
+  screenCount = 0,
+): string {
+  if (kind === "hardware") {
+    return `A black and white pencil concept sketch of ${base}, bare-bones, minimal lines, white background, ${SUFFIX}`;
+  }
+  const frames =
+    screenCount === 1
+      ? "exactly one phone screen, a single phone frame filling the view"
+      : screenCount >= 2
+        ? `exactly ${screenCount} phone screens, one phone frame per screen, arranged in a compact grid`
+        : "the app's phone screens, one phone frame per screen, arranged in a compact grid";
+  return `A black and white wireframe sketch of a phone app for ${base}, ${frames}, each screen fully visible with bare-bones UI boxes buttons and text lines, everything fully inside the frame, no icon grid, white background, ${SUFFIX}`;
 }
 
 /** The portrait grows out of the sketch: same object, realized. Plain
@@ -76,7 +101,7 @@ export function sketchPrompt(kind: string, base: string): string {
 export function portraitPrompt(kind: string): string {
   return kind === "hardware"
     ? `A full-color product photo render of this sketched object, same object and composition, isolated on a plain white background, no room, no scenery, warm light, ${SUFFIX}`
-    : `A clean full-color app design mockup of this wireframe sketch, same screens and layout, plain white background, no scenery, ${SUFFIX}`;
+    : `A clean full-color app design mockup of this wireframe sketch, same phone screens, same layout in each screen, each screen fully visible, plain white background, no scenery, ${SUFFIX}`;
 }
 
 /**
@@ -87,11 +112,13 @@ export function portraitPrompt(kind: string): string {
 export function reviseSketchPrompt(kind: string, instruction: string): string {
   return kind === "hardware"
     ? `${instruction}, keep it a black and white pencil concept sketch, bare-bones, minimal lines, white background, ${SUFFIX}`
-    : `${instruction}, keep it a black and white wireframe sketch of a phone app, one dynamic composition filling the view, everything fully inside the frame, no icon grid, white background, ${SUFFIX}`;
+    : `${instruction}, keep it a black and white wireframe sketch of the same phone app screens, one phone frame per screen, each screen fully visible, everything fully inside the frame, white background, ${SUFFIX}`;
 }
 
-export function revisePortraitPrompt(instruction: string): string {
-  return `${instruction}, same object and composition, isolated on a plain white background, no room, no scenery, ${SUFFIX}`;
+export function revisePortraitPrompt(kind: string, instruction: string): string {
+  return kind === "hardware"
+    ? `${instruction}, same object and composition, isolated on a plain white background, no room, no scenery, ${SUFFIX}`
+    : `${instruction}, same phone screens, same layout in each screen, each screen fully visible, plain white background, no scenery, ${SUFFIX}`;
 }
 
 async function uploadImage(
@@ -121,8 +148,13 @@ export async function renderSketch(
 ): Promise<{ sketchPath: string; sketchBytes: Uint8Array }> {
   const parsed = parseSpec(app.spec);
   if (!parsed.ok) throw new Error("Bad project spec.");
-  const base = promptBase(parsed.spec) + (extra ?? "");
-  const sketchBytes = await image(sketchPrompt(app.kind, base));
+  let base = promptBase(parsed.spec) + (extra ?? "");
+  if (app.kind !== "hardware") {
+    base += ` ${specScreenLine(parsed.spec)}`;
+  }
+  const sketchBytes = await image(
+    sketchPrompt(app.kind, base, parsed.spec.screens.length),
+  );
   const sketchPath = `${uid}/${app.id}/blueprint.png`;
   await uploadImage(client, sketchPath, sketchBytes);
   return { sketchPath, sketchBytes };
@@ -170,7 +202,7 @@ export async function reviseArt(
   const prompt =
     target === "sketch"
       ? reviseSketchPrompt(kind, instruction)
-      : revisePortraitPrompt(instruction);
+      : revisePortraitPrompt(kind, instruction);
   const revised = await editImage(
     prompt,
     sourceBytes as Uint8Array<ArrayBuffer>,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   Fragment,
+  Suspense,
   useEffect,
   useMemo,
   useState,
@@ -14,6 +15,7 @@ import {
   goBackStage,
   markArrived,
   savePromise,
+  setFormFactor,
   type ProjectNote,
 } from "@/app/projects/[id]/actions";
 import {
@@ -22,8 +24,16 @@ import {
   type DesignMedium,
   type LiveStage,
 } from "@/lib/design/project-art";
+import {
+  renderSpecWireframe,
+  type WireScreen,
+} from "@/lib/design/spec-wireframe";
 import { buildPackFiles } from "@/lib/design/pack-files";
 import { stageLabelsFor, toolIcon, toolsFor } from "@/lib/design/tools";
+import type { DbRecord } from "@/lib/records";
+import type { AppSpec } from "@/lib/spec/schema";
+import AppRuntime from "../runtime/AppRuntime";
+import type { RuntimeApp } from "../runtime/registry";
 
 import "@/vendor/bottega/core.js";
 import "@/vendor/bottega/types.js";
@@ -86,6 +96,9 @@ export default function BoardPanel({
   sketchUrl,
   lookUrl,
   version,
+  runtime,
+  wireScreens,
+  formFactor,
 }: {
   appId: string;
   project: { name: string; medium: DesignMedium; stage: LiveStage };
@@ -111,12 +124,42 @@ export default function BoardPanel({
   sketchUrl: string | null;
   lookUrl: string | null;
   version: string;
+  // Present only at software's Prototype step: the working app renders
+  // in the board, above the spec wireframe.
+  runtime?: {
+    app: RuntimeApp;
+    spec: AppSpec;
+    records: Record<string, DbRecord[]>;
+  };
+  // The app's screens, for the software sketch (drawn from the spec).
+  wireScreens?: WireScreen[];
+  // Mobile or desktop, picked before the sketch shows. Null = unasked.
+  formFactor: "mobile" | "desktop" | null;
 }) {
   const B = window.B;
   const router = useRouter();
   const medium = B.MEDIUMS[project.medium] ?? B.MEDIUMS.hardware;
   const tools = toolsFor(project.medium, medium.tools);
+  // Software sketches ARE the spec: a live wireframe, no painted art.
+  const specSketch = project.medium === "software";
   const si = B.STAGES.indexOf(project.stage);
+  // The shape question gates the sketch: no pick, no sketch.
+  const needFactor = specSketch && si === 0 && !formFactor;
+  const [factorBusy, setFactorBusy] = useState(false);
+  const [factorProblem, setFactorProblem] = useState("");
+
+  async function pickFactor(factor: "mobile" | "desktop") {
+    if (factorBusy) return;
+    setFactorBusy(true);
+    setFactorProblem("");
+    const res = await setFormFactor(appId, factor);
+    setFactorBusy(false);
+    if (!res.ok) {
+      setFactorProblem("Couldn't save that. Try again.");
+      return;
+    }
+    router.refresh();
+  }
   const [mode, setMode] = useState<string | null>(null);
   const [tool, setTool] = useState<string>(tools[0][0]);
   const [part, setPart] = useState<number>(1);
@@ -401,10 +444,13 @@ export default function BoardPanel({
               <button
                 type="button"
                 className="btn btn-dark"
-                disabled={advancing}
+                disabled={advancing || needFactor}
                 onClick={() => void advance()}
               >
-                <BIcon svg={B.icon("check")} /> Looks good — {labels[1]}
+                <BIcon svg={B.icon("check")} />{" "}
+                {needFactor
+                  ? "Pick mobile or desktop first"
+                  : `Looks good — ${labels[1]}`}
               </button>
             </div>
           )}
@@ -590,12 +636,14 @@ export default function BoardPanel({
         </div>
       )}
 
-      <LookPainter
-        appId={appId}
-        sketchMissing={sketchMissing}
-        lookMissing={lookMissing}
-        onPhase={(p) => setArtFailed(p === "off" || p === "failed")}
-      />
+      {!specSketch && (
+        <LookPainter
+          appId={appId}
+          sketchMissing={sketchMissing}
+          lookMissing={lookMissing}
+          onPhase={(p) => setArtFailed(p === "off" || p === "failed")}
+        />
+      )}
       <BuildGallery
         appId={appId}
         medium={project.medium}
@@ -642,6 +690,118 @@ export default function BoardPanel({
               ),
             )}
           </div>
+          {runtime && (
+            <>
+              <div
+                id="app-preview"
+                className="card"
+                style={{ scrollMarginTop: 12, padding: 16 }}
+              >
+                <div
+                  className={
+                    formFactor === "desktop"
+                      ? "device-desktop"
+                      : formFactor === "mobile"
+                        ? "device-mobile"
+                        : undefined
+                  }
+                >
+                  <Suspense
+                    fallback={<p className="text-muted">Loading…</p>}
+                  >
+                    <AppRuntime
+                      app={runtime.app}
+                      spec={runtime.spec}
+                      records={runtime.records}
+                      embedded
+                      layout={formFactor ?? "auto"}
+                    />
+                  </Suspense>
+                </div>
+              </div>
+              <p className="small" style={{ margin: 0 }}>
+                {`${labels[si] ?? "Prototype"} · draft ${drafts.length} — the working app, live. Tap through it; it runs on your data.`}
+              </p>
+            </>
+          )}
+          {specSketch ? (
+            si === 0 ? (
+              needFactor ? (
+                <div className="card" style={{ padding: 20 }}>
+                  <p className="hand" style={{ fontSize: 24, margin: 0 }}>
+                    Is this a mobile or a desktop app?
+                  </p>
+                  <p className="small" style={{ margin: "8px 0 0" }}>
+                    Pick the shape and I&apos;ll draw your sketch in it —
+                    the download at the end matches what you see here.
+                  </p>
+                  {factorProblem !== "" && (
+                    <p
+                      className="small"
+                      style={{ margin: "8px 0 0", color: "var(--red)" }}
+                    >
+                      {factorProblem}
+                    </p>
+                  )}
+                  <div
+                    style={{ display: "flex", gap: 8, marginTop: 12 }}
+                    role="group"
+                    aria-label="App shape"
+                  >
+                    {(["mobile", "desktop"] as const).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={factorBusy}
+                        onClick={() => void pickFactor(f)}
+                      >
+                        {f === "mobile" ? "📱 Mobile" : "🖥️ Desktop"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="card" style={{ padding: 16 }}>
+                    <span
+                      style={{ display: "contents" }}
+                      dangerouslySetInnerHTML={{
+                        __html: renderSpecWireframe(
+                          wireScreens ?? [],
+                          formFactor ?? "mobile",
+                        ),
+                      }}
+                    />
+                  </div>
+                  <p className="small" style={{ margin: 0 }}>
+                    {`Sketch · draft ${drafts.length} — drawn from your spec in ${formFactor ?? "mobile"} shape. `}
+                    <button
+                      type="button"
+                      disabled={factorBusy}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        color: "var(--red)",
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                        font: "inherit",
+                      }}
+                      onClick={() =>
+                        void pickFactor(
+                          formFactor === "desktop" ? "mobile" : "desktop",
+                        )
+                      }
+                    >
+                      Switch to {formFactor === "desktop" ? "mobile" : "desktop"}
+                    </button>
+                  </p>
+                </>
+              )
+            ) : null
+          ) : (
+          <>
           <div className="board">
             {revising ? (
               <SketchPending kind={photoKind} />
@@ -776,6 +936,8 @@ export default function BoardPanel({
               </form>
             )}
           </div>
+          </>
+          )}
         </div>
         <MarginNotes
           appId={appId}
@@ -794,10 +956,22 @@ export default function BoardPanel({
         <section className="card" style={{ marginBottom: 16 }}>
           <h2 className="h2">Your pack</h2>
           <p className="small" style={{ marginTop: 4 }}>
-            The design turned into files. They go out with the send-off —
-            or download them now.
+            {specSketch
+              ? "Your decisions record below — and your code, generated from the same design."
+              : "The design turned into files. They go out with the send-off — or download them now."}
           </p>
           <PackFileList files={packFiles} />
+          {specSketch && (
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setSending(true)}
+              >
+                <BIcon svg={B.icon("download")} /> Generate my code (.zip)
+              </button>
+            </div>
+          )}
         </section>
       )}
 
@@ -829,7 +1003,17 @@ export default function BoardPanel({
                 >
                   <span
                     style={{ display: "contents" }}
-                    dangerouslySetInnerHTML={{ __html: thumbs[i].svg }}
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        specSketch && !formFactor
+                          ? ""
+                          : specSketch
+                            ? renderSpecWireframe(
+                                wireScreens ?? [],
+                                formFactor ?? "mobile",
+                              )
+                            : thumbs[i].svg,
+                    }}
                   />
                   <strong>
                     Draft {d.n} · {d.label}
@@ -879,6 +1063,7 @@ export default function BoardPanel({
             text: n.text,
           }))}
           drafts={drafts}
+          formFactor={formFactor}
           onClose={() => {
             setSending(false);
             router.refresh();

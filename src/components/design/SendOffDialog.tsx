@@ -3,19 +3,21 @@
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import {
   addProjectNote,
+  getExportMeta,
   markFinished,
   markInstalled,
   recordRfqSent,
+  type ExportMeta,
 } from "@/app/projects/[id]/actions";
 import type { DesignMedium } from "@/lib/design/project-art";
 import { slug } from "@/lib/design/cad";
+import { strBytes, zipStore } from "@/lib/design/fabpack";
 import {
   buildPackFiles,
   downloadPackFile,
@@ -60,6 +62,7 @@ export default function SendOffDialog({
   stageLabel,
   notes,
   drafts,
+  formFactor,
 }: {
   onClose: () => void;
   appId: string;
@@ -68,6 +71,7 @@ export default function SendOffDialog({
   stageLabel: string;
   notes: { who: string; part: number | null; topic: string | null; text: string }[];
   drafts: { n: number; label: string; stage: string }[];
+  formFactor: "mobile" | "desktop" | null;
 }) {
   const B = window.B;
   const router = useRouter();
@@ -89,8 +93,19 @@ export default function SendOffDialog({
   const [marked, setMarked] = useState<Record<string, boolean>>({});
   const [target, setTarget] = useState("tablet");
   const [started, setStarted] = useState(false);
-  const [log, setLog] = useState<string[]>([]);
-  const [built, setBuilt] = useState(false);
+  const [meta, setMeta] = useState<ExportMeta | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
+  // First-pass code: the shape was picked at Sketch; legacy blanks pick here.
+  const [cgPick, setCgPick] = useState<"mobile" | "desktop">("mobile");
+  const factor = formFactor ?? cgPick;
+  const [cgBusy, setCgBusy] = useState(false);
+  const [cgSecs, setCgSecs] = useState(0);
+  const [cgFiles, setCgFiles] = useState<
+    { path: string; content: string }[] | null
+  >(null);
+  const [cgProblem, setCgProblem] = useState("");
+  const [cgVia, setCgVia] = useState("meta");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [done, setDone] = useState<
@@ -103,8 +118,7 @@ export default function SendOffDialog({
     email: string;
     replyBy: string;
   } | null>(null);
-  const timers = useRef<number[]>([]);
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
 
   const files = useMemo(
     () =>
@@ -147,54 +161,133 @@ export default function SendOffDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow]);
 
-  // Simulated software build log.
-  function runBuild() {
-    setStarted(true);
-    const link = `${window.location.origin}/apps/${appId}`;
-    const lines = [
-      `$ bottega build "${project.name}" --for ${target}`,
-      "✓ Writing screens from the drawing",
-      "✓ Setting up data (stored on your device)",
-      "✓ Running 24 checks — all passed",
-      "✓ Packaging as an installable web app",
-      `✓ Ready: ${link}`,
-    ];
-    lines.forEach((ln, i) => {
-      const t = window.setTimeout(
-        () => {
-          setLog((l) => [...l, ln]);
-          if (i === lines.length - 1) setBuilt(true);
-        },
-        500 + i * 650,
-      );
-      timers.current.push(t);
+  useEffect(() => {
+    if (!cgBusy) return;
+    const t0 = Date.now();
+    setCgSecs(0);
+    const t = window.setInterval(
+      () => setCgSecs(Math.floor((Date.now() - t0) / 1000)),
+      500,
+    );
+    return () => window.clearInterval(t);
+  }, [cgBusy]);
+
+  async function generateCode() {
+    if (cgBusy) return;
+    setCgBusy(true);
+    setCgProblem("");
+    setCgFiles(null);
+    try {
+      const res = await fetch("/api/codegen", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ appId, formFactor: factor }),
+      });
+      if (res.status === 503) {
+        setCgProblem("Code generation is off right now (no model key).");
+        return;
+      }
+      if (!res.ok) throw new Error("codegen failed");
+      const data = (await res.json()) as {
+        files: { path: string; content: string }[];
+        via?: string;
+      };
+      setCgFiles(data.files);
+      setCgVia(data.via ?? "meta");
+    } catch {
+      setCgProblem("Couldn't generate the code. Try again.");
+    } finally {
+      setCgBusy(false);
+    }
+  }
+
+  function downloadCodeZip() {
+    if (!cgFiles) return;
+    const bytes = zipStore(
+      cgFiles.map((f) => ({ name: f.path, data: strBytes(f.content) })),
+    );
+    const blob = new Blob([bytes as unknown as BlobPart], {
+      type: "application/zip",
     });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${slug(project.name)}-app-code.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  // Real software build: the design is checked and counted server-side;
+  // every line below reports a measured fact.
+  async function runBuild() {
+    if (busy) return;
+    setBusy(true);
+    setProblem("");
+    const res = await getExportMeta(appId);
+    setBusy(false);
+    if (!res.ok) {
+      setProblem("Couldn't check the design. Try again.");
+      return;
+    }
+    setMeta(res.meta);
+    setStarted(true);
+  }
+
+  function exportFileName(): string {
+    return `${slug(project.name)}-app.html`;
+  }
+
+  async function downloadApp() {
+    if (downloading) return;
+    setDownloading(true);
+    setProblem("");
+    try {
+      const res = await fetch(
+        `/api/export-app?appId=${encodeURIComponent(appId)}`,
+      );
+      if (!res.ok) throw new Error("export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = exportFileName();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+      setDownloaded(true);
+    } catch {
+      setProblem("Couldn't build the file. Try again.");
+    } finally {
+      setDownloading(false);
+    }
   }
 
   function installSteps(): string[] {
-    const link = `${window.location.origin}/apps/${appId}`;
+    const link = `${window.location.origin}/projects/${appId}`;
     return (
       {
         tablet: [
           `On the tablet, open ${link} in Safari or Chrome.`,
           "Tap Share (iPad) or the ⋮ menu (Android), then “Add to Home Screen”.",
-          "Open it from the new icon. It runs full screen and works offline.",
+          "Open it from the new icon — your live app, signed in as you.",
           "Optional: turn on Guided Access (iPad) or Screen Pinning (Android) so customers can't leave the app.",
         ],
         phone: [
           `Open ${link} on your phone.`,
-          "Tap Share → “Add to Home Screen” (iPhone) or ⋮ → “Install app” (Android).",
-          "Open it from your home screen.",
+          "Tap Share → “Add to Home Screen” (iPhone) or ⋮ → “Add to Home Screen” (Android).",
+          "Open it from your home screen — your live app, signed in as you.",
         ],
         computer: [
           `Open ${link} in Chrome or Edge.`,
-          "Click the install icon at the right of the address bar.",
-          "It now opens like a normal program from your Start menu or Dock.",
+          "In Chrome: ⋮ → “Save and share” → “Install page as app” for a windowed shortcut; otherwise bookmark it.",
+          "It opens straight into your live app.",
         ],
         web: [
-          `It's live at ${link}.`,
-          "Share that link, or put it on your website and social profiles.",
-          "To use your own domain, add it in Settings → Domain.",
+          `It's live at ${link} — open it any time, on any device you're signed in on.`,
+          "To hand the app to someone else, download the file above and send it to them — it runs anywhere.",
         ],
       }[target] ?? []
     );
@@ -678,20 +771,19 @@ Thank you,
   }
 
   function shipBody(): ReactNode {
+    const liveLink = `${window.location.origin}/projects/${appId}`;
     if (done === "installed") {
-      const link = `${window.location.origin}/apps/${appId}`;
       return (
         <>
           <p className="hand" style={{ fontSize: 26, margin: 0, lineHeight: 1.2 }}>
-            {target === "web"
-              ? `It's live at ${link}.`
-              : "It's installed."}
+            {target === "web" ? "It's live." : "It's installed."}
           </p>
-          {target !== "web" && (
-            <p style={{ margin: 0 }}>
-              Open it any time at {link}.
-            </p>
-          )}
+          <p style={{ margin: 0 }}>
+            Open it any time at {liveLink}.
+            {downloaded
+              ? " Your file runs anywhere — send it, host it, keep building on it."
+              : " Download the file any time from this dialog to take it anywhere."}
+          </p>
           <div className="dialog-actions">
             <button
               type="button"
@@ -714,8 +806,8 @@ Thank you,
       return (
         <>
           <p style={{ margin: 0 }}>
-            Where should {project.name} run? I&apos;ll build it for that and
-            give you the install steps.
+            Where will you open {project.name}? I&apos;ll check the design,
+            package your file, and give you the steps.
           </p>
           <div className="chips" role="group" aria-label="Where it runs">
             {targets.map(([id, l]) => (
@@ -730,6 +822,11 @@ Thank you,
               </button>
             ))}
           </div>
+          {problem !== "" && (
+            <p className="small" style={{ margin: 0, color: "var(--red)" }}>
+              {problem}
+            </p>
+          )}
           <div className="dialog-actions">
             <button type="button" className="btn" onClick={onClose}>
               Not yet
@@ -737,29 +834,129 @@ Thank you,
             <button
               type="button"
               className="btn btn-primary"
-              onClick={runBuild}
+              disabled={busy}
+              onClick={() => void runBuild()}
             >
-              <BIcon svg={B.icon("play")} /> Build it
+              <BIcon svg={B.icon("play")} /> {busy ? "Checking…" : "Build it"}
             </button>
           </div>
         </>
       );
     }
-    if (step === 0) {
+    if (step === 0 && meta) {
       return (
         <>
           <div className="log" aria-live="polite">
-            {log.join("\n")}
+            {[
+              `${project.name} — spec v${meta.version}`,
+              "✓ Design checks passed",
+              `✓ ${meta.screens} screens · ${meta.blocks} blocks · ${meta.collections} collections · ${meta.records} records`,
+              `✓ ${exportFileName()} ready`,
+            ].join("\n")}
           </div>
           <p className="sim">
-            Simulated build. A real build checks the spec and packages the
-            app for the device.
+            One file with your whole app: screens, blocks, and a copy of
+            your records. Open it anywhere, send it, host it, keep editing
+            the code. Voice and pictures run with a Meta key you paste in
+            the file.
           </p>
+          {problem !== "" && (
+            <p className="small" style={{ margin: 0, color: "var(--red)" }}>
+              {problem}
+            </p>
+          )}
+          <div className="install" style={{ marginBottom: 12 }}>
+            <p style={{ margin: "0 0 10px" }}>
+              <strong>First-pass code.</strong> Real files generated from
+              this design in {factor} shape — double-click index.html and
+              it runs.
+            </p>
+            {!formFactor && (
+              <div
+                className="chips"
+                role="group"
+                aria-label="Code shape"
+                style={{ marginBottom: 10 }}
+              >
+                {(["mobile", "desktop"] as const).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    className="chip"
+                    aria-pressed={cgPick === f}
+                    onClick={() => setCgPick(f)}
+                  >
+                    {f === "mobile" ? "📱 Mobile" : "🖥️ Desktop"}
+                  </button>
+                ))}
+              </div>
+            )}
+            {cgBusy && (
+              <p className="small" style={{ margin: "0 0 10px" }}>
+                Generating your first pass… {cgSecs}s (usually under a
+                minute)
+              </p>
+            )}
+            {cgFiles && (
+              <p className="small" style={{ margin: "0 0 10px" }}>
+                {cgFiles.map((f) => f.path).join(" · ")}
+                {cgVia === "open" ? " — written with Muse Spark Open" : ""}
+              </p>
+            )}
+            {cgProblem !== "" && (
+              <p
+                className="small"
+                style={{ margin: "0 0 10px", color: "var(--red)" }}
+              >
+                {cgProblem}
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={cgBusy}
+                onClick={() => void generateCode()}
+              >
+                <BIcon svg={B.icon("play")} />{" "}
+                {cgBusy
+                  ? "Generating…"
+                  : cgFiles
+                    ? "Regenerate"
+                    : "Generate my code"}
+              </button>
+              {cgFiles && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => downloadCodeZip()}
+                >
+                  <BIcon svg={B.icon("download")} /> Download code (.zip)
+                </button>
+              )}
+            </div>
+            <p className="sim" style={{ marginBottom: 0 }}>
+              Data saves in that browser. Voice, counting and pictures are
+              marked where they belong — they run in Bottega.
+            </p>
+          </div>
           <div className="dialog-actions">
             <button
               type="button"
+              className="btn"
+              disabled={downloading}
+              onClick={() => void downloadApp()}
+            >
+              <BIcon svg={B.icon("download")} />{" "}
+              {downloading
+                ? "Building…"
+                : downloaded
+                  ? "Download again"
+                  : "Download your app"}
+            </button>
+            <button
+              type="button"
               className="btn btn-primary"
-              disabled={!built}
               onClick={() => setStep(1)}
             >
               Install it <BIcon svg={B.icon("fwd")} />
@@ -772,7 +969,7 @@ Thank you,
       <>
         <div className="install">
           <p style={{ margin: "0 0 10px" }}>
-            It&apos;s built. Here&apos;s how to put it on your{" "}
+            It&apos;s built. Here&apos;s how to open it on your{" "}
             {target === "web" ? "website" : target}:
           </p>
           <ol>
@@ -781,12 +978,37 @@ Thank you,
             ))}
           </ol>
         </div>
+        <div className="install" style={{ marginTop: 12 }}>
+          <p style={{ margin: "0 0 10px" }}>
+            <strong>Take it further.</strong> The file is yours to keep
+            building on — or hand it to us: custom domain and hosting,
+            team logins, more Meta blocks, scheduled automations.
+          </p>
+          <ConciergeCard
+            appId={appId}
+            idPrefix="ship-further"
+            headline="Request sent"
+            blurb="Tell us what to add and we'll reply within 48 hours."
+            actionLabel="Ask the Bottega team"
+            mailSubject={`Keep building: ${project.name}`}
+            mailContext={`Project: ${project.name}\nKind: software\nWorkshop: ${workshopName}`}
+          />
+        </div>
         {problem !== "" && (
           <p className="small" style={{ margin: 0, color: "var(--red)" }}>
             {problem}
           </p>
         )}
         <div className="dialog-actions">
+          <button
+            type="button"
+            className="btn"
+            disabled={downloading}
+            onClick={() => void downloadApp()}
+          >
+            <BIcon svg={B.icon("download")} />{" "}
+            {downloading ? "Building…" : "Download your app"}
+          </button>
           <button
             type="button"
             className="btn"

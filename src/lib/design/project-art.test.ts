@@ -10,6 +10,7 @@ import {
   mediumForKind,
   menuLines,
   nextStage,
+  runtimeInBoard,
   stageForVersion,
 } from "./project-art";
 
@@ -143,5 +144,20 @@ describe("detectMedium", () => {
   });
   it("lets the earlier medium win ties, like the prototype", () => {
     expect(detectMedium("fix my app")).toBe("hardware");
+  });
+});
+
+describe("runtimeInBoard", () => {
+  it("is true only for software at the Prototype (shape) step", () => {
+    expect(runtimeInBoard("software", "shape")).toBe(true);
+    expect(runtimeInBoard("software", "sketch")).toBe(false);
+    expect(runtimeInBoard("software", "build")).toBe(true);
+    expect(runtimeInBoard("software", "sent")).toBe(true);
+    expect(runtimeInBoard("software", "arrived")).toBe(true);
+    expect(runtimeInBoard("hardware", "shape")).toBe(false);
+    expect(runtimeInBoard("print", "shape")).toBe(false);
+    expect(runtimeInBoard("music", "shape")).toBe(false);
+    expect(runtimeInBoard("dance", "shape")).toBe(false);
+    expect(runtimeInBoard("recipe", "shape")).toBe(false);
   });
 });

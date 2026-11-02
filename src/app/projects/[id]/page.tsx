@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import DeleteAppButton from "@/app/DeleteAppButton";
 import type { BoardDraft } from "@/components/design/BoardPanel";
 import BoardPanelMount from "@/components/design/BoardPanelMount";
 import ZoomMount from "@/components/design/ZoomMount";
@@ -9,6 +10,7 @@ import {
   effectiveStage,
   mediumForKind,
   menuLines,
+  runtimeInBoard,
   stageForVersion,
 } from "@/lib/design/project-art";
 import { signedUrls } from "@/lib/media";
@@ -26,7 +28,7 @@ export default async function AppPage({
   const { data: app, error } = await supabase
     .from("apps")
     .select(
-      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, owner, photos, look_path, blueprint_path, workshop_id, workshops ( name, type )",
+      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, owner, photos, look_path, blueprint_path, form_factor, workshop_id, workshops ( name, type )",
     )
     .eq("id", id)
     .single();
@@ -74,6 +76,17 @@ export default async function AppPage({
   }));
   const medium = mediumForKind(app.kind ?? "software");
   const stage = effectiveStage(app.stage, app.version);
+  // At software's Prototype step the live runtime moves into the board;
+  // everywhere else it renders below the board as before.
+  const spotlight = runtimeInBoard(medium, stage);
+  const runtimeApp = {
+    id: app.id,
+    name: app.name,
+    version: app.version,
+    private: app.private ?? false,
+    kind: mediumForKind(app.kind ?? "software"),
+    workshop: workshop ? { id: app.workshop_id, name: workshop.name } : null,
+  };
   const { data: noteRows } = await supabase
     .from("project_notes")
     .select("id, who, part, topic, text")
@@ -163,26 +176,63 @@ export default async function AppPage({
           sketchUrl={sketchUrl}
           lookUrl={lookUrl}
           version={`${app.id}@${app.version}@${app.stage ?? ""}`}
+          runtime={
+            spotlight
+              ? { app: runtimeApp, spec, records }
+              : undefined
+          }
+          wireScreens={spec.screens.map((s) => ({
+            title: s.title,
+            blocks: s.blocks.map((b) => ({ type: b.type, title: b.title })),
+          }))}
+          formFactor={
+            app.form_factor === "mobile" || app.form_factor === "desktop"
+              ? app.form_factor
+              : null
+          }
         />
       )}
-      <div id="app-preview" style={{ scrollMarginTop: 12 }}>
-      <Suspense fallback={<p className="text-muted">Loading…</p>}>
-        <AppRuntime
-          app={{
-            id: app.id,
-            name: app.name,
-            version: app.version,
-            private: app.private ?? false,
-            kind: mediumForKind(app.kind ?? "software"),
-            workshop: workshop
-              ? { id: app.workshop_id, name: workshop.name }
-              : null,
-          }}
-          spec={spec}
-          records={records}
-        />
-      </Suspense>
-      </div>
+      {!spotlight && stage !== "sketch" && (
+        <div id="app-preview" style={{ scrollMarginTop: 12 }}>
+        <Suspense fallback={<p className="text-muted">Loading…</p>}>
+          <AppRuntime app={runtimeApp} spec={spec} records={records} />
+        </Suspense>
+        </div>
+      )}
+      {stage === "sketch" && (
+        <div className="b-scope">
+          <section
+            id="app-preview"
+            className="card dashed"
+            style={{ marginTop: 24, scrollMarginTop: 12 }}
+          >
+            <h2 className="h2">
+              The working {medium === "software" ? "app" : "prototype"} arrives
+              at the next step.
+            </h2>
+            <p className="small" style={{ marginTop: 4 }}>
+              Finish the sketch first — the apprentice is still drawing.
+            </p>
+          </section>
+        </div>
+      )}
+      {workshop && app.workshop_id && (
+        <div className="b-scope">
+          <section className="card" style={{ marginTop: 24 }}>
+            <h2 className="h2">Done with this project?</h2>
+            <p className="small" style={{ marginTop: 4 }}>
+              Deleting removes the project and everything in it —
+              records, drafts, and notes. This can&apos;t be undone.
+            </p>
+            <div style={{ marginTop: 8 }}>
+              <DeleteAppButton
+                appId={app.id}
+                redirectTo={`/workshops/${app.workshop_id}`}
+              />
+            </div>
+          </section>
+        </div>
+      )}
     </ZoomMount>
   );
 }

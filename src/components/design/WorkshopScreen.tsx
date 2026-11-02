@@ -8,7 +8,6 @@ import "@/vendor/bottega/types.js";
 import "@/vendor/bottega/art/common.js";
 import "@/vendor/bottega/art/room.js";
 import { moveRoomCard } from "@/app/projects/[id]/actions";
-import DeleteAppButton from "@/app/DeleteAppButton";
 import DeleteWorkshopButton from "@/app/DeleteWorkshopButton";
 import ProjectBuildButton from "@/components/workshop/ProjectBuildButton";
 import ProjectMoveButtons from "@/components/workshop/ProjectMoveButtons";
@@ -320,9 +319,6 @@ export default function WorkshopScreen({
                 initial={workshop.type}
               />
             </div>
-            <div style={{ marginTop: 12 }}>
-              <DeleteWorkshopButton workshopId={workshop.id} />
-            </div>
           </div>
           <ul className="grid-cards">
           {projects.map((p, i) => {
@@ -368,7 +364,6 @@ export default function WorkshopScreen({
                     isFirst={i === 0}
                     isLast={i === projects.length - 1}
                   />
-                  <DeleteAppButton appId={p.id} />
                 </div>
               </li>
             );
@@ -443,6 +438,17 @@ export default function WorkshopScreen({
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 24 }}>
+        <h2 className="h2">Done with this room?</h2>
+        <p className="small" style={{ marginTop: 4 }}>
+          Deleting removes the workshop and every project in it. This
+          can&apos;t be undone.
+        </p>
+        <div style={{ marginTop: 8 }}>
+          <DeleteWorkshopButton workshopId={workshop.id} />
         </div>
       </section>
       {creating && (

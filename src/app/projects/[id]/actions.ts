@@ -19,6 +19,7 @@ import {
   type DbRecord,
 } from "@/lib/records";
 import type { Op } from "@/lib/spec/ops";
+import { parseSpec } from "@/lib/spec/schema";
 import { createClient } from "@/lib/supabase/server";
 import {
   ConciergeInput,
@@ -587,6 +588,28 @@ async function arriveNow(appId: string, orderInfo?: Record<string, unknown>) {
   revalidatePath(`/projects/${appId}`);
 }
 
+export async function setFormFactor(
+  appId: string,
+  factor: string,
+): Promise<{ ok: true } | Fail> {
+  try {
+    if (factor !== "mobile" && factor !== "desktop") {
+      throw new Error("Pick mobile or desktop.");
+    }
+    const supabase = await createClient();
+    await needApp(supabase, appId);
+    const { error } = await supabase
+      .from("apps")
+      .update({ form_factor: factor })
+      .eq("id", appId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/projects/${appId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function markInstalled(
   appId: string,
   target?: string,
@@ -594,6 +617,51 @@ export async function markInstalled(
   try {
     await arriveNow(appId, target ? { target } : undefined);
     return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export type ExportMeta = {
+  version: number;
+  screens: number;
+  blocks: number;
+  collections: number;
+  records: number;
+};
+
+/** Real build readout for the software send-off: the spec is checked for
+ *  real (parseSpec is the gate) and everything reported is counted, not
+ *  performed. RLS + ownership: only the owner's app answers. */
+export async function getExportMeta(
+  appId: string,
+): Promise<Ok<{ meta: ExportMeta }> | Fail> {
+  try {
+    const supabase = await createClient();
+    await needApp(supabase, appId);
+    const { data: app, error } = await supabase
+      .from("apps")
+      .select("version, spec")
+      .eq("id", appId)
+      .single();
+    if (error || !app) throw new Error("No such project.");
+    const parsed = parseSpec(app.spec);
+    if (!parsed.ok) throw new Error("This app's design didn't pass its checks.");
+    const spec = parsed.spec;
+    let records = 0;
+    for (const c of spec.collections) {
+      records += (await listRecords(supabase, appId, c.id)).length;
+    }
+    return {
+      ok: true,
+      meta: {
+        version: app.version,
+        screens: spec.screens.length,
+        blocks: spec.screens.reduce((n, s) => n + s.blocks.length, 0),
+        collections: spec.collections.length,
+        records,
+      },
+    };
   } catch (e) {
     return fail(e);
   }

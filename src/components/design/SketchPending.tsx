@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 
 /**
  * What the board shows while generated art is on its way: a 30-second
- * countdown, then a holding line. At zero it refreshes once (a landed
- * sketch swaps in); the template drawing only ever appears when art
- * was proven unavailable, never as a loading flash.
+ * countdown, then a holding line. Every 5 seconds it re-checks the
+ * server, so art that lands early swaps in immediately instead of
+ * making the user wait out the clock. The template drawing only ever
+ * appears when art was proven unavailable, never as a loading flash.
  */
 export default function SketchPending({ kind }: { kind: "Sketch" | "Render" }) {
   const router = useRouter();
@@ -24,6 +25,13 @@ export default function SketchPending({ kind }: { kind: "Sketch" | "Render" }) {
     const t = setTimeout(() => setLeft((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [left, expired, router]);
+
+  // Re-check the server every 5s: landed art swaps in early, and the
+  // countdown unmounts with this component when it does.
+  useEffect(() => {
+    const t = setInterval(() => router.refresh(), 5000);
+    return () => clearInterval(t);
+  }, [router]);
 
   return (
     <div

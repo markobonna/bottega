@@ -64,6 +64,7 @@ export type Database = {
           arrive_at: string | null
           blueprint_path: string | null
           created_at: string | null
+          form_factor: string | null
           id: string
           kind: string
           look_path: string | null
@@ -86,6 +87,7 @@ export type Database = {
           arrive_at?: string | null
           blueprint_path?: string | null
           created_at?: string | null
+          form_factor?: string | null
           id?: string
           kind?: string
           look_path?: string | null
@@ -108,6 +110,7 @@ export type Database = {
           arrive_at?: string | null
           blueprint_path?: string | null
           created_at?: string | null
+          form_factor?: string | null
           id?: string
           kind?: string
           look_path?: string | null

@@ -156,39 +156,38 @@ DO: go to create a new project
 > "Now lets build some software to run the sign. ."
 
 DO: an app tracking my food truck sales — It listens to my commands, I call in orders
-from the truck. and peoep can enter orders and be notified  via whatsapp when they are ready. 
+from the ftruck. and people can enter orders and be notified  via whatsapp when they are ready. 
 
-DO: State Software CUT the wait. 
+DO: State Software
 
-> "Same garage — now the software. Sketch first, like always:
-> wireframe from the sentence, spec behind it, validated like
-> the sign's."
+DO: Sketch step — pick mobile (the only question), the wireframe
+IS the spec (screens + blocks as ink boxes in phone shape). SAY:
 
-DO: advance to Prototype — color app mockup, grown from the wireframe.
-Scroll to the live app below the board: it's already running. SAY:
+> "One question first — mobile or desktop? The sketch is the
+> blueprint in that shape — same screens, same blocks as the app."
 
-> "Prototype: the mockup, and under it the actual app — the runtime
-> rendering the spec's blocks live. Zero code."
+DO: advance to Prototype — the working app live in the board. SAY:
 
-DO: advance to Build — "Build and install" → pick tablet → installed.
-SAY:
+> "Prototype: not a mockup — the actual app, the runtime rendering
+> the spec's blocks live."
 
-> "Build and install — on the tablet's home screen, install recorded."
+DO (one flowing beat): Build dialog — checks run, "Generate my
+code" in mobile shape → Download code (.zip) → Install it → Test:
+voice order in the live app ("Two tacos, Friday pickup"), it logs
+→ Go live: installed, stamped board → unzip on camera, open
+index.html in a browser, tap through. SAY:
 
-DO: Test step ("Finishing up" card) — take one order by voice in the
-live app ("Two tacos, Friday pickup"). It logs. SAY:
-
-> "Test it like a customer — Voice transcribes, Spark fills the form,
-> values validated and saved."
-
-DO: advance to Go live — "It's installed!" stamped board. SAY:
-
-> "Go live — installed and running. And it runs the stall the sign
-> will hang on — one talk bar built the atoms and the bits."
+> "Build — the spec checks run, and Spark writes the real code from
+> the same design: four files, vanilla JS, zero dependencies,
+> double-click and it runs. Test it like a customer — voice in,
+> transcribed, Muse Spark fills the form, validated and saved. Go
+> live — and here's the code outside Bottega, running on its own.
+> Atoms and bits, one talk bar — take it, or hand it to us."
 
 IF-FAILS: voice fails → "Typing it instead — same apprentice either
 way." (Type the order, keep rolling.) No hear block in the build →
-type the order and cut the Test beat shorter.
+type the order and cut the Test beat shorter. File won't open on
+camera → skip it: "and the file's yours — it runs anywhere."
 
 ## F — Close (2:40–3:00): the rocket gag
 

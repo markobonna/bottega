@@ -991,7 +991,7 @@
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 20px;
 }
-.b-scope .grid-cards > li > * {
+.b-scope .grid-cards > li > :first-child {
   width: 100%;
   height: 100%;
 }
@@ -1191,6 +1191,111 @@
   padding: 6px 12px;
   border-radius: 4px;
   background: rgba(251, 244, 228, 0.8);
+}
+.b-scope .sw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 16px;
+}
+.b-scope .sw-phone {
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  background: var(--white);
+  overflow: hidden;
+}
+.b-scope .sw-bar {
+  padding: 8px 10px;
+  font-weight: 700;
+  font-size: 14px;
+  border-bottom: 2px solid var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.b-scope .sw-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+.b-scope .sw-block {
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.b-scope .sw-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.b-scope .draft .sw-grid {
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 6px;
+}
+.b-scope .draft .sw-phone {
+  border-radius: 8px;
+}
+.b-scope .draft .sw-bar {
+  font-size: 11px;
+  padding: 5px 6px;
+  border-bottom: none;
+}
+.b-scope .draft .sw-blocks {
+  display: none;
+}
+.b-scope .sw-grid.desk {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.b-scope .sw-phone.desk {
+  border-radius: 10px;
+}
+.b-scope .sw-phone.desk .sw-bar::before {
+  content: "● ● ●  ";
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--ink2);
+  vertical-align: 2px;
+}
+.b-scope .device-mobile {
+  max-width: 400px;
+  margin: 0 auto;
+  border: 3px solid var(--ink);
+  border-radius: 30px;
+  background: var(--white);
+  padding: 12px 12px 18px;
+  overflow: hidden;
+}
+.b-scope .device-mobile::before {
+  content: "";
+  display: block;
+  width: 110px;
+  height: 22px;
+  margin: 0 auto 10px;
+  border-radius: 12px;
+  background: var(--ink);
+}
+.b-scope .device-desktop {
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: var(--white);
+  overflow: hidden;
+}
+.b-scope .device-desktop::before {
+  content: "● ● ●";
+  display: block;
+  padding: 8px 14px;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--ink2);
+  border-bottom: 2px solid var(--ink);
+  background: var(--card);
+}
+.b-scope .device-desktop > div {
+  padding: 0 16px 16px;
 }
 .b-scope .callout {
   position: absolute;

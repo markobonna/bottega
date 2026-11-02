@@ -59,6 +59,16 @@ export function nextStage(stage: LiveStage): LiveStage | null {
   return null;
 }
 
+// Software past the Sketch step keeps the working app in the board:
+// the blueprint gives way to the living app from Prototype on. Every
+// other medium keeps board art + below-board runtime.
+export function runtimeInBoard(
+  medium: DesignMedium,
+  stage: LiveStage,
+): boolean {
+  return medium === "software" && stage !== "sketch";
+}
+
 // Port of arrivalLine + the arrival head from the design prototype.
 export function arrivalHead(medium: DesignMedium): string {
   return (

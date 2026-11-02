@@ -16,10 +16,16 @@ export default function AppRuntime({
   app,
   spec,
   records,
+  embedded,
+  layout = "auto",
 }: {
   app: RuntimeApp;
   spec: AppSpec;
   records: Record<string, DbRecord[]>;
+  // In the Prototype board the page already links back; hide the twin.
+  embedded?: boolean;
+  // The board forces the picked shape; everywhere else stays responsive.
+  layout?: "auto" | "phone" | "desktop";
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,12 +69,14 @@ export default function AppRuntime({
 
   return (
     <div data-accent={spec.look.accent}>
-      <Link
-        href={app.workshop ? `/workshops/${app.workshop.id}` : "/"}
-        className="text-muted text-sm underline-offset-4 hover:underline"
-      >
-        ← {app.workshop ? app.workshop.name : "Workshops"}
-      </Link>
+      {!embedded && (
+        <Link
+          href={app.workshop ? `/workshops/${app.workshop.id}` : "/"}
+          className="text-muted text-sm underline-offset-4 hover:underline"
+        >
+          ← {app.workshop ? app.workshop.name : "Workshops"}
+        </Link>
+      )}
       <header className="mt-2 flex items-start gap-3">
         <span aria-hidden="true" className="text-3xl">
           {spec.look.icon}
@@ -90,10 +98,14 @@ export default function AppRuntime({
         />
       </header>
 
-      {spec.screens.length > 0 && (
+      {spec.screens.length > 0 && layout !== "phone" && (
         <nav
           aria-label="Screens"
-          className="mt-4 hidden gap-1 rounded-[12px] bg-card p-1 shadow-[inset_0_0_0_1.5px_var(--line)] sm:flex"
+          className={
+            layout === "desktop"
+              ? "mt-4 flex gap-1 rounded-[12px] bg-card p-1 shadow-[inset_0_0_0_1.5px_var(--line)]"
+              : "mt-4 hidden gap-1 rounded-[12px] bg-card p-1 shadow-[inset_0_0_0_1.5px_var(--line)] sm:flex"
+          }
         >
           {tabs(false)}
         </nav>
@@ -128,12 +140,24 @@ export default function AppRuntime({
       <div aria-hidden="true" className="h-24 sm:h-16" />
       <ChangeBar appId={app.id} />
 
-      {spec.screens.length > 0 && (
+      {spec.screens.length > 0 && layout !== "desktop" && (
         <nav
           aria-label="Screens"
-          className="fixed inset-x-0 bottom-[var(--talk-h,0px)] z-20 border-t border-line bg-paper pt-1 pb-[max(8px,env(safe-area-inset-bottom))] sm:hidden"
+          className={
+            layout === "phone"
+              ? "mt-4 rounded-[12px] border border-line bg-paper py-1"
+              : "fixed inset-x-0 bottom-[var(--talk-h,0px)] z-20 border-t border-line bg-paper pt-1 pb-[max(8px,env(safe-area-inset-bottom))] sm:hidden"
+          }
         >
-          <div className="gutter mx-auto flex max-w-[1180px]">{tabs(true)}</div>
+          <div
+            className={
+              layout === "phone"
+                ? "flex px-2"
+                : "gutter mx-auto flex max-w-[1180px]"
+            }
+          >
+            {tabs(true)}
+          </div>
         </nav>
       )}
     </div>
