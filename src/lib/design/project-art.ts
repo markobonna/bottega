@@ -2,7 +2,7 @@
 // Stage comes from the app's version number: versions only move forward one
 // step at a time, which is exactly the design's stage rule. "sent" is skipped:
 // nothing is ordered or shipped in this backend, so a project goes from being
-// built straight to arrived (installed).
+// built straight to arrived (downloaded, for software).
 
 export type DesignStage = "sketch" | "shape" | "build" | "arrived";
 
@@ -74,7 +74,7 @@ export function arrivalHead(medium: DesignMedium): string {
   return (
     {
       hardware: "It's here!",
-      software: "It's installed!",
+      software: "Downloaded!",
       print: "Delivered!",
       music: "Released!",
       dance: "Showtime!",
@@ -98,7 +98,7 @@ export function arrivalLine(
         : "on the counter";
   switch (medium) {
     case "software":
-      return `${projectName} is installed and running. It's on the ${target || "tablet"} in ${workshopName}. What should we make next?`;
+      return `${projectName} is downloaded — the zip is yours to keep, send, or host. What should we make next?`;
     case "print":
       return `${projectName} just came back from the printer — I hung it up in ${workshopName}. What's next?`;
     case "music":

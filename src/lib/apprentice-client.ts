@@ -26,6 +26,7 @@ export interface AskEdit {
   baseVersion: number;
   preview: { added: string[]; changed: string[]; removed: string[] };
   answeredBy?: string;
+  files?: { path: string; content: string }[];
 }
 
 export interface AskReply {

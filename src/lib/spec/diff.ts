@@ -1,7 +1,8 @@
 import type { AppSpec, Block } from "./schema";
 
 // Plain-words diff between two specs, for edit previews. Compared by id;
-// order changes are noise and ignored.
+// block order changes are noise and ignored, but screen order is a
+// user-visible tab order, so a pure reorder gets one line.
 
 export interface SpecDiff {
   added: string[];
@@ -63,6 +64,15 @@ export function diffSpecs(a: AppSpec, b: AppSpec): SpecDiff {
 
   const aScreens = new Map(a.screens.map((s) => [s.id, s]));
   const bScreens = new Map(b.screens.map((s) => [s.id, s]));
+  const aOrder = a.screens.map((s) => s.id).join(",");
+  const bOrder = b.screens.map((s) => s.id).join(",");
+  if (
+    aOrder !== bOrder &&
+    a.screens.length === b.screens.length &&
+    b.screens.every((s) => aScreens.has(s.id))
+  ) {
+    changed.push(`Screen order: ${b.screens.map((s) => s.title).join(" → ")}`);
+  }
   for (const s of b.screens) {
     if (!aScreens.has(s.id)) added.push(`Screen: ${s.title}`);
   }
@@ -104,14 +114,29 @@ export function diffSpecs(a: AppSpec, b: AppSpec): SpecDiff {
   const aColls = new Map(a.collections.map((c) => [c.id, c]));
   const bColls = new Map(b.collections.map((c) => [c.id, c]));
   for (const c of b.collections) {
-    if (!aColls.has(c.id)) {
+    const old = aColls.get(c.id);
+    if (!old) {
       added.push(`Collection: ${c.name}`);
       continue;
     }
-    const oldFields = new Map(aColls.get(c.id)?.fields.map((f) => [f.id, f]));
+    if (old.name !== c.name) {
+      changed.push(`Collection renamed: ${old.name} → ${c.name}`);
+    }
+    const oldFields = new Map(old.fields.map((f) => [f.id, f]));
     const newFields = new Map(c.fields.map((f) => [f.id, f]));
     for (const f of c.fields) {
-      if (!oldFields.has(f.id)) added.push(`Field: ${c.name} → ${f.name}`);
+      const prev = oldFields.get(f.id);
+      if (!prev) {
+        added.push(`Field: ${c.name} → ${f.name}`);
+      } else {
+        if (prev.name !== f.name) {
+          changed.push(`Field renamed: ${c.name} → ${f.name} (was ${prev.name})`);
+        }
+        const prevOpts = JSON.stringify(prev.options ?? null);
+        if (JSON.stringify(f.options ?? null) !== prevOpts) {
+          changed.push(`Field options: ${c.name} → ${f.name} updated`);
+        }
+      }
     }
     for (const f of oldFields.values()) {
       if (!newFields.has(f.id)) removed.push(`Field: ${c.name} → ${f.name}`);

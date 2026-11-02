@@ -25,6 +25,14 @@ const BodySchema = z.object({
     .optional(),
 });
 
+/** Truncate at a word boundary with an ellipsis — never mid-word. */
+function shortTitle(s: string, max: number): string {
+  const t = s.trim().replace(/\s+/g, " ");
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max - 1).replace(/\s+\S*$/, "");
+  return `${cut || t.slice(0, max - 1)}…`;
+}
+
 export async function POST(req: Request): Promise<Response> {
   const auth = await requireUser();
   if (auth instanceof Response) return auth;
@@ -38,6 +46,39 @@ export async function POST(req: Request): Promise<Response> {
   if (!workshop || workshop.owner !== auth.user.id)
     return Response.json({ error: "No such workshop." }, { status: 404 });
   try {
+    // Software revision 4: Spark builds the app directly (designed files),
+    // so no block-catalog spec is needed up front. The row carries a stub
+    // spec plus the brief; the design call fills in the real app once the
+    // shape is picked. Every other kind keeps the spec pipeline.
+    const kind =
+      body.kind ?? detectMedium(`${body.description.slice(0, 80)}`);
+    if (body.kind === "software" || kind === "software") {
+      const stub = {
+        version: 1,
+        name: shortTitle(body.description, 40) || "New app",
+        tagline: shortTitle(body.description, 80) || "Built with Bottega",
+        look: { accent: "terracotta", icon: "📱" },
+        collections: [],
+        screens: [],
+      } as const;
+      const appId = await createApp(auth.supabase, stub, {
+        source: "build",
+        summary: "Built from your description",
+        workshopId: body.workshopId,
+        kind: "software",
+      });
+      const { error: briefError } = await auth.supabase
+        .from("apps")
+        .update({ brief: body.description.slice(0, 1500) })
+        .eq("id", appId);
+      if (briefError) {
+        return Response.json(
+          { error: `Couldn't save the brief: ${briefError.message}` },
+          { status: 500 },
+        );
+      }
+      return Response.json({ appId, spec: stub });
+    }
     let viaOpen = false;
     const first = await jsonWithFallback(
       [

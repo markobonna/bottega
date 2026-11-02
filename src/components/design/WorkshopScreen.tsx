@@ -26,6 +26,7 @@ export interface RoomProject {
   stage: LiveStage;
   tagline: string;
   imageUrl: string | null;
+  snapshotDoc: string | null;
   roomX: number | null;
   roomY: number | null;
 }
@@ -234,7 +235,8 @@ export default function WorkshopScreen({
               {rm.tags.map(({ p, x, y }) => {
                 const medium = B.MEDIUMS[p.medium] ?? B.MEDIUMS.hardware;
                 const pid = p.id ?? p.name;
-                if (byId.get(pid)?.imageUrl) return null;
+                const known = byId.get(pid);
+                if (known?.imageUrl || known?.snapshotDoc) return null;
                 return (
                   <Link
                     key={pid}
@@ -254,7 +256,7 @@ export default function WorkshopScreen({
                 );
               })}
               {projects.map((p) => {
-                if (!p.imageUrl) return null;
+                if (!p.imageUrl && !p.snapshotDoc) return null;
                 const at = cardPos(p);
                 if (!at) return null;
                 return (
@@ -264,6 +266,7 @@ export default function WorkshopScreen({
                     name={p.name}
                     meta={cardMeta(p)}
                     imageUrl={p.imageUrl}
+                    snapshotDoc={p.snapshotDoc}
                     x={at.x}
                     y={at.y}
                     sceneRef={sceneRef}

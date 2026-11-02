@@ -71,6 +71,7 @@ export default function ChangeBar({ appId }: { appId: string }) {
           ops: edit.ops,
           summary: edit.summary,
           baseVersion: edit.baseVersion,
+          ...(edit.files ? { files: edit.files } : {}),
         }),
       });
     } catch {

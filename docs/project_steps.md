@@ -19,7 +19,11 @@ memory — update it when `BoardPanel.tsx` changes.
   callouts + caption, with the Ink only / As built / Full render view
   switch below it. Exception: software step 2 shows the live runtime
   in the board instead of the art (see Software below).
-- Tool toolbar (trade-specific, see below) + margin notes beside the board.
+- Right rail beside the board: margin notes on top, the tool toolbar
+  beneath them (tools feed the notes, not the board), plus a "How
+  this works" card on software (Blueprint = still look, Prototype =
+  tap-through, Download = yours to wire up). Notes ship in every
+  download (NOTES.txt in the software zip).
 - Portrait line (until the portrait paints), build-photos gallery.
 - Drafts on the wall: every version pinned, current one marked.
 - The working app itself (list/form/stat/see/… blocks) further down —
@@ -35,9 +39,9 @@ memory — update it when `BoardPanel.tsx` changes.
 |---|---|---|---|---|
 | 1 | "Looks good — {step 2}" | none | B&W sketch photo; 30s countdown until it paints | unlocked |
 | 2 | "← {step 1}" + "Next: {step 3}" | none | Color render (grown from the sketch); sketch shown, countdown if neither painted — except software, whose board is the live runtime | unlocked |
-| 3 | "← {step 2}" + big "Build and install" (software) or "Send it off" (rest) → send-off dialog | none (but "Your pack" files panel below the board) | Full render; all callouts live | unlocked |
+| 3 | "← {step 2}" + big "Download" (software) or "Send it off" (rest) → send-off dialog | none (but "Your pack" files panel below the board) | Full render; all callouts live | unlocked |
 | 4 | "← {step 3}" + "It arrived" (inside the card) | Crate card: RFQ tracking (hardware/print) or "Finishing up" (rest) | Full render; only parts *with* notes stay clickable | **locked** |
-| 5 | "← {step 4}" + "See it in the room" + "Next project" (inside the card) | Green card: "{step 5} — vendors", arrival photo if any | Full render + stamped label (It arrived / Go live / …) | locked |
+| 5 | "← {step 4}" + "See it in the room" + "Next project" (inside the card) | Green card: "{step 5} — vendors", arrival photo if any | Full render + stamped label (It arrived / Downloaded / …) | locked |
 
 Every step except the first has a back button; going back never deletes
 versions or notes. (The half-ink "As built" look still exists in the
@@ -68,29 +72,49 @@ print) and, for software only, the "Need a hand running this?" help card.
 - Step 4 card: same RFQ tracking as hardware.
 - Step 5 card: "Collect — {vendors}"; board stamped "Collect".
 
-### Software — Sketch · Prototype · Build · Test · Go live
+### Software — Sketch · Prototype · Download (ends here; no Test, no Go live)
 
-- Tools: Screens, Data, Users, Preview (scrolls to the live app).
-- Step 1 first asks mobile-or-desktop (saved on the app); the sketch
-  stays hidden until picked, and advancing waits too. No painted art:
-  the sketch is the spec wireframe (phone frames for mobile,
-  browser frames for desktop; one labeled box per block), instant, no
-  countdown, no revise form — edits via the change bar redraw it on
-  the next version. Shown at step 1 only.
-- Steps 2–5 board: the live runtime only (tabs, blocks, change bar,
-  tappable on your data) — the app stays on the bench from
-  Prototype through Go live. Step 3 adds the pack panel (brief.md
-  + "Generate my code (.zip)" into the send-off dialog).
-- Step 3 button: "Build and install" → send-off dialog with a REAL
-  readout (spec version, design checks, counted screens/blocks/
-  collections/records), "Download your app" (single self-contained
-  HTML file: spec + record seed + renderer, localStorage-backed,
-  AI blocks bring-your-own-key), "Generate my code" (Spark writes
-  index.html + styles.css + app.js + README from the same spec in
-  the picked shape — dependency-free, "Download code (.zip)"),
-  honest per-device open steps, and a "take it further" team contact.
-- Step 4 card: "Finishing up" (no vendors, no countdown).
-- Step 5 card: "Go live"; board stamped "Go live"; help card appears.
+- Revision 4: Spark designs AND builds the app directly (real
+  HTML/CSS/JS, no block catalog), in two small replies instead of
+  one giant one: the design (HTML + CSS) first, then the prototype
+  (JS + readme) wired to that exact design. The row carries a stub
+  spec plus the brief; the design call fills in the look once the
+  shape is picked. Legacy spec-built apps (seeds) keep the classic
+  wireframe + runtime renderers below.
+- Tools: Screens, Data, Users, Preview (scrolls to the app).
+- Step 1 first asks mobile-or-desktop; picking it designs the app
+  (countdown while Spark works, honest 503 off-state without a
+  key). The Blueprint is the designed app itself in a sandboxed
+  iframe — genuinely static, look, don't touch — framed in the
+  picked shape. "Redesign for mobile/desktop" regenerates in the
+  other shape (the old prototype JS goes with the old HTML it
+  wired). Advancing waits for the files.
+- Step 2 arrival auto-builds the prototype from the design
+  (countdown, honest failure card with retry). Steps 2–3 board:
+  the working app in the sandboxed iframe — interactive, tappable,
+  runs on its own data (sandboxed: no same-origin, so generated
+  code can't touch the Bottega session; a preview-only guard traps
+  link/form navigations so the app can't load Bottega inside
+  itself), plus "Open fullscreen".
+- Change bar revises the FILES directly (Replit-style): Spark
+  returns the full updated set, preview names the changed files,
+  accept stores a versioned revision (history capped at 10, undo
+  pops). Suggestions stay silent for files-apps (they speak
+  spec-ops).
+- Step 3 button: "Download" → send-off dialog: file readout (names
+  + KB, counted not performed), "Download code (.zip)" zips the
+  stored files (only when all four are present — otherwise an
+  honest "walk back to Prototype" line), "Redesign" rebuilds both
+  phases from the brief (previous files stay undoable). First-pass
+  framing throughout: download to keep adding features, or ask the
+  team. Done screen carries the "take it further" team contact.
+- The zip leaving the browser lands the DB at arrived: green
+  "Downloaded" card ("unzip it, double-click index.html, and it
+  runs"), board stamped "Downloaded", "Downloaded!" arrival
+  moment, help card appears. The stepper stays on Download (shown
+  position 3 of 3); Back returns to Download, and "Download again"
+  on the card reopens the dialog (change-bar revisions flow into
+  the next zip). The Test slot is skipped in both directions.
 
 ### Music — Sketch · Write · Record · Mix · Release
 

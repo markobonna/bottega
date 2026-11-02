@@ -147,13 +147,18 @@ OPS (op -> fields; * = required, set only the fields your op needs):
 - addScreen { screen*, at? } (screen is { id, title, icon, blocks })
 - updateScreen { id*, title?, icon? } (at least one of title, icon)
 - removeScreen { id* }
+- moveScreen { id*, at* }
 - addBlock { screenId*, block*, at? }
 - updateBlock { id*, setJson* } (setJson is a JSON object string merged onto the block; it replaces whole values, so to change one rate send the block's full lines array)
 - removeBlock { id* }
 - moveBlock { id*, screenId*, at* }
+- duplicateBlock { id*, newId*, screenId?, at? } (copies a block; newId must be unique app-wide)
 - addCollection { collection* } (collection is { id, name, fields })
+- updateCollection { id*, name* }
 - addField { collectionId*, field* } (field is { id, name, type, options? })
+- updateField { collectionId*, id*, name?, optionsJson? } (at least one of name, optionsJson; optionsJson is a JSON string array, choice fields only)
 - renameApp { name?, tagline? } (at least one)
+- updateLook { accent?, icon? } (at least one; accent is one of terracotta, olive, indigo, teal, plum, ochre)
 
 RULES:
 - Reply with a summary (one sentence, plain words) and 1 or more ops.
@@ -162,6 +167,7 @@ RULES:
 - New blocks must reference existing collections and fields with the right types: stat/price/count fields are number; before/after/see-photo/draw-image fields are photo; draw titleField is text. Choice fields need 2-12 options.
 - Field types: text, number, date, choice, bool, photo. Icons are a single code point.
 - Prefer editing over replacing; never remove a screen or block the person still uses.
+- Rename, don't recreate: updateScreen/updateCollection/updateField change names; field types and every id never change.
 - Output ONLY the summary and ops as JSON, no other text.`;
 
 // Flat wire schema for the edit call: same oneOf problem as the builder, so
@@ -172,13 +178,18 @@ const WireOpSchema = z.object({
     "addScreen",
     "updateScreen",
     "removeScreen",
+    "moveScreen",
     "addBlock",
     "updateBlock",
     "removeBlock",
     "moveBlock",
+    "duplicateBlock",
     "addCollection",
+    "updateCollection",
     "addField",
+    "updateField",
     "renameApp",
+    "updateLook",
   ]),
   screen: WireScreenSchema.optional(),
   block: WireBlockSchema.optional(),
@@ -187,12 +198,15 @@ const WireOpSchema = z.object({
   screenId: z.string().optional(),
   collectionId: z.string().optional(),
   id: z.string().optional(),
+  newId: z.string().optional(),
   title: z.string().optional(),
   icon: z.string().optional(),
   name: z.string().optional(),
   tagline: z.string().optional(),
+  accent: z.string().optional(),
   at: z.number().int().min(0).optional(),
   setJson: z.string().optional(),
+  optionsJson: z.string().optional(),
 });
 
 export const WireEditSchema = z.object({
@@ -234,13 +248,18 @@ OPS (op -> fields; * = required, set only the fields your op needs):
 - addScreen { screen*, at? } (screen is { id, title, icon, blocks })
 - updateScreen { id*, title?, icon? } (at least one of title, icon)
 - removeScreen { id* }
+- moveScreen { id*, at* }
 - addBlock { screenId*, block*, at? }
 - updateBlock { id*, setJson* } (setJson is a JSON object string merged onto the block; it replaces whole values)
 - removeBlock { id* }
 - moveBlock { id*, screenId*, at* }
+- duplicateBlock { id*, newId*, screenId?, at? } (copies a block; newId must be unique app-wide)
 - addCollection { collection* } (collection is { id, name, fields })
+- updateCollection { id*, name* }
 - addField { collectionId*, field* } (field is { id, name, type, options? })
+- updateField { collectionId*, id*, name?, optionsJson? } (at least one of name, optionsJson; optionsJson is a JSON string array, choice fields only)
 - renameApp { name?, tagline? } (at least one)
+- updateLook { accent?, icon? } (at least one; accent is one of terracotta, olive, indigo, teal, plum, ochre)
 
 RULES:
 - Reply with up to 3 suggestions. Each has a title (max 60 chars), a one-line why pointing to their usage, and 1 or more ops.
@@ -249,6 +268,7 @@ RULES:
 - New blocks must reference existing collections and fields with the right types: stat/price/count fields are number; before/after/see-photo/draw-image fields are photo; draw titleField is text. Choice fields need 2-12 options.
 - Field types: text, number, date, choice, bool, photo. Icons are a single code point.
 - Never remove a screen or block the person still uses. Never suggest advice about their work, life or business — app changes only.
+- Rename, don't recreate: updateScreen/updateCollection/updateField change names; field types and every id never change.
 - Output ONLY the suggestions as JSON, no other text.`;
 
 export const WireSuggestSchema = z.object({
@@ -306,6 +326,13 @@ export function wireOpToOp(wire: WireOp, i: number): Op {
     }
     case "removeScreen":
       return parseOp(tag, { op: wire.op, id: need(wire.id, "id") });
+    case "moveScreen":
+      if (wire.at === undefined) throw new Error(`${tag}: missing 'at'`);
+      return parseOp(tag, {
+        op: wire.op,
+        id: need(wire.id, "id"),
+        at: wire.at,
+      });
     case "addBlock":
       if (!wire.block) throw new Error(`${tag}: missing 'block'`);
       return parseOp(tag, {
@@ -339,9 +366,23 @@ export function wireOpToOp(wire: WireOp, i: number): Op {
         screen: need(wire.screenId, "screenId"),
         at: wire.at,
       });
+    case "duplicateBlock":
+      return parseOp(tag, {
+        op: wire.op,
+        id: need(wire.id, "id"),
+        newId: need(wire.newId, "newId"),
+        ...(wire.screenId !== undefined ? { screen: wire.screenId } : {}),
+        ...(wire.at !== undefined ? { at: wire.at } : {}),
+      });
     case "addCollection":
       if (!wire.collection) throw new Error(`${tag}: missing 'collection'`);
       return parseOp(tag, { op: wire.op, collection: wire.collection });
+    case "updateCollection":
+      return parseOp(tag, {
+        op: wire.op,
+        id: need(wire.id, "id"),
+        set: { name: need(wire.name, "name") },
+      });
     case "addField":
       if (!wire.field) throw new Error(`${tag}: missing 'field'`);
       return parseOp(tag, {
@@ -349,6 +390,35 @@ export function wireOpToOp(wire: WireOp, i: number): Op {
         collection: need(wire.collectionId, "collectionId"),
         field: wire.field,
       });
+    case "updateField": {
+      if (wire.name === undefined && wire.optionsJson === undefined) {
+        throw new Error(`${tag}: needs 'name' or 'optionsJson'`);
+      }
+      let options: string[] | undefined;
+      if (wire.optionsJson !== undefined) {
+        try {
+          const parsedOpts: unknown = JSON.parse(wire.optionsJson);
+          if (
+            !Array.isArray(parsedOpts) ||
+            !parsedOpts.every((o) => typeof o === "string")
+          ) {
+            throw new Error("not a string array");
+          }
+          options = parsedOpts;
+        } catch {
+          throw new Error(`${tag}: 'optionsJson' must be a JSON string array`);
+        }
+      }
+      return parseOp(tag, {
+        op: wire.op,
+        collection: need(wire.collectionId, "collectionId"),
+        id: need(wire.id, "id"),
+        set: {
+          ...(wire.name !== undefined ? { name: wire.name } : {}),
+          ...(options !== undefined ? { options } : {}),
+        },
+      });
+    }
     case "renameApp": {
       if (wire.name === undefined && wire.tagline === undefined) {
         throw new Error(`${tag}: needs 'name' or 'tagline'`);
@@ -357,6 +427,16 @@ export function wireOpToOp(wire: WireOp, i: number): Op {
         op: wire.op,
         ...(wire.name !== undefined ? { name: wire.name } : {}),
         ...(wire.tagline !== undefined ? { tagline: wire.tagline } : {}),
+      });
+    }
+    case "updateLook": {
+      if (wire.accent === undefined && wire.icon === undefined) {
+        throw new Error(`${tag}: needs 'accent' or 'icon'`);
+      }
+      return parseOp(tag, {
+        op: wire.op,
+        ...(wire.accent !== undefined ? { accent: wire.accent } : {}),
+        ...(wire.icon !== undefined ? { icon: wire.icon } : {}),
       });
     }
   }

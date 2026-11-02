@@ -12,7 +12,14 @@ import {
 
 describe("project look prompts", () => {
   it("sketch is black and white bare-bones, carries the subject", () => {
-    for (const kind of ["hardware", "software", "print", "recipe"]) {
+    for (const kind of [
+      "hardware",
+      "software",
+      "print",
+      "recipe",
+      "music",
+      "dance",
+    ]) {
       const p = sketchPrompt(kind, "Truck Price Sign");
       expect(p).toContain("black and white");
       expect(p).toContain("bare-bones");
@@ -24,6 +31,18 @@ describe("project look prompts", () => {
   it("hardware sketches as pencil, software as wireframe", () => {
     expect(sketchPrompt("hardware", "x")).toContain("pencil");
     expect(sketchPrompt("software", "x")).toContain("wireframe");
+  });
+
+  it("every other kind sketches its own thing, never phone UI", () => {
+    expect(sketchPrompt("print", "x")).toContain("printed piece");
+    expect(sketchPrompt("recipe", "x")).toContain("plated dish");
+    expect(sketchPrompt("music", "x")).toContain("instruments");
+    expect(sketchPrompt("dance", "x")).toContain("dancers");
+    for (const kind of ["print", "recipe", "music", "dance"]) {
+      const p = sketchPrompt(kind, "x");
+      expect(p).not.toContain("phone");
+      expect(p).not.toContain("wireframe");
+    }
   });
 
   it("software sketch draws one frame per real screen", () => {
@@ -65,10 +84,27 @@ describe("project look prompts", () => {
   });
 
   it("portrait forbids invented scenery, plain white background", () => {
-    for (const kind of ["hardware", "software"]) {
+    for (const kind of [
+      "hardware",
+      "software",
+      "print",
+      "recipe",
+      "music",
+      "dance",
+    ]) {
       const p = portraitPrompt(kind);
       expect(p).toContain("plain white background");
       expect(p).toContain("no scenery");
+    }
+  });
+
+  it("every other kind realizes its own subject, never phone screens", () => {
+    expect(portraitPrompt("print")).toContain("printed piece");
+    expect(portraitPrompt("recipe")).toContain("dish");
+    expect(portraitPrompt("music")).toContain("music concept");
+    expect(portraitPrompt("dance")).toContain("dancers");
+    for (const kind of ["print", "recipe", "music", "dance"]) {
+      expect(portraitPrompt(kind)).not.toContain("phone screens");
     }
   });
 
@@ -90,5 +126,13 @@ describe("project look prompts", () => {
     expect(rh).toContain("same object and composition");
     expect(rh).toContain("plain white background");
     expect(rh).toContain("no scenery");
+    const rd = reviseSketchPrompt("dance", "bigger leaps");
+    expect(rd).toContain("bigger leaps");
+    expect(rd).toContain("black and white");
+    expect(rd).not.toContain("phone");
+    const rr = revisePortraitPrompt("recipe", "rustic");
+    expect(rr).toContain("rustic");
+    expect(rr).toContain("same subject and composition");
+    expect(rr).not.toContain("phone screens");
   });
 });

@@ -4,6 +4,7 @@ import WorkshopScreenMount from "@/components/design/WorkshopScreenMount";
 import ZoomMount from "@/components/design/ZoomMount";
 import { effectiveStage, mediumForKind } from "@/lib/design/project-art";
 import { signedUrls } from "@/lib/media";
+import { inlineFiles, parseSoftwareFilesState } from "@/lib/software-build";
 import { parseSpec } from "@/lib/spec/schema";
 import { createClient } from "@/lib/supabase/server";
 import { createSample } from "../../actions";
@@ -29,7 +30,7 @@ export default async function WorkshopPage({
   const { data: apps, error } = await supabase
     .from("apps")
     .select(
-      "id, name, version, updated_at, spec, kind, stage, look_path, blueprint_path, photos, room_x, room_y",
+      "id, name, version, updated_at, spec, kind, stage, look_path, blueprint_path, photos, room_x, room_y, build_files",
     )
     .eq("workshop_id", id)
     .order("position", { ascending: true })
@@ -60,6 +61,18 @@ export default async function WorkshopPage({
       (newest ? galleryUrls[newest] : undefined) ??
       (a.look_path ? urls[a.look_path] : undefined) ??
       null;
+    // Software skips portrait art (the app IS the visual), so its card
+    // shows a static snapshot of the real design instead of a tag.
+    const designFiles =
+      !imageUrl && a.kind === "software"
+        ? (parseSoftwareFilesState(a.build_files)?.files ?? []).filter(
+            (f) => f.path === "index.html" || f.path === "styles.css",
+          )
+        : [];
+    const snapshotDoc =
+      designFiles.some((f) => f.path === "index.html")
+        ? inlineFiles(designFiles)
+        : null;
     return {
       id: a.id,
       name: a.name,
@@ -67,6 +80,7 @@ export default async function WorkshopPage({
       stage: effectiveStage(a.stage, a.version),
       tagline: parsed.ok ? parsed.spec.tagline : "",
       imageUrl,
+      snapshotDoc,
       roomX: a.room_x ?? null,
       roomY: a.room_y ?? null,
     };

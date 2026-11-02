@@ -17,6 +17,11 @@ export function fail(e: unknown): Response {
   if (e instanceof ProviderUnavailableError)
     return Response.json({ error: 'provider-off' }, { status: 503 });
   console.error(e instanceof ModelError ? e.message : e);
+  if (e instanceof ModelError && e.message.startsWith('cut off'))
+    return Response.json(
+      { error: 'The design was cut off before it finished. Try again.' },
+      { status: 502 },
+    );
   return Response.json({ error: "The model didn't answer. Try again." }, { status: 502 });
 }
 

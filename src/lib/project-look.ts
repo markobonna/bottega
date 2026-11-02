@@ -73,19 +73,36 @@ export function specScreenLine(spec: {
   return `Screens: ${parts.join("; ")}`.slice(0, 500);
 }
 
+/** What the sketch draws for the non-screen kinds: the thing itself,
+ *  never phone UI. */
+function sketchSubject(kind: string, base: string): string {
+  switch (kind) {
+    case "print":
+      return `pencil concept sketch of a printed piece for ${base} (poster, sign or menu), flat front view`;
+    case "recipe":
+      return `pencil sketch of the plated dish for ${base}`;
+    case "music":
+      return `pencil concept sketch for ${base}: the instruments and score behind the song`;
+    case "dance":
+      return `pencil sketch of dancers in formation for ${base}`;
+    default:
+      return `pencil concept sketch of ${base}`;
+  }
+}
+
 /**
  * The sketch prompt: a black and white bare-bones image, nothing else.
  * Software draws one frame per real screen (screenCount from the spec),
- * so the sketch mirrors the app it will become. Pure so tests can lock
- * the contract.
+ * so the sketch mirrors the app it will become; every other kind draws
+ * its own thing. Pure so tests can lock the contract.
  */
 export function sketchPrompt(
   kind: string,
   base: string,
   screenCount = 0,
 ): string {
-  if (kind === "hardware") {
-    return `A black and white pencil concept sketch of ${base}, bare-bones, minimal lines, white background, ${SUFFIX}`;
+  if (kind !== "software") {
+    return `A black and white ${sketchSubject(kind, base)}, bare-bones, minimal lines, white background, ${SUFFIX}`;
   }
   const frames =
     screenCount === 1
@@ -96,12 +113,32 @@ export function sketchPrompt(
   return `A black and white wireframe sketch of a phone app for ${base}, ${frames}, each screen fully visible with bare-bones UI boxes buttons and text lines, everything fully inside the frame, no icon grid, white background, ${SUFFIX}`;
 }
 
+/** What the portrait realizes for the non-screen kinds. */
+function portraitSubject(kind: string): string {
+  switch (kind) {
+    case "print":
+      return "this sketched printed piece";
+    case "recipe":
+      return "this sketched dish";
+    case "music":
+      return "this sketched music concept";
+    case "dance":
+      return "these sketched dancers";
+    default:
+      return "this sketched object";
+  }
+}
+
 /** The portrait grows out of the sketch: same object, realized. Plain
  * white background, no invented setting — the object alone. */
 export function portraitPrompt(kind: string): string {
-  return kind === "hardware"
-    ? `A full-color product photo render of this sketched object, same object and composition, isolated on a plain white background, no room, no scenery, warm light, ${SUFFIX}`
-    : `A clean full-color app design mockup of this wireframe sketch, same phone screens, same layout in each screen, each screen fully visible, plain white background, no scenery, ${SUFFIX}`;
+  if (kind === "hardware") {
+    return `A full-color product photo render of this sketched object, same object and composition, isolated on a plain white background, no room, no scenery, warm light, ${SUFFIX}`;
+  }
+  if (kind === "software") {
+    return `A clean full-color app design mockup of this wireframe sketch, same phone screens, same layout in each screen, each screen fully visible, plain white background, no scenery, ${SUFFIX}`;
+  }
+  return `A full-color render of ${portraitSubject(kind)}, same subject and composition, isolated on a plain white background, no room, no scenery, warm light, ${SUFFIX}`;
 }
 
 /**
@@ -110,15 +147,20 @@ export function portraitPrompt(kind: string): string {
  * no invented scenery). Pure so tests can lock the contract.
  */
 export function reviseSketchPrompt(kind: string, instruction: string): string {
-  return kind === "hardware"
-    ? `${instruction}, keep it a black and white pencil concept sketch, bare-bones, minimal lines, white background, ${SUFFIX}`
-    : `${instruction}, keep it a black and white wireframe sketch of the same phone app screens, one phone frame per screen, each screen fully visible, everything fully inside the frame, white background, ${SUFFIX}`;
+  if (kind === "software") {
+    return `${instruction}, keep it a black and white wireframe sketch of the same phone app screens, one phone frame per screen, each screen fully visible, everything fully inside the frame, white background, ${SUFFIX}`;
+  }
+  return `${instruction}, keep it a black and white pencil sketch of the same subject, bare-bones, minimal lines, white background, ${SUFFIX}`;
 }
 
 export function revisePortraitPrompt(kind: string, instruction: string): string {
-  return kind === "hardware"
-    ? `${instruction}, same object and composition, isolated on a plain white background, no room, no scenery, ${SUFFIX}`
-    : `${instruction}, same phone screens, same layout in each screen, each screen fully visible, plain white background, no scenery, ${SUFFIX}`;
+  if (kind === "software") {
+    return `${instruction}, same phone screens, same layout in each screen, each screen fully visible, plain white background, no scenery, ${SUFFIX}`;
+  }
+  if (kind === "hardware") {
+    return `${instruction}, same object and composition, isolated on a plain white background, no room, no scenery, ${SUFFIX}`;
+  }
+  return `${instruction}, same subject and composition, isolated on a plain white background, no room, no scenery, ${SUFFIX}`;
 }
 
 async function uploadImage(
@@ -149,7 +191,7 @@ export async function renderSketch(
   const parsed = parseSpec(app.spec);
   if (!parsed.ok) throw new Error("Bad project spec.");
   let base = promptBase(parsed.spec) + (extra ?? "");
-  if (app.kind !== "hardware") {
+  if (app.kind === "software") {
     base += ` ${specScreenLine(parsed.spec)}`;
   }
   const sketchBytes = await image(

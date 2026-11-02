@@ -127,4 +127,54 @@ describe("diffSpecs", () => {
       "App accent: terracotta → plum",
     );
   });
+
+  test("screen reorder", () => {
+    const base = specOf(maria);
+    const next = edited(base, [{ op: "moveScreen", id: "loaves", at: 0 }]);
+    expect(diffSpecs(base, next).changed).toContain(
+      "Screen order: Loaves → Orders → Pantry → Specials",
+    );
+  });
+
+  test("collection and field renames", () => {
+    const base = specOf(maria);
+    const next = edited(base, [
+      { op: "updateCollection", id: "orders", set: { name: "Cake orders" } },
+      {
+        op: "updateField",
+        collection: "orders",
+        id: "customer",
+        set: { name: "Client" },
+      },
+    ]);
+    const diff = diffSpecs(base, next);
+    expect(diff.changed).toContain("Collection renamed: Orders → Cake orders");
+    expect(diff.changed).toContain(
+      "Field renamed: Cake orders → Client (was Customer)",
+    );
+  });
+
+  test("choice options edit", () => {
+    const base = specOf(maria);
+    const next = edited(base, [
+      {
+        op: "updateField",
+        collection: "orders",
+        id: "status",
+        set: { options: ["new", "baking", "ready"] },
+      },
+    ]);
+    expect(diffSpecs(base, next).changed).toContain(
+      "Field options: Orders → Status updated",
+    );
+  });
+
+  test("duplicated block reads as added", () => {
+    const base = specOf(maria);
+    const next = edited(base, [
+      { op: "duplicateBlock", id: "orders_list", newId: "orders_list_2" },
+    ]);
+    const diff = diffSpecs(base, next);
+    expect(diff.added).toContain("Block: List · Open orders");
+  });
 });

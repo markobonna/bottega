@@ -10,9 +10,20 @@ import { useRouter } from "next/navigation";
  * making the user wait out the clock. The template drawing only ever
  * appears when art was proven unavailable, never as a loading flash.
  */
-export default function SketchPending({ kind }: { kind: "Sketch" | "Render" }) {
+const KIND_CONFIG = {
+  Sketch: { seconds: 30, line: "seconds · Muse Image is drawing your project" },
+  Render: { seconds: 30, line: "seconds · Muse Image is drawing your project" },
+  Design: { seconds: 120, line: "seconds · Muse Spark is designing your app" },
+  Prototype: { seconds: 120, line: "seconds · Muse Spark is wiring up your prototype" },
+} as const;
+
+export default function SketchPending({
+  kind,
+}: {
+  kind: "Sketch" | "Render" | "Design" | "Prototype";
+}) {
   const router = useRouter();
-  const [left, setLeft] = useState(30);
+  const [left, setLeft] = useState<number>(KIND_CONFIG[kind].seconds);
   const [expired, setExpired] = useState(false);
 
   useEffect(() => {
@@ -64,7 +75,7 @@ export default function SketchPending({ kind }: { kind: "Sketch" | "Render" }) {
             {left}
           </p>
           <p className="small" style={{ margin: 0 }}>
-            seconds · Muse Image is drawing your project
+            {KIND_CONFIG[kind].line}
           </p>
         </>
       )}

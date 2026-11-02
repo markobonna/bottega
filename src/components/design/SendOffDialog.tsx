@@ -9,9 +9,10 @@ import {
 import { useRouter } from "next/navigation";
 import {
   addProjectNote,
+  getBuildFiles,
   getExportMeta,
   markFinished,
-  markInstalled,
+  markDownloaded,
   recordRfqSent,
   type ExportMeta,
 } from "@/app/projects/[id]/actions";
@@ -24,7 +25,7 @@ import {
   packLabelFor,
 } from "@/lib/design/pack-files";
 import { REAL_MAKERS } from "@/lib/design/makers";
-import { toolsFor } from "@/lib/design/tools";
+import { toolsFor, topicLabel } from "@/lib/design/tools";
 
 import "@/vendor/bottega/core.js";
 import "@/vendor/bottega/types.js";
@@ -82,7 +83,7 @@ export default function SendOffDialog({
     flow === "quote"
       ? ["Files", "Find makers", "Message", "Send"]
       : flow === "ship"
-        ? ["Build", "Install"]
+        ? ["Download"]
         : ["Files"];
 
   const [step, setStep] = useState(0);
@@ -91,11 +92,8 @@ export default function SendOffDialog({
   const [message, setMessage] = useState("");
   const [msgTouched, setMsgTouched] = useState(false);
   const [marked, setMarked] = useState<Record<string, boolean>>({});
-  const [target, setTarget] = useState("tablet");
   const [started, setStarted] = useState(false);
   const [meta, setMeta] = useState<ExportMeta | null>(null);
-  const [downloading, setDownloading] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
   // First-pass code: the shape was picked at Sketch; legacy blanks pick here.
   const [cgPick, setCgPick] = useState<"mobile" | "desktop">("mobile");
   const factor = formFactor ?? cgPick;
@@ -106,10 +104,13 @@ export default function SendOffDialog({
   >(null);
   const [cgProblem, setCgProblem] = useState("");
   const [cgVia, setCgVia] = useState("meta");
+  // Spark-built apps ship their designed files; legacy spec apps
+  // generate code from the spec in this dialog instead.
+  const [storedView, setStoredView] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [done, setDone] = useState<
-    "installed" | "finished" | "rfqs-out" | "concierge" | null
+    "downloaded" | "finished" | "rfqs-out" | "concierge" | null
   >(null);
   const [addName, setAddName] = useState("");
   const [addAddr, setAddAddr] = useState("");
@@ -162,6 +163,20 @@ export default function SendOffDialog({
   }, [flow]);
 
   useEffect(() => {
+    if (flow !== "ship") return;
+    let live = true;
+    void getBuildFiles(appId).then((res) => {
+      if (!live || !res.ok || !res.files) return;
+      setCgFiles(res.files);
+      setStoredView(true);
+    });
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flow, appId]);
+
+  useEffect(() => {
     if (!cgBusy) return;
     const t0 = Date.now();
     setCgSecs(0);
@@ -201,10 +216,27 @@ export default function SendOffDialog({
     }
   }
 
-  function downloadCodeZip() {
-    if (!cgFiles) return;
+  // The margin notes ship with the code, so further development —
+  // by the user or the team — starts from the same decisions.
+  const notesTxt =
+    notes.length === 0
+      ? `Margin notes for ${project.name}\n\nNo margin notes on this project.`
+      : `Margin notes for ${project.name}\n\n${notes
+          .map(
+            (n) =>
+              `[${n.who === "you" ? "You" : "Apprentice"}${n.topic ? ` · ${topicLabel(tools, n.topic) ?? n.topic}` : ""}] ${n.text}`,
+          )
+          .join("\n\n")}`;
+
+  // The download IS the finish line: the file left the browser, so the
+  // project is honestly done the moment this fires.
+  async function downloadCodeZip() {
+    if (!cgFiles || busy) return;
     const bytes = zipStore(
-      cgFiles.map((f) => ({ name: f.path, data: strBytes(f.content) })),
+      [...cgFiles, { path: "NOTES.txt", content: notesTxt }].map((f) => ({
+        name: f.path,
+        data: strBytes(f.content),
+      })),
     );
     const blob = new Blob([bytes as unknown as BlobPart], {
       type: "application/zip",
@@ -217,12 +249,25 @@ export default function SendOffDialog({
     a.click();
     a.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+    setBusy(true);
+    const res = await markDownloaded(appId);
+    setBusy(false);
+    if (!res.ok) {
+      setProblem("The file downloaded, but I couldn't stamp it done. Try again.");
+      return;
+    }
+    setDone("downloaded");
+    router.refresh();
   }
 
-  // Real software build: the design is checked and counted server-side;
+  // Real software download: the design is checked and counted server-side;
   // every line below reports a measured fact.
-  async function runBuild() {
+  async function runDownload() {
     if (busy) return;
+    if (storedView) {
+      setStarted(true);
+      return;
+    }
     setBusy(true);
     setProblem("");
     const res = await getExportMeta(appId);
@@ -235,63 +280,51 @@ export default function SendOffDialog({
     setStarted(true);
   }
 
-  function exportFileName(): string {
-    return `${slug(project.name)}-app.html`;
-  }
-
-  async function downloadApp() {
-    if (downloading) return;
-    setDownloading(true);
-    setProblem("");
+  async function regenerateDesign() {
+    if (cgBusy) return;
+    setCgBusy(true);
+    setCgProblem("");
     try {
-      const res = await fetch(
-        `/api/export-app?appId=${encodeURIComponent(appId)}`,
+      // A redesign rebuilds both phases in order: the look, then the
+      // wiring plugged into that exact look.
+      for (const phase of ["design", "prototype"] as const) {
+        const res = await fetch("/api/software-design", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ appId, formFactor: factor, phase }),
+        });
+        if (res.status === 503) {
+          setCgProblem("Designing is off right now (no model key).");
+          return;
+        }
+        if (!res.ok) {
+          const err = (await res.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          throw new Error(err?.error || "design failed");
+        }
+        if (phase === "prototype") {
+          const data = (await res.json()) as {
+            files: { path: string; content: string }[];
+            via?: string;
+          };
+          setCgFiles(data.files);
+          setCgVia(data.via ?? "meta");
+        }
+      }
+      router.refresh();
+    } catch (e) {
+      setCgProblem(
+        e instanceof Error && e.message !== "design failed"
+          ? e.message
+          : "Couldn't redesign that. Try again.",
       );
-      if (!res.ok) throw new Error("export failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = exportFileName();
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 5000);
-      setDownloaded(true);
-    } catch {
-      setProblem("Couldn't build the file. Try again.");
     } finally {
-      setDownloading(false);
+      setCgBusy(false);
     }
   }
 
-  function installSteps(): string[] {
-    const link = `${window.location.origin}/projects/${appId}`;
-    return (
-      {
-        tablet: [
-          `On the tablet, open ${link} in Safari or Chrome.`,
-          "Tap Share (iPad) or the ⋮ menu (Android), then “Add to Home Screen”.",
-          "Open it from the new icon — your live app, signed in as you.",
-          "Optional: turn on Guided Access (iPad) or Screen Pinning (Android) so customers can't leave the app.",
-        ],
-        phone: [
-          `Open ${link} on your phone.`,
-          "Tap Share → “Add to Home Screen” (iPhone) or ⋮ → “Add to Home Screen” (Android).",
-          "Open it from your home screen — your live app, signed in as you.",
-        ],
-        computer: [
-          `Open ${link} in Chrome or Edge.`,
-          "In Chrome: ⋮ → “Save and share” → “Install page as app” for a windowed shortcut; otherwise bookmark it.",
-          "It opens straight into your live app.",
-        ],
-        web: [
-          `It's live at ${link} — open it any time, on any device you're signed in on.`,
-          "To hand the app to someone else, download the file above and send it to them — it runs anywhere.",
-        ],
-      }[target] ?? []
-    );
-  }
+
 
   const initialMessage = useMemo(() => {
     const mine = notes
@@ -359,18 +392,6 @@ Thank you,
     });
     setBusy(false);
     setDone("rfqs-out");
-    router.refresh();
-  }
-
-  async function installed() {
-    setBusy(true);
-    const res = await markInstalled(appId, target);
-    setBusy(false);
-    if (!res.ok) {
-      setProblem("Couldn't save that. Try again.");
-      return;
-    }
-    setDone("installed");
     router.refresh();
   }
 
@@ -772,18 +793,33 @@ Thank you,
 
   function shipBody(): ReactNode {
     const liveLink = `${window.location.origin}/projects/${appId}`;
-    if (done === "installed") {
+    if (done === "downloaded") {
       return (
         <>
           <p className="hand" style={{ fontSize: 26, margin: 0, lineHeight: 1.2 }}>
-            {target === "web" ? "It's live." : "It's installed."}
+            Downloaded.
           </p>
           <p style={{ margin: 0 }}>
-            Open it any time at {liveLink}.
-            {downloaded
-              ? " Your file runs anywhere — send it, host it, keep building on it."
-              : " Download the file any time from this dialog to take it anywhere."}
+            {slug(project.name)}-app-code.zip is yours — unzip it,
+            double-click index.html, and it runs. Send it, host it, keep
+            building on it. Your live app stays here too: {liveLink}.
           </p>
+          <div className="install" style={{ marginTop: 12 }}>
+            <p style={{ margin: "0 0 10px" }}>
+              <strong>Take it further.</strong> The file is yours to keep
+              building on — or hand it to us: custom domain and hosting,
+              team logins, more Meta blocks, scheduled automations.
+            </p>
+            <ConciergeCard
+              appId={appId}
+              idPrefix="ship-further"
+              headline="Request sent"
+              blurb="Tell us what to add and we'll reply within 48 hours."
+              actionLabel="Ask the Bottega team"
+              mailSubject={`Keep building: ${project.name}`}
+              mailContext={`Project: ${project.name}\nKind: software\nWorkshop: ${workshopName}`}
+            />
+          </div>
           <div className="dialog-actions">
             <button
               type="button"
@@ -797,31 +833,12 @@ Thank you,
       );
     }
     if (!started) {
-      const targets = [
-        ["tablet", "Tablet"],
-        ["phone", "Phone"],
-        ["computer", "Computer"],
-        ["web", "Website"],
-      ];
       return (
         <>
           <p style={{ margin: 0 }}>
-            Where will you open {project.name}? I&apos;ll check the design,
-            package your file, and give you the steps.
+            I&apos;ll check the design and package your file — one zip,
+            yours to keep.
           </p>
-          <div className="chips" role="group" aria-label="Where it runs">
-            {targets.map(([id, l]) => (
-              <button
-                key={id}
-                type="button"
-                className="chip"
-                aria-pressed={target === id}
-                onClick={() => setTarget(id)}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
           {problem !== "" && (
             <p className="small" style={{ margin: 0, color: "var(--red)" }}>
               {problem}
@@ -835,9 +852,97 @@ Thank you,
               type="button"
               className="btn btn-primary"
               disabled={busy}
-              onClick={() => void runBuild()}
+              onClick={() => void runDownload()}
             >
-              <BIcon svg={B.icon("play")} /> {busy ? "Checking…" : "Build it"}
+              <BIcon svg={B.icon("play")} /> {busy ? "Checking…" : "Download it"}
+            </button>
+          </div>
+        </>
+      );
+    }
+    if (step === 0 && started && storedView && cgFiles) {
+      const withNotes = [...cgFiles, { path: "NOTES.txt", content: notesTxt }];
+      const bytes = withNotes.reduce((n, f) => n + f.content.length, 0);
+      const paths = withNotes.map((f) => f.path);
+      const complete =
+        paths.includes("index.html") &&
+        paths.includes("styles.css") &&
+        paths.includes("app.js") &&
+        paths.includes("README.txt");
+      return (
+        <>
+          <div className="log" aria-live="polite">
+            {[
+              `${project.name} — designed app in ${factor} shape`,
+              complete
+                ? "✓ Design checks passed"
+                : "… prototype not built yet",
+              `✓ ${cgFiles.map((f) => f.path).join(" · ")} (${Math.max(1, Math.round(bytes / 1024))} KB)`,
+            ].join("\n")}
+          </div>
+          {problem !== "" && (
+            <p className="small" style={{ margin: 0, color: "var(--red)" }}>
+              {problem}
+            </p>
+          )}
+          <div className="install" style={{ marginBottom: 12 }}>
+            {complete ? (
+              <p style={{ margin: "0 0 10px" }}>
+                <strong>First pass, working.</strong> This is the app from
+                your board, in {factor} shape — double-click index.html and
+                it runs. Download it to keep adding features yourself, or
+                ask the Bottega team to develop it further.
+              </p>
+            ) : (
+              <p style={{ margin: "0 0 10px" }}>
+                <strong>Not ready to download.</strong> The design is here
+                but the prototype was never wired up — walk back to the
+                Prototype step and let it build, then come back.
+              </p>
+            )}
+            {cgBusy && (
+              <p className="small" style={{ margin: "0 0 10px" }}>
+                Redesigning… {cgSecs}s (usually a couple of minutes)
+              </p>
+            )}
+            {cgProblem !== "" && (
+              <p
+                className="small"
+                style={{ margin: "0 0 10px", color: "var(--red)" }}
+              >
+                {cgProblem}
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={cgBusy}
+                onClick={() => void regenerateDesign()}
+              >
+                <BIcon svg={B.icon("play")} />{" "}
+                {cgBusy ? "Redesigning…" : "Redesign"}
+              </button>
+              {complete && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={busy}
+                  onClick={() => void downloadCodeZip()}
+                >
+                  <BIcon svg={B.icon("download")} />{" "}
+                  {busy ? "Finishing…" : "Download code (.zip)"}
+                </button>
+              )}
+            </div>
+            <p className="sim" style={{ marginBottom: 0 }}>
+              Data saves in that browser. Voice, counting and pictures are
+              marked where they belong — they run in Bottega.
+            </p>
+          </div>
+          <div className="dialog-actions">
+            <button type="button" className="btn" onClick={onClose}>
+              Close
             </button>
           </div>
         </>
@@ -851,15 +956,8 @@ Thank you,
               `${project.name} — spec v${meta.version}`,
               "✓ Design checks passed",
               `✓ ${meta.screens} screens · ${meta.blocks} blocks · ${meta.collections} collections · ${meta.records} records`,
-              `✓ ${exportFileName()} ready`,
             ].join("\n")}
           </div>
-          <p className="sim">
-            One file with your whole app: screens, blocks, and a copy of
-            your records. Open it anywhere, send it, host it, keep editing
-            the code. Voice and pictures run with a Meta key you paste in
-            the file.
-          </p>
           {problem !== "" && (
             <p className="small" style={{ margin: 0, color: "var(--red)" }}>
               {problem}
@@ -929,9 +1027,11 @@ Thank you,
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={() => downloadCodeZip()}
+                  disabled={busy}
+                  onClick={() => void downloadCodeZip()}
                 >
-                  <BIcon svg={B.icon("download")} /> Download code (.zip)
+                  <BIcon svg={B.icon("download")} />{" "}
+                  {busy ? "Finishing…" : "Download code (.zip)"}
                 </button>
               )}
             </div>
@@ -941,102 +1041,15 @@ Thank you,
             </p>
           </div>
           <div className="dialog-actions">
-            <button
-              type="button"
-              className="btn"
-              disabled={downloading}
-              onClick={() => void downloadApp()}
-            >
-              <BIcon svg={B.icon("download")} />{" "}
-              {downloading
-                ? "Building…"
-                : downloaded
-                  ? "Download again"
-                  : "Download your app"}
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => setStep(1)}
-            >
-              Install it <BIcon svg={B.icon("fwd")} />
+            <button type="button" className="btn" onClick={onClose}>
+              Close
             </button>
           </div>
         </>
       );
     }
-    return (
-      <>
-        <div className="install">
-          <p style={{ margin: "0 0 10px" }}>
-            It&apos;s built. Here&apos;s how to open it on your{" "}
-            {target === "web" ? "website" : target}:
-          </p>
-          <ol>
-            {installSteps().map((x) => (
-              <li key={x}>{x}</li>
-            ))}
-          </ol>
-        </div>
-        <div className="install" style={{ marginTop: 12 }}>
-          <p style={{ margin: "0 0 10px" }}>
-            <strong>Take it further.</strong> The file is yours to keep
-            building on — or hand it to us: custom domain and hosting,
-            team logins, more Meta blocks, scheduled automations.
-          </p>
-          <ConciergeCard
-            appId={appId}
-            idPrefix="ship-further"
-            headline="Request sent"
-            blurb="Tell us what to add and we'll reply within 48 hours."
-            actionLabel="Ask the Bottega team"
-            mailSubject={`Keep building: ${project.name}`}
-            mailContext={`Project: ${project.name}\nKind: software\nWorkshop: ${workshopName}`}
-          />
-        </div>
-        {problem !== "" && (
-          <p className="small" style={{ margin: 0, color: "var(--red)" }}>
-            {problem}
-          </p>
-        )}
-        <div className="dialog-actions">
-          <button
-            type="button"
-            className="btn"
-            disabled={downloading}
-            onClick={() => void downloadApp()}
-          >
-            <BIcon svg={B.icon("download")} />{" "}
-            {downloading ? "Building…" : "Download your app"}
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() =>
-              B.download(
-                `${slug(project.name)}-install.md`,
-                `# Installing ${project.name}\n\n` +
-                  installSteps()
-                    .map((x, i) => `${i + 1}. ${x}`)
-                    .join("\n") +
-                  "\n",
-              )
-            }
-          >
-            <BIcon svg={B.icon("download")} /> Save these steps
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={busy}
-            onClick={() => void installed()}
-          >
-            <BIcon svg={B.icon("check")} />{" "}
-            {busy ? "Saving…" : "I've installed it"}
-          </button>
-        </div>
-      </>
-    );
+    // Unreachable for ship: the flow is checks → download → done.
+    return null;
   }
 
   function exportBody(): ReactNode {
@@ -1102,7 +1115,7 @@ Thank you,
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <BIcon svg={CRATE_SVG} />
           <h2 id="dlg-title">
-            {flow === "ship" ? "Build and install" : "Send it off"}
+            {flow === "ship" ? "Download" : "Send it off"}
           </h2>
         </div>
         <button

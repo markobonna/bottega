@@ -174,6 +174,94 @@ describe("spec ops", () => {
     expect(result.ok).toBe(false);
   });
 
+  test("moveScreen reorders tabs", () => {
+    const result = applyOps(coleSpec(), [
+      { op: "moveScreen", id: "quote", at: 0 },
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.spec.screens.map((s) => s.id)).toEqual([
+      "quote",
+      "pieces",
+      "damage",
+      "before_after",
+    ]);
+  });
+
+  test("moveScreen rejects a missing screen and a wild index", () => {
+    expect(
+      applyOps(coleSpec(), [{ op: "moveScreen", id: "nope", at: 0 }]).ok,
+    ).toBe(false);
+    const wild = applyOps(coleSpec(), [{ op: "moveScreen", id: "quote", at: 9 }]);
+    expect(wild.ok).toBe(false);
+    if (!wild.ok) {
+      expect(wild.issues[0]).toContain("out of range");
+    }
+  });
+
+  test("updateCollection renames a collection", () => {
+    const result = applyOps(coleSpec(), [
+      { op: "updateCollection", id: "pieces", set: { name: "Restorations" } },
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.spec.collections[0].name).toBe("Restorations");
+  });
+
+  test("updateField renames a field and edits choice options", () => {
+    const result = applyOps(coleSpec(), [
+      {
+        op: "updateField",
+        collection: "pieces",
+        id: "status",
+        set: { name: "Stage", options: ["assessing", "quoted", "done"] },
+      },
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const status = result.spec.collections[0].fields.find(
+      (f) => f.id === "status",
+    );
+    expect(status?.name).toBe("Stage");
+    expect(status?.options).toEqual(["assessing", "quoted", "done"]);
+  });
+
+  test("updateField refuses options on a non-choice field", () => {
+    const result = applyOps(coleSpec(), [
+      {
+        op: "updateField",
+        collection: "pieces",
+        id: "notes",
+        set: { options: ["a", "b"] },
+      },
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues[0]).toContain("not choice");
+    }
+  });
+
+  test("duplicateBlock copies a block under a new id", () => {
+    const result = applyOps(coleSpec(), [
+      { op: "duplicateBlock", id: "pieces_list", newId: "pieces_list_2" },
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const ids = result.spec.screens[0].blocks.map((b) => b.id);
+    expect(ids).toContain("pieces_list");
+    expect(ids).toContain("pieces_list_2");
+  });
+
+  test("duplicateBlock rejects a taken id", () => {
+    const result = applyOps(coleSpec(), [
+      { op: "duplicateBlock", id: "pieces_list", newId: "pieces_form" },
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues[0]).toContain("duplicate block id");
+    }
+  });
+
   test("the input spec is unchanged after any call", () => {
     const snapshot = JSON.stringify(maria);
     const parsed = parseSpec(structuredClone(maria));

@@ -6,6 +6,7 @@ import { SUGGEST_SYSTEM, WireSuggestSchema, wireOpToOp } from "@/lib/prompts";
 import { applyOps } from "@/lib/spec/ops";
 import { diffSpecs } from "@/lib/spec/diff";
 import { parseSpec } from "@/lib/spec/schema";
+import { parseSoftwareFilesState } from "@/lib/software-build";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -55,11 +56,27 @@ export async function POST(req: Request): Promise<Response> {
   if (body instanceof Response) return body;
   const { data: app } = await auth.supabase
     .from("apps")
-    .select("spec, private, owner")
+    .select("spec, private, owner, build_files")
     .eq("id", body.appId)
     .maybeSingle();
   if (!app || app.owner !== auth.user.id)
     return Response.json({ error: "No such project." }, { status: 404 });
+  // Spark-built software improves through direct revision (the change
+  // bar), not spec ops — suggestions would speak the wrong language.
+  // That includes undesigned software: the stub spec (no screens yet)
+  // must skip Wonder too, or every new board burns ~2 minutes for
+  // suggestions about an empty app.
+  if (parseSoftwareFilesState(app.build_files) !== null) {
+    return Response.json({ suggestions: [] });
+  }
+  const stubCheck = parseSpec(app.spec);
+  if (
+    stubCheck.ok &&
+    stubCheck.spec.screens.length === 0 &&
+    stubCheck.spec.collections.length === 0
+  ) {
+    return Response.json({ suggestions: [] });
+  }
   const parsed = parseSpec(app.spec);
   if (!parsed.ok)
     return Response.json({ error: "Bad project spec." }, { status: 404 });

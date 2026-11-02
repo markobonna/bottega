@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 import { readJson, requireUser } from "@/lib/api";
-import { restorePrevious, restoreVersion } from "@/lib/versions";
+import { parseSoftwareFilesState } from "@/lib/software-build";
+import {
+  restorePrevious,
+  restorePreviousFiles,
+  restoreVersion,
+} from "@/lib/versions";
 
 export const runtime = "nodejs";
 
@@ -17,7 +22,7 @@ export async function POST(req: Request): Promise<Response> {
   if (body instanceof Response) return body;
   const { data: app } = await auth.supabase
     .from("apps")
-    .select("version, owner")
+    .select("version, owner, build_files")
     .eq("id", body.appId)
     .maybeSingle();
   if (!app || app.owner !== auth.user.id)
@@ -26,8 +31,12 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "Nothing to undo yet." }, { status: 400 });
   }
   try {
-    const { version } =
-      body.version === undefined
+    const filesUndo =
+      body.version === undefined &&
+      parseSoftwareFilesState(app.build_files) !== null;
+    const { version } = filesUndo
+      ? await restorePreviousFiles(auth.supabase, body.appId)
+      : body.version === undefined
         ? await restorePrevious(auth.supabase, body.appId)
         : await restoreVersion(auth.supabase, body.appId, body.version);
     return Response.json({ version });

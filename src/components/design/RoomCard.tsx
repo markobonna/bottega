@@ -20,6 +20,7 @@ export default function RoomCard({
   name,
   meta,
   imageUrl,
+  snapshotDoc,
   x,
   y,
   sceneRef,
@@ -28,7 +29,8 @@ export default function RoomCard({
   id: string;
   name: string;
   meta: string;
-  imageUrl: string;
+  imageUrl: string | null;
+  snapshotDoc: string | null;
   x: number;
   y: number;
   sceneRef: React.RefObject<HTMLDivElement | null>;
@@ -210,19 +212,39 @@ export default function RoomCard({
             : "0 2px 8px rgba(0,0,0,0.18)",
         }}
       >
-        <img
-          src={imageUrl}
-          alt=""
-          draggable={false}
-          style={{
-            display: "block",
-            width: "100%",
-            aspectRatio: "1/1",
-            objectFit: "cover",
-            borderRadius: 3,
-            pointerEvents: "none",
-          }}
-        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt=""
+            draggable={false}
+            style={{
+              display: "block",
+              width: "100%",
+              aspectRatio: "1/1",
+              objectFit: "cover",
+              borderRadius: 3,
+              pointerEvents: "none",
+            }}
+          />
+        ) : snapshotDoc ? (
+          <iframe
+            title={`${name} preview`}
+            sandbox="allow-scripts"
+            srcDoc={snapshotDoc}
+            tabIndex={-1}
+            aria-hidden="true"
+            draggable={false}
+            style={{
+              display: "block",
+              width: "100%",
+              aspectRatio: "1/1",
+              border: "none",
+              borderRadius: 3,
+              background: "#fff",
+              pointerEvents: "none",
+            }}
+          />
+        ) : null}
         <span
           className="small"
           style={{

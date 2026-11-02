@@ -264,9 +264,19 @@ export default function TalkBar() {
               autoComplete="off"
               value={text}
               disabled={thinking}
+              maxLength={1500}
               onChange={(e) => setText(e.target.value)}
               placeholder={placeholderFor(pathname)}
             />
+            {text.length > 0 && (
+              <span
+                className="small"
+                style={{ flex: "none", color: "var(--muted)" }}
+                aria-label={`${1500 - text.length} characters left`}
+              >
+                {1500 - text.length}
+              </span>
+            )}
             <button
               type="button"
               id="talk-mic"

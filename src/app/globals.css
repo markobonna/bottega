@@ -1119,6 +1119,16 @@
   flex-direction: column;
   gap: 14px;
 }
+.b-scope .bench .railcol {
+  flex: 1 1 340px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.b-scope .bench .railcol .margin {
+  flex: none;
+}
 .b-scope .toolbar {
   display: flex;
   flex-wrap: wrap;

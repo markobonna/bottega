@@ -6,6 +6,7 @@ import {
   Suspense,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -29,7 +30,14 @@ import {
   type WireScreen,
 } from "@/lib/design/spec-wireframe";
 import { buildPackFiles } from "@/lib/design/pack-files";
-import { stageLabelsFor, toolIcon, toolsFor } from "@/lib/design/tools";
+import { inlineFiles } from "@/lib/software-build";
+import {
+  stageLabelsFor,
+  stepLabel,
+  stepPosition,
+  toolIcon,
+  toolsFor,
+} from "@/lib/design/tools";
 import type { DbRecord } from "@/lib/records";
 import type { AppSpec } from "@/lib/spec/schema";
 import AppRuntime from "../runtime/AppRuntime";
@@ -43,7 +51,7 @@ import "@/vendor/bottega/art/board.js";
 import ArrivalDialog from "./ArrivalDialog";
 import BuildGallery from "./BuildGallery";
 import ConciergeCard from "./ConciergeCard";
-import { BIcon } from "./Dialog";
+import Dialog, { BIcon } from "./Dialog";
 import MarginNotes from "./MarginNotes";
 import LookPainter from "./LookPainter";
 import SketchPending from "./SketchPending";
@@ -99,6 +107,7 @@ export default function BoardPanel({
   runtime,
   wireScreens,
   formFactor,
+  builtFiles,
 }: {
   appId: string;
   project: { name: string; medium: DesignMedium; stage: LiveStage };
@@ -135,31 +144,139 @@ export default function BoardPanel({
   wireScreens?: WireScreen[];
   // Mobile or desktop, picked before the sketch shows. Null = unasked.
   formFactor: "mobile" | "desktop" | null;
+  // Spark-built app files (revision 4 software). Absent for legacy
+  // spec-built apps, which keep the classic wireframe + runtime.
+  builtFiles?: { path: string; content: string }[];
 }) {
   const B = window.B;
   const router = useRouter();
   const medium = B.MEDIUMS[project.medium] ?? B.MEDIUMS.hardware;
   const tools = toolsFor(project.medium, medium.tools);
-  // Software sketches ARE the spec: a live wireframe, no painted art.
+  // Software step 1: new apps show the Spark-designed app itself;
+  // legacy spec-built apps show the spec as a live wireframe.
   const specSketch = project.medium === "software";
   const si = B.STAGES.indexOf(project.stage);
+  // Stepper position: software skips the Test slot.
+  const pos = stepPosition(project.medium, si);
+  // Revision 4 software carries Spark-built files; legacy spec-built apps
+  // (seeds) keep the classic wireframe + runtime below.
+  const hasFiles = specSketch && !!builtFiles?.length;
+  const legacySpec =
+    specSketch && !hasFiles && (wireScreens?.length ?? 0) > 0;
   // The shape question gates the sketch: no pick, no sketch.
   const needFactor = specSketch && si === 0 && !formFactor;
   const [factorBusy, setFactorBusy] = useState(false);
   const [factorProblem, setFactorProblem] = useState("");
+  const [designing, setDesigning] = useState(false);
+  const [fullView, setFullView] = useState(false);
+  // The prototype phase lands app.js: until it does, the design is
+  // static. Visiting the Prototype step builds it, once per design.
+  const hasJs = specSketch && !!builtFiles?.some((f) => f.path === "app.js");
+  const [protoBusy, setProtoBusy] = useState(false);
+  const [protoProblem, setProtoProblem] = useState("");
+  const protoKick = useRef("");
+  const previewDoc = useMemo(
+    () => (builtFiles?.length ? inlineFiles(builtFiles) : ""),
+    [builtFiles],
+  );
 
   async function pickFactor(factor: "mobile" | "desktop") {
-    if (factorBusy) return;
-    setFactorBusy(true);
-    setFactorProblem("");
-    const res = await setFormFactor(appId, factor);
-    setFactorBusy(false);
-    if (!res.ok) {
-      setFactorProblem("Couldn't save that. Try again.");
+    if (factorBusy || designing) return;
+    if (legacySpec) {
+      setFactorBusy(true);
+      setFactorProblem("");
+      const res = await setFormFactor(appId, factor);
+      setFactorBusy(false);
+      if (!res.ok) {
+        setFactorProblem("Couldn't save that. Try again.");
+        return;
+      }
+      router.refresh();
       return;
     }
-    router.refresh();
+    // New software: picking the shape designs the app. The countdown
+    // holds the board while Spark works.
+    setFactorBusy(true);
+    setDesigning(true);
+    setFactorProblem("");
+    try {
+      const res = await fetch("/api/software-design", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId, formFactor: factor, phase: "design" }),
+      });
+      if (res.status === 503) {
+        setFactorProblem(
+          "Designing is off right now (no model key). Try again once a key is set.",
+        );
+        return;
+      }
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(data?.error || "design failed");
+      }
+      router.refresh();
+    } catch (e) {
+      setFactorProblem(
+        e instanceof Error && e.message !== "design failed"
+          ? e.message
+          : "Couldn't design that. Try again.",
+      );
+    } finally {
+      setFactorBusy(false);
+      setDesigning(false);
+    }
   }
+  async function runPrototype() {
+    if (protoBusy) return;
+    setProtoBusy(true);
+    setProtoProblem("");
+    try {
+      const res = await fetch("/api/software-design", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appId,
+          formFactor: formFactor ?? "mobile",
+          phase: "prototype",
+        }),
+      });
+      if (res.status === 503) {
+        setProtoProblem(
+          "Prototyping is off right now (no model key). Try again once a key is set.",
+        );
+        return;
+      }
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(data?.error || "prototype failed");
+      }
+      router.refresh();
+    } catch (e) {
+      setProtoProblem(
+        e instanceof Error && e.message !== "prototype failed"
+          ? e.message
+          : "Couldn't build the prototype. Try again.",
+      );
+    } finally {
+      setProtoBusy(false);
+    }
+  }
+  useEffect(() => {
+    // Auto-build on arrival at the Prototype step. The ref keys the
+    // kick to the design's content, so a redesign re-kicks exactly
+    // once while StrictMode's double-effect only kicks once.
+    if (!(specSketch && si === 1 && hasFiles && !hasJs) || protoBusy) return;
+    const key = `${appId}:${(builtFiles ?? []).map((f) => f.path).join(",")}:${(builtFiles?.find((f) => f.path === "index.html")?.content.length ?? 0)}`;
+    if (protoKick.current === key) return;
+    protoKick.current = key;
+    void runPrototype();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specSketch, si, hasFiles, hasJs, appId]);
   const [mode, setMode] = useState<string | null>(null);
   const [tool, setTool] = useState<string>(tools[0][0]);
   const [part, setPart] = useState<number>(1);
@@ -216,7 +333,7 @@ export default function BoardPanel({
         medium: project.medium,
         tagline,
         workshopName: backTo.name,
-        stageLabel: labels[si] ?? labels[0],
+        stageLabel: stepLabel(labels, project.medium, si),
         notes,
         drafts,
         tools,
@@ -395,12 +512,12 @@ export default function BoardPanel({
                 {i > 0 && (
                   <li
                     aria-hidden="true"
-                    className={`bar${i > si ? " todo" : ""}`}
+                    className={`bar${i > pos ? " todo" : ""}`}
                   />
                 )}
                 <li
-                  className={i === si ? "now" : i > si ? "todo-label" : ""}
-                  aria-current={i === si ? "step" : undefined}
+                  className={i === pos ? "now" : i > pos ? "todo-label" : ""}
+                  aria-current={i === pos ? "step" : undefined}
                 >
                   <svg
                     width="18"
@@ -408,9 +525,9 @@ export default function BoardPanel({
                     viewBox="0 0 18 18"
                     aria-hidden="true"
                   >
-                    {i < si ? (
+                    {i < pos ? (
                       <circle cx="9" cy="9" r="7" fill="#33261A" />
-                    ) : i === si ? (
+                    ) : i === pos ? (
                       <>
                         <circle
                           cx="9"
@@ -444,13 +561,19 @@ export default function BoardPanel({
               <button
                 type="button"
                 className="btn btn-dark"
-                disabled={advancing || needFactor}
+                disabled={
+                  advancing ||
+                  needFactor ||
+                  (specSketch && !legacySpec && !hasFiles)
+                }
                 onClick={() => void advance()}
               >
                 <BIcon svg={B.icon("check")} />{" "}
                 {needFactor
                   ? "Pick mobile or desktop first"
-                  : `Looks good — ${labels[1]}`}
+                  : specSketch && !legacySpec && !hasFiles
+                    ? "Design it first"
+                    : `Looks good — ${labels[1]}`}
               </button>
             </div>
           )}
@@ -490,7 +613,7 @@ export default function BoardPanel({
                 onClick={() => setSending(true)}
               >
                 <BIcon svg={B.icon("crate")} />{" "}
-                {medium.flow === "ship" ? "Build and install" : "Send it off"}
+                {medium.flow === "ship" ? "Download" : "Send it off"}
               </button>
             </div>
           )}
@@ -588,11 +711,13 @@ export default function BoardPanel({
           <BIcon svg={B.icon("check", 28)} />
           <div className="grow">
             <strong>
-              {labels[4]}
+              {medium.arrivedLabel}
               {order ? ` — ${order.vendors.map((v) => v.name).join(", ")}` : ""}
             </strong>
             <div className="small">
-              It&apos;s in {backTo.name} now, ready to use.
+              {project.medium === "software"
+                ? "The zip is yours — unzip it, double-click index.html, and it runs."
+                : `It's in ${backTo.name} now, ready to use.`}
             </div>
             {arrivalPhotoUrl && (
               <img
@@ -608,8 +733,17 @@ export default function BoardPanel({
             disabled={advancing}
             onClick={() => void goBack()}
           >
-            ← {labels[3]}
+            ← {stepLabel(labels, project.medium, si - 1)}
           </button>
+          {project.medium === "software" && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setSending(true)}
+            >
+              <BIcon svg={B.icon("download")} /> Download again
+            </button>
+          )}
           <Link href={`/workshops/${backTo.id}`} className="btn">
             See it in the room
           </Link>
@@ -644,96 +778,166 @@ export default function BoardPanel({
           onPhase={(p) => setArtFailed(p === "off" || p === "failed")}
         />
       )}
-      <BuildGallery
-        appId={appId}
-        medium={project.medium}
-        photoUrls={photoUrls}
-        photoPaths={photoPaths}
-      />
+      {project.medium !== "software" && (
+        <BuildGallery
+          appId={appId}
+          medium={project.medium}
+          photoUrls={photoUrls}
+          photoPaths={photoPaths}
+        />
+      )}
       <section className="bench">
         <div className="boardcol">
-          <div
-            className="toolbar"
-            role="toolbar"
-            aria-label={`${medium.label} tools`}
-          >
-            <span className="lab">{medium.label} tools</span>
-            {tools.map(([id, label]) =>
-              id === "preview" ? (
-                <button
-                  key={id}
-                  type="button"
-                  className="tool"
-                  onClick={() => {
-                    document
-                      .getElementById("app-preview")
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }}
-                >
-                  <BIcon svg={B.icon(toolIcon(id), 18, 1.9)} /> {label}
-                </button>
-              ) : (
-                <button
-                  key={id}
-                  type="button"
-                  className="tool"
-                  aria-pressed={tool === id}
-                  onClick={() => {
-                    setTool(id);
-                    document
-                      .getElementById("margin-notes")
-                      ?.scrollIntoView({ block: "nearest" });
-                  }}
-                >
-                  <BIcon svg={B.icon(toolIcon(id), 18, 1.9)} /> {label}
-                </button>
-              ),
-            )}
-          </div>
           {runtime && (
             <>
+              {specSketch && !formFactor && (
+                <div
+                  className="card"
+                  style={{
+                    padding: "10px 14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span className="small" style={{ margin: 0 }}>
+                    Mobile or desktop? Pick the shape to frame this app:
+                  </span>
+                  {(["mobile", "desktop"] as const).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      className="chip"
+                      disabled={factorBusy}
+                      onClick={() => void pickFactor(f)}
+                    >
+                      {f === "mobile" ? "📱 Mobile" : "🖥️ Desktop"}
+                    </button>
+                  ))}
+                  {factorProblem !== "" && (
+                    <span
+                      className="small"
+                      style={{ margin: 0, color: "var(--red)" }}
+                    >
+                      {factorProblem}
+                    </span>
+                  )}
+                </div>
+              )}
               <div
                 id="app-preview"
                 className="card"
                 style={{ scrollMarginTop: 12, padding: 16 }}
               >
-                <div
-                  className={
-                    formFactor === "desktop"
-                      ? "device-desktop"
-                      : formFactor === "mobile"
-                        ? "device-mobile"
-                        : undefined
-                  }
-                >
-                  <Suspense
-                    fallback={<p className="text-muted">Loading…</p>}
+                {hasFiles ? (
+                  hasJs ? (
+                    <>
+                      <div
+                        className={
+                          formFactor === "desktop"
+                            ? "device-desktop"
+                            : "device-mobile"
+                        }
+                      >
+                        <iframe
+                          title={`${project.name} working prototype`}
+                          sandbox="allow-scripts"
+                          srcDoc={previewDoc}
+                          style={{
+                            width: "100%",
+                            height: formFactor === "desktop" ? 560 : 620,
+                            border: "none",
+                            borderRadius: 8,
+                            background: "#fff",
+                          }}
+                        />
+                      </div>
+                      <div style={{ marginTop: 12 }}>
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => setFullView(true)}
+                        >
+                          Open fullscreen
+                        </button>
+                      </div>
+                    </>
+                  ) : protoBusy ? (
+                    <div style={{ position: "relative", minHeight: 320 }}>
+                      <SketchPending kind="Prototype" />
+                    </div>
+                  ) : (
+                    <div className="card" style={{ padding: 20 }}>
+                      <p className="hand" style={{ fontSize: 24, margin: 0 }}>
+                        The prototype isn&apos;t wired up yet.
+                      </p>
+                      <p className="small" style={{ margin: "8px 0 0" }}>
+                        {protoProblem !== ""
+                          ? protoProblem
+                          : "The design is ready — build the working version from it."}
+                      </p>
+                      <div style={{ marginTop: 12 }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => void runPrototype()}
+                        >
+                          Build the prototype
+                        </button>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <div
+                    className={
+                      formFactor === "desktop"
+                        ? "device-desktop"
+                        : formFactor === "mobile"
+                          ? "device-mobile"
+                          : undefined
+                    }
                   >
-                    <AppRuntime
-                      app={runtime.app}
-                      spec={runtime.spec}
-                      records={runtime.records}
-                      embedded
-                      layout={formFactor ?? "auto"}
-                    />
-                  </Suspense>
-                </div>
+                    <Suspense
+                      fallback={<p className="text-muted">Loading…</p>}
+                    >
+                      <AppRuntime
+                        app={runtime.app}
+                        spec={runtime.spec}
+                        records={runtime.records}
+                        embedded
+                        layout={
+                          formFactor === "mobile"
+                            ? "phone"
+                            : (formFactor ?? "auto")
+                        }
+                      />
+                    </Suspense>
+                  </div>
+                )}
               </div>
               <p className="small" style={{ margin: 0 }}>
-                {`${labels[si] ?? "Prototype"} · draft ${drafts.length} — the working app, live. Tap through it; it runs on your data.`}
+                {!hasFiles
+                  ? `${stepLabel(labels, project.medium, si)} · draft ${drafts.length}${formFactor ? ` · ${formFactor}` : ""} — the working app, live. Tap through it; it runs on your data.`
+                  : hasJs
+                    ? `${stepLabel(labels, project.medium, si)} · draft ${drafts.length}${formFactor ? ` · ${formFactor}` : ""} — the working app, first pass. Tap through it; it runs on its own.`
+                    : `${stepLabel(labels, project.medium, si)} · draft ${drafts.length}${formFactor ? ` · ${formFactor}` : ""} — the design, waiting on its wiring.`}
               </p>
             </>
           )}
           {specSketch ? (
             si === 0 ? (
-              needFactor ? (
+              designing ? (
+                <SketchPending kind="Design" />
+              ) : needFactor ? (
                 <div className="card" style={{ padding: 20 }}>
                   <p className="hand" style={{ fontSize: 24, margin: 0 }}>
                     Is this a mobile or a desktop app?
                   </p>
                   <p className="small" style={{ margin: "8px 0 0" }}>
-                    Pick the shape and I&apos;ll draw your sketch in it —
-                    the download at the end matches what you see here.
+                    Pick the shape and I&apos;ll design your app in it —
+                    a real first pass, working. The download at the end
+                    matches what you see here.
                   </p>
                   {factorProblem !== "" && (
                     <p
@@ -761,7 +965,57 @@ export default function BoardPanel({
                     ))}
                   </div>
                 </div>
-              ) : (
+              ) : hasFiles ? (
+                <>
+                  <div className="card" style={{ padding: 16 }}>
+                    <div
+                      className={
+                        formFactor === "desktop"
+                          ? "device-desktop"
+                          : "device-mobile"
+                      }
+                      style={{ pointerEvents: "none" }}
+                    >
+                      <iframe
+                        title={`${project.name} design preview`}
+                        sandbox="allow-scripts"
+                        srcDoc={previewDoc}
+                        style={{
+                          width: "100%",
+                          height: formFactor === "desktop" ? 560 : 620,
+                          border: "none",
+                          borderRadius: 8,
+                          background: "#fff",
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <p className="small" style={{ margin: 0 }}>
+                    {`Blueprint · draft ${drafts.length} — designed from your words in ${formFactor ?? "mobile"} shape. Look it over, then walk it to Prototype to tap through it. `}
+                    <button
+                      type="button"
+                      disabled={factorBusy}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        color: "var(--red)",
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                        font: "inherit",
+                      }}
+                      onClick={() =>
+                        void pickFactor(
+                          formFactor === "desktop" ? "mobile" : "desktop",
+                        )
+                      }
+                    >
+                      Redesign for{" "}
+                      {formFactor === "desktop" ? "mobile" : "desktop"}
+                    </button>
+                  </p>
+                </>
+              ) : legacySpec ? (
                 <>
                   <div className="card" style={{ padding: 16 }}>
                     <span
@@ -798,6 +1052,29 @@ export default function BoardPanel({
                     </button>
                   </p>
                 </>
+              ) : (
+                <div className="card" style={{ padding: 20 }}>
+                  <p className="hand" style={{ fontSize: 24, margin: 0 }}>
+                    The design didn&apos;t land.
+                  </p>
+                  <p className="small" style={{ margin: "8px 0 0" }}>
+                    {factorProblem !== ""
+                      ? factorProblem
+                      : "Something went wrong while designing. Try again — your shape is saved."}
+                  </p>
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={factorBusy}
+                      onClick={() =>
+                        void pickFactor(formFactor ?? "mobile")
+                      }
+                    >
+                      Design it again
+                    </button>
+                  </div>
+                </div>
               )
             ) : null
           ) : (
@@ -939,17 +1216,67 @@ export default function BoardPanel({
           </>
           )}
         </div>
-        <MarginNotes
-          appId={appId}
-          medium={project.medium}
-          initial={notes}
-          activePart={boardPhoto || boardPending ? null : part}
-          onPart={setPart}
-          partLabel={partLabel}
-          locked={si >= 3}
-          topics={tools}
-          topicId={tool}
-        />
+        <div className="railcol">
+          <MarginNotes
+            appId={appId}
+            medium={project.medium}
+            initial={notes}
+            activePart={boardPhoto || boardPending ? null : part}
+            onPart={setPart}
+            partLabel={partLabel}
+            locked={si >= 3}
+            topics={tools}
+            topicId={tool}
+          />
+          {specSketch && (
+            <div className="card" style={{ padding: "12px 14px" }}>
+              <p className="small" style={{ margin: 0 }}>
+                <strong>How this works.</strong> The Blueprint is a still
+                look — not clickable. The Prototype taps through so you can
+                feel it. The Download is yours to wire up: backend,
+                hosting, whatever&apos;s next.
+              </p>
+            </div>
+          )}
+          <div
+            className="toolbar"
+            role="toolbar"
+            aria-label={`${medium.label} tools`}
+          >
+            <span className="lab">{medium.label} tools</span>
+            {tools.map(([id, label]) =>
+              id === "preview" ? (
+                <button
+                  key={id}
+                  type="button"
+                  className="tool"
+                  onClick={() => {
+                    document
+                      .getElementById("app-preview")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                >
+                  <BIcon svg={B.icon(toolIcon(id), 18, 1.9)} /> {label}
+                </button>
+              ) : (
+                <button
+                  key={id}
+                  type="button"
+                  className="tool"
+                  aria-pressed={tool === id}
+                  onClick={() => {
+                    setTool(id);
+                    document
+                      .getElementById("margin-notes")
+                      ?.scrollIntoView({ block: "nearest" });
+                  }}
+                >
+                  <BIcon svg={B.icon(toolIcon(id), 18, 1.9)} /> {label}
+                </button>
+              ),
+            )}
+          </div>
+        </div>
       </section>
 
       {si === 2 && (
@@ -1052,10 +1379,11 @@ export default function BoardPanel({
             tagline,
           }}
           workshopName={backTo.name}
-          stageLabel={(() => {
-            const idx = B.STAGES.indexOf(project.stage);
-            return labels[Math.max(0, idx)];
-          })()}
+          stageLabel={stepLabel(
+            labels,
+            project.medium,
+            B.STAGES.indexOf(project.stage),
+          )}
           notes={notes.map((n) => ({
             who: n.who,
             part: n.part,
@@ -1083,8 +1411,44 @@ export default function BoardPanel({
             project.medium,
             shipTarget,
           )}
-          arrivedLabel={labels[4]}
+          arrivedLabel={medium.arrivedLabel}
         />
+      )}
+      {fullView && hasFiles && (
+        <Dialog
+          labelledBy="fullview-title"
+          onClose={() => setFullView(false)}
+          wide
+        >
+          <h2 id="fullview-title" className="h2" style={{ marginTop: 0 }}>
+            {project.name}
+          </h2>
+          <p className="small" style={{ marginTop: 0 }}>
+            First pass, working — isolated preview, your Bottega data
+            stays untouched.
+          </p>
+          <iframe
+            title={`${project.name} fullscreen prototype`}
+            sandbox="allow-scripts"
+            srcDoc={previewDoc}
+            style={{
+              width: "100%",
+              height: "70vh",
+              border: "1px solid var(--line)",
+              borderRadius: 8,
+              background: "#fff",
+            }}
+          />
+          <div className="dialog-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setFullView(false)}
+            >
+              Back to the board
+            </button>
+          </div>
+        </Dialog>
       )}
     </div>
   );

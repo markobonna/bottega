@@ -11,6 +11,11 @@ import {
 } from "./prompts";
 import { applyOps, type Op } from "./spec/ops";
 import { diffSpecs, type SpecDiff } from "./spec/diff";
+import { reviseSoftwareFiles } from "./software-server";
+import {
+  changedFilePaths,
+  parseSoftwareFilesState,
+} from "./software-build";
 import { parseSpec, type AppSpec } from "./spec/schema";
 import type { Database } from "./supabase/types";
 
@@ -30,6 +35,7 @@ export interface EditProposal {
   baseVersion: number;
   preview: SpecDiff;
   answeredBy?: string;
+  files?: { path: string; content: string }[];
 }
 
 function attempt(
@@ -59,10 +65,35 @@ export async function proposeEdit(
   }
   const { data: app } = await supabase
     .from("apps")
-    .select("spec, version, private")
+    .select("spec, version, private, build_files")
     .eq("id", appId)
     .maybeSingle();
   if (!app) throw new EditError(404, "No such project.");
+  const filesState = parseSoftwareFilesState(app.build_files);
+  if (filesState) {
+    // Spark-built software: revise the files directly, Replit-style.
+    // Nothing is saved; accept() stores the returned files.
+    const { files, via } = await reviseSoftwareFiles(
+      filesState.files,
+      request,
+    );
+    const changed = changedFilePaths(filesState.files, files);
+    return {
+      summary:
+        changed.length > 0
+          ? `Code updated (${changed.join(", ")})`
+          : "No changes needed",
+      ops: [],
+      baseVersion: app.version,
+      preview: {
+        added: [],
+        changed: changed.map((p) => `File: ${p} updated`),
+        removed: [],
+      },
+      files,
+      ...(via === "open" ? { answeredBy: "muse-spark-open" } : {}),
+    };
+  }
   const parsed = parseSpec(app.spec);
   if (!parsed.ok) throw new EditError(404, "Bad project spec.");
   const base = JSON.stringify(parsed.spec);

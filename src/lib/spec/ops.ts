@@ -25,6 +25,11 @@ export const OpSchema = z.discriminatedUnion("op", [
   }),
   z.object({ op: z.literal("removeScreen"), id: z.string() }),
   z.object({
+    op: z.literal("moveScreen"),
+    id: z.string(),
+    at: z.number().int().min(0),
+  }),
+  z.object({
     op: z.literal("addBlock"),
     screen: z.string(),
     block: BlockSchema,
@@ -44,9 +49,30 @@ export const OpSchema = z.discriminatedUnion("op", [
   }),
   z.object({ op: z.literal("addCollection"), collection: CollectionSchema }),
   z.object({
+    op: z.literal("updateCollection"),
+    id: z.string(),
+    set: z.object({ name: z.string() }),
+  }),
+  z.object({
     op: z.literal("addField"),
     collection: z.string(),
     field: FieldSchema,
+  }),
+  z.object({
+    op: z.literal("updateField"),
+    collection: z.string(),
+    id: z.string(),
+    set: z.object({
+      name: z.string().optional(),
+      options: z.array(z.string()).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("duplicateBlock"),
+    id: z.string(),
+    newId: z.string(),
+    screen: z.string().optional(),
+    at: atIndex,
   }),
   z.object({
     op: z.literal("renameApp"),
@@ -105,6 +131,17 @@ function applyOne(spec: AppSpec, op: Op): string | null {
       spec.screens.splice(si, 1);
       return null;
     }
+    case "moveScreen": {
+      const si = spec.screens.findIndex((s) => s.id === op.id);
+      if (si < 0) return `no screen '${op.id}'`;
+      const [screen] = spec.screens.splice(si, 1);
+      if (op.at > spec.screens.length) {
+        spec.screens.splice(si, 0, screen);
+        return `screen index ${op.at} out of range`;
+      }
+      spec.screens.splice(op.at, 0, screen);
+      return null;
+    }
     case "addBlock": {
       const screen = spec.screens.find((s) => s.id === op.screen);
       if (!screen) return `no screen '${op.screen}'`;
@@ -156,6 +193,45 @@ function applyOne(spec: AppSpec, op: Op): string | null {
         return `duplicate field id '${op.field.id}' in collection '${op.collection}'`;
       }
       coll.fields.push(op.field);
+      return null;
+    }
+    case "updateCollection": {
+      const coll = spec.collections.find((c) => c.id === op.id);
+      if (!coll) return `no collection '${op.id}'`;
+      coll.name = op.set.name;
+      return null;
+    }
+    case "updateField": {
+      const coll = spec.collections.find((c) => c.id === op.collection);
+      if (!coll) return `no collection '${op.collection}'`;
+      const field = coll.fields.find((f) => f.id === op.id);
+      if (!field) return `no field '${op.id}' in collection '${op.collection}'`;
+      if (op.set.name !== undefined) field.name = op.set.name;
+      if (op.set.options !== undefined) {
+        if (field.type !== "choice") {
+          return `field '${op.id}' is ${field.type}, not choice — options need a choice field`;
+        }
+        field.options = op.set.options;
+      }
+      return null;
+    }
+    case "duplicateBlock": {
+      const found = findBlock(spec, op.id);
+      if (!found) return `no block '${op.id}'`;
+      if (findBlock(spec, op.newId)) {
+        return `duplicate block id '${op.newId}'`;
+      }
+      const target = op.screen
+        ? spec.screens.find((s) => s.id === op.screen)
+        : spec.screens[found.si];
+      if (!target) return `no screen '${op.screen}'`;
+      const at = op.at ?? target.blocks.length;
+      if (at > target.blocks.length) {
+        return `block index ${at} out of range`;
+      }
+      const copy = structuredClone(spec.screens[found.si].blocks[found.bi]);
+      copy.id = op.newId;
+      target.blocks.splice(at, 0, copy);
       return null;
     }
     case "renameApp": {

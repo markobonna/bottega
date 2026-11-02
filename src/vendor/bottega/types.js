@@ -78,7 +78,7 @@
     software: {
       label: 'Software', keywords: ['app', 'website', 'site', 'software', 'program', 'system', 'dashboard', 'bot', 'booking', 'tracker', 'portal', 'page', 'online', 'ordering', 'inventory', 'quiz', 'calculator', 'spreadsheet', 'automation'],
       tools: [['screen', 'Screens'], ['flow', 'Flows'], ['data', 'Data'], ['test', 'Test'], ['play', 'Preview']],
-      flow: 'ship', sentLabel: 'Test', arrivedLabel: 'Go live', thing: 'app',
+      flow: 'ship', sentLabel: 'Download', arrivedLabel: 'Downloaded', thing: 'app',
       questions: [
         'Who uses it first — you, your staff, or customers?',
         'What will it run on: a phone, a tablet, a computer, or the web?',

@@ -6,6 +6,7 @@ import { ACCENTS, type Accent } from "@/lib/accents";
 import {
   effectiveStage,
   isMediumId,
+  mediumForKind,
   nextStage,
   type DesignMedium,
 } from "@/lib/design/project-art";
@@ -20,6 +21,7 @@ import {
 } from "@/lib/records";
 import type { Op } from "@/lib/spec/ops";
 import { parseSpec } from "@/lib/spec/schema";
+import { parseSoftwareFilesState } from "@/lib/software-build";
 import { createClient } from "@/lib/supabase/server";
 import {
   ConciergeInput,
@@ -348,7 +350,7 @@ async function loadStage(appId: string) {
   const supabase = await createClient();
   const { data: app, error } = await supabase
     .from("apps")
-    .select("id, version, stage, owner")
+    .select("id, version, stage, owner, kind")
     .eq("id", appId)
     .maybeSingle();
   if (error || !app) throw new Error("No such project.");
@@ -390,8 +392,12 @@ export async function goBackStage(
 ): Promise<Ok<{ stage: string }> | Fail> {
   try {
     const { supabase, app } = await loadStage(appId);
-    const prev = PREV_STAGE[effectiveStage(app.stage, app.version)];
+    let prev = PREV_STAGE[effectiveStage(app.stage, app.version)];
     if (!prev) throw new Error("Already at the start.");
+    // Software skips the Test slot in both directions.
+    if (mediumForKind(app.kind ?? "software") === "software" && prev === "sent") {
+      prev = "build";
+    }
     const { error } = await supabase
       .from("apps")
       .update({ stage: prev })
@@ -610,12 +616,9 @@ export async function setFormFactor(
   }
 }
 
-export async function markInstalled(
-  appId: string,
-  target?: string,
-): Promise<{ ok: true } | Fail> {
+export async function markDownloaded(appId: string): Promise<{ ok: true } | Fail> {
   try {
-    await arriveNow(appId, target ? { target } : undefined);
+    await arriveNow(appId);
     return { ok: true };
   } catch (e) {
     return fail(e);
@@ -629,6 +632,28 @@ export type ExportMeta = {
   collections: number;
   records: number;
 };
+
+/** Spark-built files for the software send-off. Null for legacy spec
+ *  apps (which generate code from the spec instead). RLS + ownership:
+ *  only the owner's app answers. */
+export async function getBuildFiles(
+  appId: string,
+): Promise<Ok<{ files: { path: string; content: string }[] | null }> | Fail> {
+  try {
+    const supabase = await createClient();
+    await needApp(supabase, appId);
+    const { data: app, error } = await supabase
+      .from("apps")
+      .select("build_files")
+      .eq("id", appId)
+      .single();
+    if (error || !app) throw new Error("No such project.");
+    const state = parseSoftwareFilesState(app.build_files);
+    return { ok: true, files: state ? state.files : null };
+  } catch (e) {
+    return fail(e);
+  }
+}
 
 /** Real build readout for the software send-off: the spec is checked for
  *  real (parseSpec is the gate) and everything reported is counted, not

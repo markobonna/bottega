@@ -84,6 +84,21 @@ describe('meta', () => {
     expect(JSON.parse(init.body as string).model).toBe('muse-spark-1.3');
   });
 
+  it("finish_reason 'length' throws a cut-off ModelError", async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '{"files":[' }, finish_reason: 'length' }],
+        }),
+      })),
+    );
+    const err = await chat([{ role: 'user', content: 'hello' }]).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ModelError);
+    expect((err as ModelError).message).toMatch(/^cut off/);
+  });
+
   it('a 500 throws ModelError with the status', async () => {
     vi.stubGlobal(
       'fetch',

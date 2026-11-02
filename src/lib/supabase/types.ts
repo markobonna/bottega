@@ -61,6 +61,8 @@ export type Database = {
       apps: {
         Row: {
           arrival_seen: boolean
+          brief: string | null
+          build_files: Json | null
           arrive_at: string | null
           blueprint_path: string | null
           created_at: string | null
@@ -84,6 +86,8 @@ export type Database = {
         }
         Insert: {
           arrival_seen?: boolean
+          brief?: string | null
+          build_files?: Json | null
           arrive_at?: string | null
           blueprint_path?: string | null
           created_at?: string | null
@@ -107,6 +111,8 @@ export type Database = {
         }
         Update: {
           arrival_seen?: boolean
+          brief?: string | null
+          build_files?: Json | null
           arrive_at?: string | null
           blueprint_path?: string | null
           created_at?: string | null

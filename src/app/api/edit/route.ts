@@ -4,7 +4,7 @@ import { fail, readJson, requireUser } from "@/lib/api";
 import { EditError, proposeEdit } from "@/lib/edit-pipeline";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const BodySchema = z.object({
   appId: z.string().min(1),

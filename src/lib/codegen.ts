@@ -32,6 +32,7 @@ export type CodegenFiles = z.infer<typeof CodegenFilesSchema>;
 
 export function validateCodegenFiles(
   files: { path: string; content: string }[],
+  expected: readonly string[] = CODEGEN_PATHS,
 ): { ok: true; files: { path: string; content: string }[] } | { ok: false; issues: string[] } {
   const issues: string[] = [];
   const seen = new Set<string>();
@@ -48,7 +49,7 @@ export function validateCodegenFiles(
     if (f.content.trim() === "") issues.push(`empty file '${f.path}'`);
     total += f.content.length;
   }
-  for (const p of CODEGEN_PATHS) {
+  for (const p of expected) {
     if (!seen.has(p)) issues.push(`missing file '${p}'`);
   }
   if (total > CODEGEN_TOTAL_MAX) issues.push("files too large");

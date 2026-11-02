@@ -43,9 +43,9 @@ export function sentLabelFor(medium: string, designLabel: string): string {
   return designLabel;
 }
 
-const STAGE_LABELS: Record<string, [string, string, string, string, string]> = {
+const STAGE_LABELS: Record<string, string[]> = {
   hardware: ["Sketch", "Design", "Pack", "Send RFQ", "It arrived"],
-  software: ["Sketch", "Prototype", "Build", "Test", "Go live"],
+  software: ["Sketch", "Prototype", "Download"],
   print: ["Sketch", "Design", "Proof", "Send RFQ", "Collect"],
   music: ["Sketch", "Write", "Record", "Mix", "Release"],
   dance: ["Sketch", "Choreograph", "Preview", "Rehearse", "Perform"],
@@ -57,7 +57,7 @@ export function stageLabelsFor(
   medium: string,
   sentLabel: string,
   arrivedLabel: string,
-): [string, string, string, string, string] {
+): string[] {
   return (
     STAGE_LABELS[medium] ?? [
       "Sketch",
@@ -67,6 +67,25 @@ export function stageLabelsFor(
       arrivedLabel,
     ]
   );
+}
+
+// Software ends at Download: the 'sent' (Test) and 'arrived' slots both
+// collapse onto it — the download itself stamps the project done, and
+// the arrival moment carries the "Downloaded" stamp instead of a
+// fourth step. Map a stage index to the position actually shown in
+// that medium's stepper.
+export function stepPosition(medium: string, si: number): number {
+  if (medium !== "software") return si;
+  return Math.min(si, 2);
+}
+
+// The stepper label for a stage index, Test-slot aware.
+export function stepLabel(
+  labels: string[],
+  medium: string,
+  si: number,
+): string {
+  return labels[stepPosition(medium, si)] ?? labels[0];
 }
 
 /** Display label for a note topic; falls back to the capitalized id. */

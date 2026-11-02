@@ -54,6 +54,18 @@ describe("validateCodegenFiles", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.issues.join(" ")).toContain("README.txt");
   });
+  it("accepts a partial set when only those paths are expected", () => {
+    const design = good.slice(0, 2);
+    expect(validateCodegenFiles(design, ["index.html", "styles.css"]).ok).toBe(
+      true,
+    );
+    const r = validateCodegenFiles(design.slice(0, 1), [
+      "index.html",
+      "styles.css",
+    ]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.issues.join(" ")).toContain("styles.css");
+  });
   it("rejects unexpected paths, traversal and duplicates", () => {
     const extra = [...good, { path: "evil.sh", content: "x" }];
     expect(validateCodegenFiles(extra).ok).toBe(false);

@@ -5,7 +5,12 @@ import type { DesignMedium } from "./design/project-art";
 import { needApp, needWorkshop } from "./ownership";
 import { applyOps, type Op } from "./spec/ops";
 import { parseSpec, type AppSpec } from "./spec/schema";
-import type { Database } from "./supabase/types";
+import {
+  parseSoftwareFilesState,
+  type SoftwareFiles,
+  type SoftwareFilesState,
+} from "./software-build";
+import type { Database, Json } from "./supabase/types";
 
 // Versioned app storage. Client-first like records.ts so the seed script can
 // reuse these with the admin client (passing owner explicitly, since the
@@ -106,6 +111,103 @@ export async function saveVersion(
     ops: ops as unknown as Database["public"]["Tables"]["app_versions"]["Insert"]["ops"],
     summary: opts.summary,
     source: opts.source,
+  });
+  if (verError) throw new Error(verError.message);
+  return { version };
+}
+
+/** Save a file revision on a Spark-built app: current files move into
+ *  bounded history, the new files become current, version bumps. Same
+ *  conflict rule as saveVersion. */
+export async function saveFilesVersion(
+  client: Client,
+  appId: string,
+  baseVersion: number,
+  files: SoftwareFiles,
+  summary: string,
+): Promise<SaveResult> {
+  const { data: app, error } = await client
+    .from("apps")
+    .select("id, version, spec, build_files")
+    .eq("id", appId)
+    .single();
+  if (error || !app) throw new Error(`no app '${appId}'`);
+  await needApp(client, appId);
+  if (app.version !== baseVersion) return { conflict: true };
+  const state = parseSoftwareFilesState(app.build_files);
+  if (!state) throw new Error("no designed files on this project");
+  const next: SoftwareFilesState = {
+    ...state,
+    files,
+    updatedAt: new Date().toISOString(),
+    history: [
+      ...state.history,
+      { files: state.files, summary, at: new Date().toISOString() },
+    ].slice(-10),
+  };
+  const version = baseVersion + 1;
+  const { error: upError } = await client
+    .from("apps")
+    .update({
+      build_files: next as unknown as Json,
+      version,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", appId);
+  if (upError) throw new Error(upError.message);
+  const { error: verError } = await client.from("app_versions").insert({
+    app_id: appId,
+    version,
+    spec: app.spec as Database["public"]["Tables"]["app_versions"]["Insert"]["spec"],
+    ops: [] as unknown as Database["public"]["Tables"]["app_versions"]["Insert"]["ops"],
+    summary,
+    source: "edit",
+  });
+  if (verError) throw new Error(verError.message);
+  return { version };
+}
+
+/** Undo a file revision: pop history back to current, version bumps. */
+export async function restorePreviousFiles(
+  client: Client,
+  appId: string,
+): Promise<{ version: number }> {
+  const { data: app, error } = await client
+    .from("apps")
+    .select("id, version, spec, build_files")
+    .eq("id", appId)
+    .single();
+  if (error || !app) throw new Error(`no app '${appId}'`);
+  await needApp(client, appId);
+  const state = parseSoftwareFilesState(app.build_files);
+  if (!state || state.history.length === 0) {
+    throw new Error("Nothing to undo yet.");
+  }
+  const prev = state.history[state.history.length - 1];
+  const next: SoftwareFilesState = {
+    ...state,
+    files: prev.files,
+    updatedAt: new Date().toISOString(),
+    history: state.history.slice(0, -1),
+  };
+  const version = app.version + 1;
+  const summary = `Undid: ${prev.summary}`;
+  const { error: upError } = await client
+    .from("apps")
+    .update({
+      build_files: next as unknown as Json,
+      version,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", appId);
+  if (upError) throw new Error(upError.message);
+  const { error: verError } = await client.from("app_versions").insert({
+    app_id: appId,
+    version,
+    spec: app.spec as Database["public"]["Tables"]["app_versions"]["Insert"]["spec"],
+    ops: [] as unknown as Database["public"]["Tables"]["app_versions"]["Insert"]["ops"],
+    summary,
+    source: "edit",
   });
   if (verError) throw new Error(verError.message);
   return { version };

@@ -21,6 +21,7 @@
     "try-draw": "tsx --conditions=react-server --env-file=.env.local scripts/try-draw.ts",
     "try-open": "tsx --conditions=react-server --env-file=.env.local scripts/try-open.ts",
     "seed:demo": "tsx --conditions=react-server --env-file=.env.local scripts/seed-demo.ts",
+    "repaint:looks": "tsx --conditions=react-server --env-file=.env.local scripts/repaint-looks.ts",
     "realify": "node --env-file=.env.local scripts/realify-images.mjs"
   },
   "dependencies": {

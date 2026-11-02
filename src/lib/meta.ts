@@ -175,8 +175,13 @@ export async function chat(
     },
     timeoutMs,
   );
-  const json = (await res.json()) as { choices?: { message?: { content?: unknown } }[] };
-  const content = json.choices?.[0]?.message?.content;
+  const json = (await res.json()) as {
+    choices?: { message?: { content?: unknown }; finish_reason?: string }[];
+  };
+  const first = json.choices?.[0];
+  if (first?.finish_reason === 'length')
+    throw new ModelError(502, 'cut off: reply hit the token limit');
+  const content = first?.message?.content;
   if (typeof content !== 'string' || !content) throw new ModelError(502, 'empty reply');
   console.log(`[bottega] chat via ${target.provider} (${target.model})`);
   return content;
