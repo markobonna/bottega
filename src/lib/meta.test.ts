@@ -99,6 +99,20 @@ describe('meta', () => {
     expect((err as ModelError).message).toMatch(/^cut off/);
   });
 
+  it("a TimeoutError abort becomes ModelError 504 (falls back like a 5xx)", async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        const e = new Error("The operation was aborted due to timeout");
+        e.name = "TimeoutError";
+        throw e;
+      }),
+    );
+    const err = await chat([{ role: 'user', content: 'hello' }]).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ModelError);
+    expect((err as ModelError).status).toBe(504);
+  });
+
   it('a 500 throws ModelError with the status', async () => {
     vi.stubGlobal(
       'fetch',

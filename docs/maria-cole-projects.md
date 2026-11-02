@@ -18,7 +18,7 @@ Takes effect on the next `pnpm run seed:demo`.
 | The Café | Register drawer fix | hardware | arrived | 3 fixes, drawer slides and rings |
 | The Café | Loyalty app | software | arrived | 3 members, visits tallied |
 | The Café | Autumn menu board | print | arrived | 3 items, board picture draws on demand |
-| Dance Studio | Spring showcase routine | dance | arrived | 3 rehearsals logged, show ready |
+| Dance Studio | Instagram Reel Dance | dance | arrived | 3 rehearsals logged, ready to post |
 | Music Room | New Sonata | music | arrived | 3 movements, a Midnight Sonata rendition |
 
 ## Cole (`cole@example.com`)

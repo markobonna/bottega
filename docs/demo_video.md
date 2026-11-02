@@ -2,52 +2,11 @@
 
 
 
-## Pre-build (on your real account, before filming day)
-
-Two workshops prebuilt; the Garage gets built on the spot in section
-D. Build these with the talk bar (type the description, answer the
-kind when asked). Leave every board as built — no need to advance any
-of them.
-
-Workshop 1 — Kitchen ("Home Kitchen"):
-- "Sunday sauce" (recipe) — e.g. "my Sunday tomato sauce, serves six"
-- "Pantry labels" (print) — e.g. "printed labels for my pantry jars"
-- "Dining chairs" (hardware) — e.g. "wooden dining chairs, set of four".
-  This is the on-camera opposite of the live build: big wood furniture
-  we keep vs. a small electronic product we sell.
-- "Menu board" (print) — e.g. "a chalk menu board for the counter"
-- "Thanksgiving robot" (hardware) — e.g. "a robot arm that plates food".
-  Named in section D; leave as built.
-
-Workshop 2 — Dance Studio ("Dance Studio"):
-- "Reel dance" (dance) — e.g. "a 30-second dance for Instagram Reels"
-- "Gig setlist" (music) — e.g. "a five-song pub gig setlist"
-- "Practice log" (software) — e.g. "an app tracking my practice sessions".
-  Software breadth proof, held in reserve: if D runs short, open it and
-  tap Preview — same apprentice, working app, no wait.
-
-## Pre-filming checklist (do all of these)
-
-- [ ] Latest code deployed to Vercel; open the production URL fresh.
-- [ ] `MODEL_API_KEY` (and friends) set in Vercel env. Without keys the
-      video shows "off" states instead of a demo.
-- [ ] Maria and Cole reseeded fresh (`pnpm run seed:demo`), templates
-      verified in the seeded summary.
-- [ ] Try-as Maria twice in a row: second click must show a clean world
-      (proves clean-room; also warms caches).
-- [ ] Voice tested once on the Vercel URL. If flaky, TYPE everything —
-      voice is a bonus, never the spine.
-- [ ] One full rehearsal run of section D below, timed.
-- [ ] Price-sign arrival photo saved (any e-ink display photo) for the
-      "It's here!" upload in D.
-
-
-
 ## A — Intro (0:00–0:25)
 
 SAY, to camera:
 
-> "I'm Mark, and this is Bottega — a workshop that builds real physical hardware and full stack software that can manage your real life ... all from a conversation. Describe the world you want to live in, and it builds with you: your data, your screens, your items. Hardware it quotes with real manufacturers. Software it hands you as a file. Let me show you."
+> "I'm Mark, and this is Bottega — a workshop that builds real physical hardware and full stack software that can manage your real life ... all from a conversation. Describe the world you want to live in, and it builds it alongside you. Let me show you."
 
 ## B — Maria (0:25–0:50)
 
@@ -55,9 +14,7 @@ DO: sign-in page → Try as Maria. Jump-cut through her world,
 ~4 seconds each: Café → Dance Studio → Music Room, hold on a
 finished board (Espresso machine v2, "It arrived"). SAY:
 
-> "Before we build live, there are two guest Bottegas you can try.
-> Maria runs a bakery — this is her world. In the dance studio — what I hope is the
-> next viral Instagram Reel."
+> "Before we build live, there are two guest accounts you can try. Maria runs a café — dance studio upstairs, music room out back. In the studio: a Reel dance, rehearsed and ready to post… and the cut she'll run as a Facebook ad for the café. Music is her hobby, where Bottega helped her come up with a new rendition of the Moonlight Sonata."
 
 ## C — Cole (0:50–1:10)
 
@@ -66,8 +23,11 @@ DO: back to sign-in → Try as Cole. Jump-cut through his world,
 board (Restoration Bench, "It arrived"). SAY:
 
 > "And here's Cole — he restores furniture for a living. Same
-> platform, completely different world.  And it's not just the garage. In the kitchen — grandma's recipes
-> from the old world, recreated… Every visit is a fresh
+> platform, completely different world. That bench produces a
+> before-and-after page he drops straight into his Instagram DMs
+> to win the next client. And in the kitchen — grandma's recipes
+> from the old world, recreated… the recipe card that'll do the
+> rounds in the family WhatsApp. Every visit is a fresh
 > private copy. Nothing stacks, nothing lingers — exit and it resets."
 
 ## D — Build live: the price sign Hardware (1:10–2:40)
@@ -146,7 +106,7 @@ IF-FAILS lines (say, smile, keep rolling; cut in edit):
 
 
 
-## E — Build live: software for the stall the sign hangs on.
+## E — Build live: software for the stall the sign hangs on. (1:10–2:40)
 
 DO: go to create a new project
 
@@ -197,19 +157,14 @@ DO: back at the world island, talk bar, type "a robot that builds
 rockets". Apprentice asks hardware or software — answer "hardware".
 Let it start designing (the "Asking Muse Spark…" line appears),
 then cut away. The edit is the stop button: never let it finish.
+
 SAY, with a grin:
 
-> "And if you want to be the next Elon Musk — you can. Same apprentice,
-> same talk bar… and I'm stopping this one right here, because when
-> this quote comes back it's got nine zeros."
-
-Honesty note: the app does NOT estimate cost — never show or claim a
-price screen. The billions line is yours, said with a smile. The joke
-is that you chickened out, not that the app quoted anything.
+> "And if you want to be the next Elon Musk and build rockets — you can manufacture some parts and puth them together ... but I'm stopping this one right here, because I know when this quote comes back it's got nine zeros behind it."
 
 SAY, to camera:
 
-> "From a one-dollar washer to a billion-dollar rocket — anything real
-> can be built in your own Bottega. Let's see what civilization builds."
+> "From hardware needed for your small business, to the software that runs on it to a billion-dollar rocket — anything real
+> can be designed and built in Bottega. Let's see what civilization builds."
 
 Hold one beat on the world island. End.

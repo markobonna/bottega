@@ -13,6 +13,7 @@ import { answer, createBrain, snapshot, train } from "@/lib/brain";
 import { MissingKeyError } from "@/lib/meta";
 import { renderLook } from "@/lib/project-look";
 import { addRecord } from "@/lib/records";
+import { retryAsync } from "@/lib/retry";
 import { segment } from "@/lib/sam";
 import coleFixture from "@/lib/spec/fixtures/cole.json";
 import mariaFixture from "@/lib/spec/fixtures/maria.json";
@@ -77,10 +78,15 @@ async function upload(
 ): Promise<string> {
   const bytes = readFileSync(`${PHOTOS}/${file}`);
   const path = `${uid}/${appId}/${file}`;
-  const { error } = await client.storage
-    .from("media")
-    .upload(path, bytes, { contentType: "image/jpeg", upsert: true });
-  if (error) throw new Error(`upload ${file}: ${error.message}`);
+  await retryAsync(
+    async () => {
+      const { error } = await client.storage
+        .from("media")
+        .upload(path, bytes, { contentType: "image/jpeg", upsert: true });
+      if (error) throw new Error(`upload ${file}: ${error.message}`);
+    },
+    { label: `upload ${file}` },
+  );
   return path;
 }
 
@@ -93,7 +99,10 @@ async function samCounts(
   const dataUrl = `data:image/jpeg;base64,${readFileSync(`${PHOTOS}/${file}`).toString("base64")}`;
   const counts: Record<string, number> = {};
   for (const noun of nouns) {
-    const r = await segment(dataUrl, noun);
+    const r = await retryAsync(() => segment(dataUrl, noun), {
+      label: `see ${file}:${noun}`,
+      fatal: (e) => e instanceof MissingKeyError,
+    });
     counts[noun] = r.objects.filter((o) => o.c >= 0.5).length;
   }
   return { counts, live: true };
@@ -139,11 +148,18 @@ async function renderPendingLooks(): Promise<void> {
     if (!p) return;
     if (looksSkipped) continue;
     try {
-      const { lookPath, blueprintPath } = await renderLook(p.client, p.uid, {
-        id: p.id,
-        spec: p.spec,
-        kind: p.kind,
-      });
+      const { lookPath, blueprintPath } = await retryAsync(
+        () =>
+          renderLook(p.client, p.uid, {
+            id: p.id,
+            spec: p.spec,
+            kind: p.kind,
+          }),
+        {
+          label: `look ${(p.spec as { name?: string }).name ?? p.id}`,
+          fatal: (e) => e instanceof MissingKeyError,
+        },
+      );
       const { error } = await p.client
         .from("apps")
         .update({ look_path: lookPath, blueprint_path: blueprintPath })
@@ -487,8 +503,8 @@ async function seedMaria(client: Client, uid: string): Promise<string> {
     client,
     uid,
     trackerSpec({
-      name: "Spring showcase routine",
-      tagline: "Six minutes, twelve dancers, one gym floor.",
+      name: "Instagram Reel Dance",
+      tagline: "Thirty seconds, one take, ready to post.",
       accent: "indigo",
       icon: "💃",
       collection: "rehearsals",
@@ -623,9 +639,9 @@ async function seedMaria(client: Client, uid: string): Promise<string> {
     { name: "Cider donut", description: "Warm, cinnamon sugar", price: 3 },
   ]);
   await addRecords(client, showcaseId, "rehearsals", [
-    { date: dayAgo(2), section: "Opening lift", notes: "Timing off on the turn", clean: false },
-    { date: dayAgo(5), section: "Finale line", notes: "Spacing fixed", clean: true },
-    { date: dayAgo(9), section: "Duet", notes: "Needs one more run", clean: false },
+    { date: dayAgo(2), section: "Hook (first 3 seconds)", notes: "Land the turn on the beat", clean: false },
+    { date: dayAgo(5), section: "Chorus drop", notes: "Spacing fixed", clean: true },
+    { date: dayAgo(9), section: "End card", notes: "Needs one more run", clean: false },
   ]);
   await addRecords(client, sonataId, "movements", [
     { name: "First movement", tempo: 60, notes: "Slow and even", polished: true },
@@ -691,7 +707,10 @@ async function seedMariaTeach(
   );
   for (const [file, y] of files) {
     const path = await upload(client, uid, appId, file);
-    const { x } = await scorePhoto(client, path, dims);
+    const { x } = await retryAsync(() => scorePhoto(client, path, dims), {
+      label: `score ${file}`,
+      fatal: (e) => e instanceof MissingKeyError,
+    });
     const row = await addExample(client, model.id, path, x, y);
     if (!row.x) throw new Error(`example ${file}: no features saved`);
     brain.train.push({ x: row.x, y });
@@ -701,7 +720,10 @@ async function seedMariaTeach(
   await saveModel(client, model.id, snapshot(brain));
 
   const trickPath = await upload(client, uid, appId, "loaf-trick.jpg");
-  const trick = await scorePhoto(client, trickPath, dims);
+  const trick = await retryAsync(() => scorePhoto(client, trickPath, dims), {
+    label: "score loaf-trick.jpg",
+    fatal: (e) => e instanceof MissingKeyError,
+  });
   const verdict = answer(brain, trick.x);
   const conf = Math.round(verdict.conf * 100);
   console.log(`Trick loaf: ${verdict.label} at ${conf}%`);
@@ -987,4 +1009,7 @@ async function main(): Promise<void> {
   console.log("SEED PASS");
 }
 
-void main();
+void main().catch((e: unknown) => {
+  console.error(e instanceof Error ? e.message : e);
+  process.exit(1);
+});

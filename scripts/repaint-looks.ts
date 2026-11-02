@@ -10,7 +10,9 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { MissingKeyError } from "@/lib/meta";
 import { renderLook } from "@/lib/project-look";
+import { retryAsync } from "@/lib/retry";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/types";
 
@@ -72,11 +74,18 @@ async function main(): Promise<void> {
       .order("created_at", { ascending: true });
     if (error) throw new Error(`${email}: ${error.message}`);
     for (const app of apps ?? []) {
-      const { lookPath, blueprintPath } = await renderLook(client, uid, {
-        id: app.id,
-        spec: app.spec,
-        kind: app.kind ?? "print",
-      });
+      const { lookPath, blueprintPath } = await retryAsync(
+        () =>
+          renderLook(client, uid, {
+            id: app.id,
+            spec: app.spec,
+            kind: app.kind ?? "print",
+          }),
+        {
+          label: `repaint ${app.name ?? app.id}`,
+          fatal: (e) => e instanceof MissingKeyError,
+        },
+      );
       const { error: upError } = await client
         .from("apps")
         .update({ look_path: lookPath, blueprint_path: blueprintPath })

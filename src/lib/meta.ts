@@ -121,7 +121,11 @@ async function request(url: string, init: RequestInit, timeoutMs: number): Promi
   try {
     res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   } catch (e) {
-    if (e instanceof Error && e.name === 'AbortError') throw new ModelError(504, 'timed out');
+    // Node's AbortSignal.timeout() rejects with TimeoutError, not
+    // AbortError. Wrap both so timeouts read — and fall back — like
+    // any other 5xx.
+    if (e instanceof Error && (e.name === 'AbortError' || e.name === 'TimeoutError'))
+      throw new ModelError(504, 'timed out');
     throw e;
   }
   if (!res.ok) throw new ModelError(res.status, await res.text());
