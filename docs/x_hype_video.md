@@ -45,6 +45,34 @@ First reply (post immediately after): "Maria's bakery and Cole's
 workbench are both live demos — Try-as buttons, no sign-up. Which
 workshop would you build?"
 
+## Alt concept: the vendor film (1:15, narrative — needs its own shoot)
+
+Filed from the founder's draft; work on this after the demo video.
+Concept: an e-ink price/menu board for street vendors, changed over
+WhatsApp. A small maker builds it for her stall, then starts selling
+it to other shops. Every beat captioned (sound-off scrolling).
+
+| Time | Shot | Caption on screen |
+|---|---|---|
+| 0:00–0:03 | Close-up: a hand rubbing out a chalk price in the rain | "Every price change. By hand." |
+| 0:03–0:08 | The vendor at her busy stall | "What if she could build her own tech?" |
+| 0:08–0:15 | She talks into her phone. Cut to the app: her stand inks itself onto the island | "She just described it." |
+| 0:15–0:30 | Fast app montage: ink turning to color, margin notes, the 3D model turning, the quotes | "It designed it." · "It wrote the code." · "It found the makers." |
+| 0:30–0:38 | A box at her door, she unboxes it. Match-cut to the app's "It's here!" card | "It arrived." |
+| 0:38–0:50 | She sends "Tacos 30" on WhatsApp, the sign flips, a customer smiles. Music beat drop here | "Now she changes prices from her phone." |
+| 0:50–1:05 | Montage: juice stand, clinic queue display, coffee cart, each with her sign. Captions switch language: Spanish, Portuguese, Hindi | "Then she started selling them." |
+| 1:05–1:15 | Her workshop in the app, filling with devices. Logo + call to action | "Bottega. Build anything. Just talk." · waitlist link |
+
+Production notes:
+
+- Music: licensed track. Meta's music AI can't be used here.
+- Shoot 16:9, also export 1:1 square for the phone feed.
+- Thumbnail: the sign-flip frame.
+- WhatsApp logos/names: check Meta brand guidelines before posting.
+- Real vendor needs signed consent; if actor/concept, end-card it
+  "Concept film". Overclaiming here burns credibility with judges
+  who also see the judged demo.
+
 ## Virality mechanics
 
 - Post when US tech X is awake (9–11am ET weekday).

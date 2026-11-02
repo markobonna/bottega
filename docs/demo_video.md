@@ -1,15 +1,16 @@
 # Bottega demo video — script and run-sheet
 
 3 minutes max. Desktop, light mode, 1440px wide or more. External mic.
-Never type a personal email on camera — the whole video runs on Try-as
-guest copies, which is itself part of the pitch.
+Never type a personal email on camera — B and C run on Try-as
+guest copies (fresh every click, itself part of the pitch); D and E
+run on the founder's real account.
 
 
 
 ## Pre-build (on your real account, before filming day)
 
 Two workshops prebuilt; the Garage gets built on the spot in section
-C. Build these with the talk bar (type the description, answer the
+D. Build these with the talk bar (type the description, answer the
 kind when asked). Leave every board as built — no need to advance any
 of them.
 
@@ -18,7 +19,7 @@ Workshop 1 — Kitchen ("Home Kitchen"):
 - "Pantry wall" (space) — e.g. "lay out my pantry wall with shelves"
 - "Dining chairs" (hardware) — e.g. "wooden dining chairs, set of four".
   This is the on-camera opposite of the live build: big wood furniture
-  we keep vs. small metal product we sell.
+  we keep vs. a small electronic product we sell.
 - "Menu board" (print) — e.g. "a chalk menu board for the counter"
 - "Thanksgiving robot" (hardware) — e.g. "a robot arm that plates food".
   Named in section D; leave as built.
@@ -27,8 +28,8 @@ Workshop 2 — Dance Studio ("Dance Studio"):
 - "Reel dance" (dance) — e.g. "a 30-second dance for Instagram Reels"
 - "Gig setlist" (music) — e.g. "a five-song pub gig setlist"
 - "Practice log" (software) — e.g. "an app tracking my practice sessions".
-  This is the on-camera opposite of the live build: software for fun
-  vs. software that runs a business.
+  Software breadth proof, held in reserve: if D runs short, open it and
+  tap Preview — same apprentice, working app, no wait.
 
 ## Pre-filming checklist (do all of these)
 
@@ -41,7 +42,9 @@ Workshop 2 — Dance Studio ("Dance Studio"):
       (proves clean-room; also warms caches).
 - [ ] Voice tested once on the Vercel URL. If flaky, TYPE everything —
       voice is a bonus, never the spine.
-- [ ] One full rehearsal run of section C below, timed.
+- [ ] One full rehearsal run of section D below, timed.
+- [ ] Price-sign arrival photo saved (any e-ink display photo) for the
+      "It's here!" upload in D.
 
 
 
@@ -49,95 +52,145 @@ Workshop 2 — Dance Studio ("Dance Studio"):
 
 SAY, to camera:
 
-> "I'm Mark, and this is Bottega — a workshop that builds you physical hardware for your real life and software that runs your life ... all from a conversation. Describe your world, and it builds with you: your data, your screens, your items. Software it installs on your machines. Hardware it orders from manufacturers. Let me show you."
+> "I'm Mark, and this is Bottega — a workshop that builds real physical hardware and full stack software that can manage your real life ... all from a conversation. Describe the world you want to live in, and it builds with you: your data, your screens, your items. Hardware it orders from manufacturers. Software it installs on your hardware. Let me show you."
 
-## B — The two demos (0:25–0:50)
+## B — Maria (0:25–0:50)
 
-DO: sign-in page. Maris first then Cole. :
+DO: sign-in page → Try as Maria. Jump-cut through her world,
+~4 seconds each: Café → Dance Studio → Music Room, hold on a
+finished board (Espresso machine, "It arrived"). SAY:
 
-> "Before we build live, there are two demo accounts any of you can use to test the app before creatign yrou own account. Try as Maria or Cole — Maria runs a bakery so lets dive in…" This is her world. Four workshops. Here is Cole's world. Here is his workshop. Every demo is a fresh private copy. Nothing stacks, nothing lingers — sign out and the demo resets. When you exit it resets so nothing is saved."
+> "Before we build live, there are two guest Bottegas you can try.
+> Maria runs a bakery — this is her world. In the dance studio — what I hope is the
+> next viral Instagram Reel."
 
-## C — Build live (0:50–2:20)
+## C — Cole (0:50–1:10)
+
+DO: back to sign-in → Try as Cole. Jump-cut through his world,
+~4 seconds each: Store → Garage → Kitchen, hold on a finished
+board (Restoration Bench, "It arrived"). SAY:
+
+> "And here's Cole — he restores furniture for a living. Same
+> platform, completely different world.  And it's not just the garage. In the kitchen — grandma's recipes
+> from the old world, recreated… Every visit is a fresh
+> private copy. Nothing stacks, nothing lingers — exit and it resets."
+
+## D — Build live: the price sign Hardware (1:10–2:40)
+
+One build, start to finish: a price sign for the founder's own
+market-stall side hustle, driven by his phone. WhatsApp is his stated
+plan, pinned to the board as a margin note — the voiceover says what
+the plan is, never that Bottega runs his messages. Jump cuts allowed
+at every advance; the edit keeps it under 90 seconds.
+
+DO: on the real account, "Build a workshop" picker → Garage. Room
+loads (instant). Upload a picture of the actual garage as the room
+photo. SAY:
+
+> "Now the live build — first, a new workshop. My garage, with a photo
+> of the real thing as the room. Say I run a market stall: every price
+> changed by hand, chalk in the rain. Let's build a hardware price sign
+> I'd configure from my phone."
+
+DO: footer talk bar, type "I want a electric food truck menu sign i can attach to my food truck." 
+
+When Bottega asks hardware or software, SAY "Hardware"
+(point at the footer status):
+
+> "Every response is a live Meta Muse model call that is shown in the
+> app footer. Every Bottega app is a spec, JSON the runtime renders.
+> Validated on every change. Never generated code." "First sketch, drawn by Muse Image from that one sentence — and
+> behind it, the spec Spark wrote. Validated before it ever rendered."
+
+DO: advance to Design — the color render, grown from the sketch.
+Then talk bar: "sealed against rain, and prices change over
+WhatsApp" → notes land in the margin. SAY:
+
+> "The sketch is right, so move on to the design. The color render grows out of the sketch — same object, realized.
+> Every decision lands in the margin — sealed case for the rain, and the software plan: prices by WhatsApp. Bottega doesn't run my messages — it carries my plan all the way to the maker. Those notes are database rows — and they ship inside the RFQ zip."
+
+DO: advance to Pack — files bloom in. Download the RFQ pack. SAY:
+
+> "One zip file includes the brief, the CAD, the SCAD source the shop can edit, STL they can print — an entire RFQ pack.  Everything a manufacturer needs to quote."
+
+DO: Find makers (real shops, jump-cut allowed) → approve the message
+→ Send (mail draft opens, cut here) → "RFQs are out." SAY:
+
+> "RFQs are out to named shops — SendCutSend, Xometry, real domains —
+> with notes on which file to upload where. They reply with a quote
+> and a payment link — card ready, because saying yes actually orders
+> it. I just won't do that part on camera."
+
+DO: tracking card — enter the vendor's promise date, countdown ticks.
+Advance to It arrived — "It's here!" card, upload the arrival photo
+(see checklist). SAY:
+
+> "The countdown runs off the date the vendor promises — not a number
+> we invented. And it's here: designed, specced, and built, without
+> me writing a line of code. That arrival photo lands in my own
+> storage — per-user paths, same isolation as everything else. I built
+> it for my stall — now I can sell it to every vendor on the street.
+> Imagine that in every market from Guadalajara to Pune — each one a
+> small business Meta's tools helped start."
 
 
 
 
-DO: "Build a workshop" picker → Garage. Room loads (instant). SAY:
-
-> "Lets build a brand new garage workshop live."
-
-DO: footer talk bar, type "I want to make a sheet-metal headphone
-stand I can sell". Apprentice asks
-hardware or software. SAY (point at the footer status):
-
-> "Watch the footer — 'Asking Muse Spark.' Every reply is a live model
-> call, and it always asks one question first: hardware or software?"
-
-DO: answer "hardware". Build runs — TALK OVER THE WAIT (point at the
-"Muse Spark is designing" line and the elapsed seconds):
-
-> "While it designs — every Bottega app is a spec, JSON the runtime
-> renders. Validated on every change. Never generated code."
-
-DO: ink-in reveal, project board with drawing. Point at the kitchen's
-dining chairs, then back. SAY:
-
-> "We've built dining chairs — big wood furniture we keep. Now the
-> opposite: a precision metal product we sell. Give it real
-> information — tap Measure…"
-
-DO: tap the Measure tool, margin focuses. Type "must fit 40mm headbands".
-SAY:
-
-> "…and that note rides with the project all the way to the maker."
-
-DO: advance, open send-off. Files step — download the RFQ pack, SAY:
-
-> "One zip: the brief, the CAD, the drawings. Everything a real shop
-> needs to quote."
-
-DO: Find makers (SendCutSend, Xometry — real shops, jump-cut allowed) →
-Message draft → Send. Pack downloads, email draft opens, tick Sent,
-"RFQs are out." SAY:
-
-> "RFQs are out to real shops. They reply with a quote and a payment
-> link — card ready, because saying yes actually orders it. I just
-> won't do that part on camera."
-
-DO: back in the garage, talk bar: "an app tracking my stand sales".
-Answer "software". Build, open the project, tap Preview — new tab
-with the working app. Take one order by voice. SAY:
-
-> "Same garage, same apprentice — now the software that runs the
-> business. The hardware pays for dinner; this counts it. One tap —
-> that's the actual app running. Not a mockup."
-
-OPTIONAL, if time allows (15s): inside the Preview tab, open a See
-block, take a photo. SAY:
-
-> "'SAM 3.1 is looking' — live counting, right inside the app the
-> apprentice just built. Voice, drawing, and suggestions all name
-> their models the same way."
 
 IF-FAILS lines (say, smile, keep rolling; cut in edit):
 
 - Build stalls: "The model's thinking — this is the one live wait in
   the video." (If >45s, cut; use the rehearsal take.)
 - Any error: "That's the honest error state — let me re-run it."
-- Voice fails: "Typing it instead — same apprentice either way."
+- Sketch is wrong: "Not it — revise that." (Type the fix in "Revise
+  the sketch", cut the repaint.)
+- Mail client misbehaves: "The draft's ready — my mail app just
+  wants the spotlight." (Cut; pick up at "RFQs are out.")
 
-## D — The world (2:20–2:40): quick cuts
 
-DO: jump-cut through the prebuilt rooms, ~4 seconds each: kitchen
-sauce board → Thanksgiving robot board → dance studio reel board →
-hold on the world island with all three rooms. SAY:
 
-> "And it's not just the garage. In the kitchen — grandma's recipes
-> from the old world, recreated… and the robot that'll make them for
-> everyone at Thanksgiving. In the dance studio — what I hope is the
-> next viral Instagram Reel. My whole life, in one world."
+## E— Build live: Software for the pricing sign, controled by WhatsApp.
 
-## E — Close (2:40–3:00): the rocket gag
+DO: go to create a new project
+
+> "Now lets build some software to run the sign. ."
+
+DO: an app tracking my food truck sales — It listens to my commands, I call in orders
+from the truck. and peoep can enter orders and be notified  via whatsapp when they are ready. 
+
+DO: State Software CUT the wait. 
+
+> "Same garage — now the software. Sketch first, like always:
+> wireframe from the sentence, spec behind it, validated like
+> the sign's."
+
+DO: advance to Prototype — color app mockup, grown from the wireframe.
+Scroll to the live app below the board: it's already running. SAY:
+
+> "Prototype: the mockup, and under it the actual app — the runtime
+> rendering the spec's blocks live. Zero code."
+
+DO: advance to Build — "Build and install" → pick tablet → installed.
+SAY:
+
+> "Build and install — on the tablet's home screen, install recorded."
+
+DO: Test step ("Finishing up" card) — take one order by voice in the
+live app ("Two tacos, Friday pickup"). It logs. SAY:
+
+> "Test it like a customer — Voice transcribes, Spark fills the form,
+> values validated and saved."
+
+DO: advance to Go live — "It's installed!" stamped board. SAY:
+
+> "Go live — installed and running. And it runs the stall the sign
+> will hang on — one talk bar built the atoms and the bits."
+
+IF-FAILS: voice fails → "Typing it instead — same apprentice either
+way." (Type the order, keep rolling.) No hear block in the build →
+type the order and cut the Test beat shorter.
+
+## F — Close (2:40–3:00): the rocket gag
 
 DO: back at the world island, talk bar, type "a robot that builds
 rockets". Apprentice asks hardware or software — answer "hardware".

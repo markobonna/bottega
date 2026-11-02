@@ -217,7 +217,10 @@ export default function WorkshopScreen({
               style={{ aspectRatio: "16/9" }}
             >
               <img
-                src={`/rooms/${ROOM_PHOTO[workshop.type] ?? "other"}.jpg`}
+                src={
+                  roomPhotoUrl ??
+                  `/rooms/${ROOM_PHOTO[workshop.type] ?? "other"}.jpg`
+                }
                 alt=""
                 aria-hidden="true"
                 draggable={false}
@@ -229,15 +232,6 @@ export default function WorkshopScreen({
                   objectFit: "cover",
                 }}
               />
-              {rm.spots.map(({ p, x, y, w, h }) => (
-                <Link
-                  key={`spot-${p.id ?? p.name}`}
-                  href={`/projects/${p.id ?? p.name}`}
-                  aria-label={`Open ${p.name}`}
-                  className="spot-link"
-                  style={{ left: x, top: y, width: w, height: h }}
-                />
-              ))}
               {rm.tags.map(({ p, x, y }) => {
                 const medium = B.MEDIUMS[p.medium] ?? B.MEDIUMS.hardware;
                 const pid = p.id ?? p.name;
@@ -260,43 +254,6 @@ export default function WorkshopScreen({
                   </Link>
                 );
               })}
-              {view === "room" && roomPhotoUrl !== null && (
-                <figure
-                  aria-label="A photo of your real room"
-                  style={{
-                    position: "absolute",
-                    top: "4%",
-                    right: "3%",
-                    width: "17%",
-                    margin: 0,
-                    padding: "6px 6px 2px",
-                    background: "var(--card)",
-                    border: "1.5px solid var(--line)",
-                    borderRadius: 4,
-                    transform: "rotate(2.5deg)",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
-                    pointerEvents: "none",
-                  }}
-                >
-                  <img
-                    src={roomPhotoUrl}
-                    alt=""
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      aspectRatio: "4/3",
-                      objectFit: "cover",
-                      borderRadius: 2,
-                    }}
-                  />
-                  <figcaption
-                    className="small"
-                    style={{ textAlign: "center", margin: "2px 0" }}
-                  >
-                    your real room
-                  </figcaption>
-                </figure>
-              )}
               {projects.map((p) => {
                 if (!p.imageUrl) return null;
                 const at = cardPos(p);
@@ -315,23 +272,6 @@ export default function WorkshopScreen({
                   />
                 );
               })}
-              {rm.newSpot && (
-                <button
-                  type="button"
-                  onClick={() => setCreating(true)}
-                  className="btn btn-primary spot-btn"
-                  style={{ left: rm.newSpot.x, top: rm.newSpot.y }}
-                >
-                  <Icon svg={B.icon("plus", 18, 2.4)} /> New project
-                </button>
-              )}
-              <Link
-                href="/"
-                className="btn door-btn"
-                style={{ left: rm.door.x, top: rm.door.y }}
-              >
-                <Icon svg={B.icon("back", 16)} /> Step outside
-              </Link>
               {rm.overflow > 0 && (
                 <button
                   type="button"
@@ -340,18 +280,6 @@ export default function WorkshopScreen({
                 >
                   +{rm.overflow} more in the list
                 </button>
-              )}
-              {n === 0 && (
-                <div className="card scene-note">
-                  <Icon svg={B.sigil(40)} />
-                  <p
-                    className="hand"
-                    style={{ fontSize: 26, margin: "8px 0 0", lineHeight: 1.2 }}
-                  >
-                    This room is empty. Tell me what you want to make — or tap
-                    the dashed spot on the bench.
-                  </p>
-                </div>
               )}
             </div>
           </div>

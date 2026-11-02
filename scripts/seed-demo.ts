@@ -128,9 +128,9 @@ interface PendingLook {
   kind: "hardware" | "software" | "music" | "dance" | "print" | "recipe";
 }
 
-/** Look renders are slow (one Muse Image call each), so they queue up and
- * run last: any bad spec or record fails the seed in seconds, before a
- * single render burns time or money. */
+/** Look renders are slow (sketch + portrait, sequential), so they queue
+ * up and run last: any bad spec or record fails the seed in seconds,
+ * before a single render burns time or money. */
 const pendingLooks: PendingLook[] = [];
 
 async function renderPendingLooks(): Promise<void> {

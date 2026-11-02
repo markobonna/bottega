@@ -887,39 +887,6 @@
     transparent 2px 4px
   );
 }
-.b-scope .spot-btn {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-}
-.b-scope .spot-link {
-  position: absolute;
-  z-index: 1;
-  border-radius: 6px;
-}
-.b-scope .spot-link:focus-visible {
-  outline: 2.5px solid var(--red);
-  outline-offset: 2px;
-  background: rgba(162, 62, 37, 0.08);
-}
-.b-scope .door-btn {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-  background: var(--card);
-  font-size: 13px;
-  padding: 0 12px;
-}
-.b-scope .scene-note {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 3;
-  max-width: 420px;
-  text-align: center;
-  padding: 20px 24px;
-}
 .b-scope .more-chip {
   position: absolute;
   right: 16px;

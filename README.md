@@ -15,7 +15,7 @@ world").
 - Hardware projects produce a downloadable **RFQ pack** (brief, CAD,
   drawings) for real US shops, a promise-date countdown, photo-proven
   arrival, and a human sourcing concierge when no supplier fits.
-- Two demo worlds prove it — Maria's bakery and Cole's restoration
+- Two guest Bottegas prove it — Maria's bakery and Cole's restoration
   bench. "Try as Maria / Try as Cole" gives each visitor a fresh
   private copy (wiped on exit); the templates are never touched.
 
@@ -55,8 +55,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="sb_publishable_pDE0Bmqvs8_tdeZdGSC33A_gjNq
 pnpm dev
 ```
 
-Open http://localhost:3000 → **Try as Maria**. One click, full demo
-world in a fresh guest account that wipes on exit. Add
+Open http://localhost:3000 → **Try as Maria**. One click, full guest
+Bottega that wipes on exit. Add
 `MODEL_API_KEY` to the same file for live AI; without it every AI
 feature shows its off-state instead of failing.
 
@@ -65,7 +65,7 @@ feature shows its off-state instead of failing.
 > Security — every table is owner-scoped, proven by
 > `pnpm run check:isolation` — and the secret key, which never leaves
 > our servers and this path never needs. The only shared data is the
-> fictional maria/cole demo content; all accounts stay mutually
+> fictional maria/cole guest content; all accounts stay mutually
 > invisible. These values come out of this README on Nov 9 — after
 > that, use your own Supabase below.
 
@@ -118,7 +118,7 @@ RLS isolation with throwaway users) · `try-build` / `try-see` /
 
 Invariants: specs are data (validated on every write); isolation lives
 in the database; secret keys are read only in server code; all UI
-colors come from CSS variables; no personal information anywhere (demo
+colors come from CSS variables; no personal information anywhere (guest
 accounts are `maria@example.com` / `cole@example.com`).
 
 ## Evaluating without a key

@@ -36,6 +36,7 @@ import ConciergeCard from "./ConciergeCard";
 import { BIcon } from "./Dialog";
 import MarginNotes from "./MarginNotes";
 import LookPainter from "./LookPainter";
+import SketchPending from "./SketchPending";
 import PackFileList from "./PackFileList";
 import SendOffDialog from "./SendOffDialog";
 
@@ -81,6 +82,9 @@ export default function BoardPanel({
   photoUrls,
   photoPaths,
   lookMissing,
+  sketchMissing,
+  sketchUrl,
+  lookUrl,
   version,
 }: {
   appId: string;
@@ -103,6 +107,9 @@ export default function BoardPanel({
   photoUrls: string[];
   photoPaths: string[];
   lookMissing: boolean;
+  sketchMissing: boolean;
+  sketchUrl: string | null;
+  lookUrl: string | null;
   version: string;
 }) {
   const B = window.B;
@@ -182,6 +189,61 @@ export default function BoardPanel({
   const partLabel = (n: number) =>
     art.parts.find((x) => x.n === n)?.label ?? "the drawing";
   const activePart = art.parts.find((x) => x.n === part);
+  // Generated art replaces the template drawing: the B&W sketch at the
+  // sketch stage, the color render after. While art is expected but not
+  // here yet, a countdown holds the board; the template (with its pins)
+  // appears only when art was proven unavailable (no key, failed paint).
+  const [artFailed, setArtFailed] = useState(false);
+  const boardPhoto =
+    project.stage === "sketch" ? sketchUrl : (lookUrl ?? sketchUrl);
+  const photoKind =
+    boardPhoto && boardPhoto === sketchUrl ? "Sketch" : "Render";
+  const pendingKind = project.stage === "sketch" ? "Sketch" : "Render";
+  const boardPending =
+    !boardPhoto && (sketchMissing || lookMissing) && !artFailed;
+  const reviseTarget = boardPhoto
+    ? photoKind === "Sketch"
+      ? ("sketch" as const)
+      : ("portrait" as const)
+    : null;
+  const [instruction, setInstruction] = useState("");
+  const [revising, setRevising] = useState(false);
+  const [reviseProblem, setReviseProblem] = useState("");
+
+  async function revise() {
+    const clean = instruction.trim().slice(0, 300);
+    if (clean.length < 3 || revising || !reviseTarget) return;
+    setRevising(true);
+    setReviseProblem("");
+    try {
+      const res = await fetch("/api/project-revise", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId, target: reviseTarget, instruction: clean }),
+      });
+      if (res.status === 503) {
+        setReviseProblem("Revising is off right now (no model key).");
+        return;
+      }
+      if (!res.ok) throw new Error("revise failed");
+      if (reviseTarget === "sketch") {
+        // The portrait grew from the old sketch: regrow it so the
+        // lineage holds.
+        const grown = await fetch("/api/project-portrait", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ appId }),
+        });
+        if (!grown.ok && grown.status !== 503) throw new Error("regrow failed");
+      }
+      setInstruction("");
+      router.refresh();
+    } catch {
+      setReviseProblem("Couldn't revise that. Try again.");
+    } finally {
+      setRevising(false);
+    }
+  }
   const arrived = project.stage === "arrived";
   const sent = project.stage === "sent";
 
@@ -528,7 +590,12 @@ export default function BoardPanel({
         </div>
       )}
 
-      <LookPainter appId={appId} lookMissing={lookMissing} />
+      <LookPainter
+        appId={appId}
+        sketchMissing={sketchMissing}
+        lookMissing={lookMissing}
+        onPhase={(p) => setArtFailed(p === "off" || p === "failed")}
+      />
       <BuildGallery
         appId={appId}
         medium={project.medium}
@@ -576,66 +643,145 @@ export default function BoardPanel({
             )}
           </div>
           <div className="board">
-            <div
-              style={{ display: "contents" }}
-              dangerouslySetInnerHTML={{ __html: art.svg }}
-            />
-            {art.parts
-              .filter((pt) => partsWithNotes.has(pt.n) || si < 3)
-              .map((pt) => (
-                <button
-                  key={pt.n}
-                  type="button"
-                  className="callout"
-                  style={{
-                    left: `${pt.x / 10}%`,
-                    top: `${(pt.y / 750) * 100}%`,
-                  }}
-                  aria-pressed={part === pt.n}
-                  aria-label={`Part ${pt.n}: ${pt.label}`}
-                  onClick={() => setPart(pt.n)}
-                >
-                  {pt.n}
-                </button>
-              ))}
+            {revising ? (
+              <SketchPending kind={photoKind} />
+            ) : boardPending ? (
+              <SketchPending kind={pendingKind} />
+            ) : boardPhoto ? (
+              <img
+                src={boardPhoto}
+                alt={`${project.name} ${photoKind.toLowerCase()}`}
+                draggable={false}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <Fragment>
+                <div
+                  style={{ display: "contents" }}
+                  dangerouslySetInnerHTML={{ __html: art.svg }}
+                />
+                {art.parts
+                  .filter((pt) => partsWithNotes.has(pt.n) || si < 3)
+                  .map((pt) => (
+                    <button
+                      key={pt.n}
+                      type="button"
+                      className="callout"
+                      style={{
+                        left: `${pt.x / 10}%`,
+                        top: `${(pt.y / 750) * 100}%`,
+                      }}
+                      aria-pressed={part === pt.n}
+                      aria-label={`Part ${pt.n}: ${pt.label}`}
+                      onClick={() => setPart(pt.n)}
+                    >
+                      {pt.n}
+                    </button>
+                  ))}
+              </Fragment>
+            )}
             <p className="caption">
-              {art.caption} · draft {drafts.length}
+              {boardPending
+                ? `${pendingKind} · draft ${drafts.length}`
+                : boardPhoto
+                  ? `${photoKind} · draft ${drafts.length}`
+                  : `${art.caption} · draft ${drafts.length}`}
             </p>
             {arrived && <p className="stamp">{medium.arrivedLabel}</p>}
           </div>
           <div className="belowboard">
-            <div
-              className="seg"
-              role="group"
-              aria-label="How to show the drawing"
-            >
-              {[
-                ["ink", "Ink only"],
-                ["built", "As built"],
-                ["render", "Full render"],
-              ].map(([id, l]) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={shown === id}
-                  onClick={() => setMode(id)}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
+            {!boardPhoto && !boardPending && (
+              <div
+                className="seg"
+                role="group"
+                aria-label="How to show the drawing"
+              >
+                {[
+                  ["ink", "Ink only"],
+                  ["built", "As built"],
+                  ["render", "Full render"],
+                ].map(([id, l]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={shown === id}
+                    onClick={() => setMode(id)}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
             <p className="small" style={{ margin: 0 }}>
-              {activePart
-                ? `Part ${activePart.n}: ${activePart.label}.`
-                : "The drawing, from your project."}
+              {boardPending
+                ? pendingKind === "Sketch"
+                  ? "Sketch on its way — hold tight."
+                  : "Render on its way — hold tight."
+                : boardPhoto
+                  ? photoKind === "Sketch"
+                    ? "Sketch, drawn by Muse Image from your sentence."
+                    : "Render, painted from the sketch."
+                  : activePart
+                    ? `Part ${activePart.n}: ${activePart.label}.`
+                    : "The drawing, from your project."}
             </p>
+            {reviseTarget && !revising && !boardPending && (
+              <form
+                className="composer"
+                style={{ marginTop: 8 }}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void revise();
+                }}
+              >
+                <label
+                  htmlFor="revise-input"
+                  style={{ fontSize: 14, fontWeight: 700 }}
+                >
+                  Revise the {reviseTarget === "sketch" ? "sketch" : "render"}
+                </label>
+                <div className="row">
+                  <input
+                    id="revise-input"
+                    type="text"
+                    autoComplete="off"
+                    maxLength={300}
+                    value={instruction}
+                    onChange={(e) => setInstruction(e.target.value)}
+                    placeholder={
+                      reviseTarget === "sketch"
+                        ? "e.g. wall-mount it, no feet"
+                        : "e.g. brass finish, darker"
+                    }
+                  />
+                  <button
+                    type="submit"
+                    className="btn"
+                    disabled={instruction.trim().length < 3}
+                  >
+                    Revise
+                  </button>
+                </div>
+                {reviseProblem !== "" && (
+                  <p className="small" style={{ color: "var(--red)" }}>
+                    {reviseProblem}
+                  </p>
+                )}
+              </form>
+            )}
           </div>
         </div>
         <MarginNotes
           appId={appId}
           medium={project.medium}
           initial={notes}
-          activePart={part}
+          activePart={boardPhoto || boardPending ? null : part}
           onPart={setPart}
           partLabel={partLabel}
           locked={si >= 3}

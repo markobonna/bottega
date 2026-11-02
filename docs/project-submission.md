@@ -33,7 +33,7 @@ suggestions; every change is a validated spec diff, never a rebuild.
 Hardware projects go further: a downloadable RFQ pack (brief, CAD,
 drawings) sent to real US shops, a promise-date countdown with overdue
 nudges, photo-proven arrival, and a human sourcing concierge when no
-supplier fits. Two demo worlds prove it — Maria's bakery and Cole's
+supplier fits. Two guest Bottegas prove it — Maria's bakery and Cole's
 restoration bench — and every visitor gets a fresh private Try-as copy,
 no sign-up.
 

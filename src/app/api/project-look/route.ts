@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { fail, readJson, requireUser } from "@/lib/api";
-import { describePrototype, renderLook } from "@/lib/project-look";
+import { describePrototype, renderSketch } from "@/lib/project-look";
 import { parseSpec } from "@/lib/spec/schema";
 
 export const runtime = "nodejs";
@@ -45,7 +45,7 @@ export async function POST(req: Request): Promise<Response> {
       extra = ` It looks like this: ${description.slice(0, 600)}`;
       fromPhoto = true;
     }
-    const { lookPath, blueprintPath } = await renderLook(
+    const { sketchPath } = await renderSketch(
       auth.supabase,
       auth.user.id,
       { id: app.id, spec: app.spec, kind: app.kind ?? "software" },
@@ -53,10 +53,10 @@ export async function POST(req: Request): Promise<Response> {
     );
     const { error: upError } = await auth.supabase
       .from("apps")
-      .update({ look_path: lookPath, blueprint_path: blueprintPath })
+      .update({ blueprint_path: sketchPath })
       .eq("id", app.id);
     if (upError) throw new Error(upError.message);
-    return Response.json({ lookPath, blueprintPath, fromPhoto });
+    return Response.json({ sketchPath, fromPhoto });
   } catch (e) {
     return fail(e);
   }

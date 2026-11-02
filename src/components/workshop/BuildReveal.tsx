@@ -95,7 +95,7 @@ export default function BuildReveal({
               : "Built with Muse Spark from your words."}
           </p>
           <div className="text-center">
-            <LookPainter appId={appId} lookMissing />
+            <LookPainter appId={appId} lookMissing sketchMissing />
           </div>
         </div>
       )}

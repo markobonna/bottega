@@ -12,6 +12,7 @@ import {
   MissingKeyError,
   ModelError,
   ProviderUnavailableError,
+  sniffImageFormat,
 } from './meta';
 
 const ENV = [
@@ -272,6 +273,47 @@ describe('meta', () => {
     expect(form.get('size')).toBe('1536x1024');
     expect(form.get('n')).toBe('1');
     expect((form.get('image') as Blob).size).toBe(3);
+  });
+
+  it('sniffImageFormat reads magic bytes, png fallback', () => {
+    expect(
+      sniffImageFormat(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d])),
+    ).toEqual({ mime: 'image/png', ext: 'png' });
+    expect(sniffImageFormat(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toEqual(
+      { mime: 'image/jpeg', ext: 'jpg' },
+    );
+    expect(
+      sniffImageFormat(
+        new Uint8Array([
+          0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42,
+          0x50,
+        ]),
+      ),
+    ).toEqual({ mime: 'image/webp', ext: 'webp' });
+    expect(sniffImageFormat(new Uint8Array([1, 2, 3]))).toEqual({
+      mime: 'image/png',
+      ext: 'png',
+    });
+  });
+
+  it('editImage declares the sniffed webp type', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [{ b64_json: 'eA==' }] }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const webp = new Uint8Array([
+      0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+    ]);
+    await editImage('make it real', webp as Uint8Array<ArrayBuffer>);
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    const file = (init.body as FormData).get('image') as File;
+    expect(file.type).toBe('image/webp');
+    expect(file.name).toBe('source.webp');
   });
 
   it('editImage throws MissingKeyError without a key', async () => {

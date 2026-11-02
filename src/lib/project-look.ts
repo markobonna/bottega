@@ -4,7 +4,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { downloadAsDataUrl } from "./media";
-import { image, json, type MetaMessage } from "./meta";
+import {
+  editImage,
+  image,
+  json,
+  sniffImageFormat,
+  type MetaMessage,
+} from "./meta";
 import { parseSpec } from "./spec/schema";
 import type { Database } from "./supabase/types";
 
@@ -56,7 +62,126 @@ function promptBase(spec: {
 }
 
 /**
- * Render + upload look.png (and blueprint.png for hardware). Returns the
+ * The sketch prompt: a black and white bare-bones image, nothing else.
+ * Pure so tests can lock the contract.
+ */
+export function sketchPrompt(kind: string, base: string): string {
+  return kind === "hardware"
+    ? `A black and white pencil concept sketch of ${base}, bare-bones, minimal lines, white background, ${SUFFIX}`
+    : `A black and white wireframe sketch of a phone app for ${base}, one dynamic composition filling the view, one phone screen or two overlapping phone screens, bare-bones UI boxes buttons and text lines, everything fully inside the frame, no icon grid, white background, ${SUFFIX}`;
+}
+
+/** The portrait grows out of the sketch: same object, realized. Plain
+ * white background, no invented setting — the object alone. */
+export function portraitPrompt(kind: string): string {
+  return kind === "hardware"
+    ? `A full-color product photo render of this sketched object, same object and composition, isolated on a plain white background, no room, no scenery, warm light, ${SUFFIX}`
+    : `A clean full-color app design mockup of this wireframe sketch, same screens and layout, plain white background, no scenery, ${SUFFIX}`;
+}
+
+/**
+ * Revise prompts: the user's change, with the house invariants locked
+ * (sketch stays B&W on white; portrait keeps the object on white with
+ * no invented scenery). Pure so tests can lock the contract.
+ */
+export function reviseSketchPrompt(kind: string, instruction: string): string {
+  return kind === "hardware"
+    ? `${instruction}, keep it a black and white pencil concept sketch, bare-bones, minimal lines, white background, ${SUFFIX}`
+    : `${instruction}, keep it a black and white wireframe sketch of a phone app, one dynamic composition filling the view, everything fully inside the frame, no icon grid, white background, ${SUFFIX}`;
+}
+
+export function revisePortraitPrompt(instruction: string): string {
+  return `${instruction}, same object and composition, isolated on a plain white background, no room, no scenery, ${SUFFIX}`;
+}
+
+async function uploadImage(
+  client: Client,
+  path: string,
+  bytes: Uint8Array,
+): Promise<void> {
+  const { mime } = sniffImageFormat(bytes);
+  const { error } = await client.storage
+    .from("media")
+    .upload(path, new Blob([bytes as BlobPart], { type: mime }), {
+      contentType: mime,
+      upsert: true,
+    });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Render + upload the B&W sketch. Stored in blueprint_path (the
+ * pre-sketch column name); the caller writes the path to the app row.
+ */
+export async function renderSketch(
+  client: Client,
+  uid: string,
+  app: { id: string; spec: unknown; kind: string },
+  extra?: string,
+): Promise<{ sketchPath: string; sketchBytes: Uint8Array }> {
+  const parsed = parseSpec(app.spec);
+  if (!parsed.ok) throw new Error("Bad project spec.");
+  const base = promptBase(parsed.spec) + (extra ?? "");
+  const sketchBytes = await image(sketchPrompt(app.kind, base));
+  const sketchPath = `${uid}/${app.id}/blueprint.png`;
+  await uploadImage(client, sketchPath, sketchBytes);
+  return { sketchPath, sketchBytes };
+}
+
+/**
+ * Render + upload the color portrait from sketch bytes. The sketch did
+ * half the job: same object and composition, realized in color.
+ */
+export async function renderPortraitFromSketch(
+  client: Client,
+  uid: string,
+  app: { id: string; kind: string },
+  sketchBytes: Uint8Array,
+): Promise<string> {
+  const lookBytes = await editImage(
+    portraitPrompt(app.kind),
+    sketchBytes as Uint8Array<ArrayBuffer>,
+    "1024x1024",
+    55000,
+  );
+  const lookPath = `${uid}/${app.id}/look.png`;
+  await uploadImage(client, lookPath, lookBytes);
+  return lookPath;
+}
+
+/**
+ * Revise what's shown: edit the current sketch or portrait with the
+ * user's instruction, uploaded over the same path (upsert). The caller
+ * regrows the portrait after a sketch revise so the lineage holds.
+ */
+export async function reviseArt(
+  client: Client,
+  target: "sketch" | "portrait",
+  sourcePath: string,
+  instruction: string,
+  kind: string,
+): Promise<void> {
+  const { data, error: dlError } = await client.storage
+    .from("media")
+    .download(sourcePath);
+  if (dlError || !data)
+    throw new Error(dlError?.message || "Nothing to revise yet.");
+  const sourceBytes = new Uint8Array(await data.arrayBuffer());
+  const prompt =
+    target === "sketch"
+      ? reviseSketchPrompt(kind, instruction)
+      : revisePortraitPrompt(instruction);
+  const revised = await editImage(
+    prompt,
+    sourceBytes as Uint8Array<ArrayBuffer>,
+    "1024x1024",
+    55000,
+  );
+  await uploadImage(client, sourcePath, revised);
+}
+
+/**
+ * Render + upload sketch then portrait, sequentially. Returns the
  * storage paths; the caller writes them to the app row.
  */
 export async function renderLook(
@@ -65,44 +190,12 @@ export async function renderLook(
   app: { id: string; spec: unknown; kind: string },
   extra?: string,
 ): Promise<{ lookPath: string; blueprintPath: string | null }> {
-  const parsed = parseSpec(app.spec);
-  if (!parsed.ok) throw new Error("Bad project spec.");
-  const base = promptBase(parsed.spec) + (extra ?? "");
-  const jobs: Promise<Uint8Array>[] = [
-    image(
-      app.kind === "hardware"
-        ? `A product photo of ${base}, warm light, ${SUFFIX}`
-        : `A clean app design mockup for ${base}, ${SUFFIX}`,
-    ),
-  ];
-  if (app.kind === "hardware") {
-    jobs.push(
-      image(
-        `A technical blueprint schematic drawing of ${base}, white lines on blue background, ${SUFFIX}`,
-      ),
-    );
-  }
-  const [look, blueprint] = await Promise.all(jobs);
-  const lookPath = `${uid}/${app.id}/look.png`;
-  const up1 = await client.storage
-    .from("media")
-    .upload(lookPath, new Blob([look as BlobPart], { type: "image/png" }), {
-      contentType: "image/png",
-      upsert: true,
-    });
-  if (up1.error) throw new Error(up1.error.message);
-  let blueprintPath: string | null = null;
-  if (blueprint) {
-    blueprintPath = `${uid}/${app.id}/blueprint.png`;
-    const up2 = await client.storage.from("media").upload(
-      blueprintPath,
-      new Blob([blueprint as BlobPart], { type: "image/png" }),
-      {
-        contentType: "image/png",
-        upsert: true,
-      },
-    );
-    if (up2.error) throw new Error(up2.error.message);
-  }
-  return { lookPath, blueprintPath };
+  const { sketchPath, sketchBytes } = await renderSketch(
+    client,
+    uid,
+    app,
+    extra,
+  );
+  const lookPath = await renderPortraitFromSketch(client, uid, app, sketchBytes);
+  return { lookPath, blueprintPath: sketchPath };
 }

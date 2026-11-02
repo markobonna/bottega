@@ -106,6 +106,17 @@ export async function saveRoomPhoto(
   revalidatePath(`/workshops/${workshopId}`);
 }
 
+export async function clearRoomPhoto(workshopId: string): Promise<void> {
+  const supabase = await createClient();
+  await needWorkshop(supabase, workshopId);
+  const { error } = await supabase
+    .from("workshops")
+    .update({ photo_path: null })
+    .eq("id", workshopId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/workshops/${workshopId}`);
+}
+
 export async function deleteApp(appId: string): Promise<void> {
   const supabase = await createClient();
   await needApp(supabase, appId);

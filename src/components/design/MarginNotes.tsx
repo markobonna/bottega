@@ -35,7 +35,7 @@ export default function MarginNotes({
   appId: string;
   medium: string;
   initial: ProjectNote[];
-  activePart: number;
+  activePart: number | null;
   onPart: (n: number) => void;
   partLabel: (n: number) => string;
   locked: boolean;
@@ -159,7 +159,9 @@ export default function MarginNotes({
           }}
         >
           <label htmlFor="margin-input" style={{ fontSize: 14, fontWeight: 700 }}>
-            {focusLabel} note, pinned to {activePart}: {partLabel(activePart)}
+            {activePart
+              ? `${focusLabel} note, pinned to ${activePart}: ${partLabel(activePart)}`
+              : `${focusLabel} note`}
           </label>
           <div className="row">
             <input

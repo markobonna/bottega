@@ -335,6 +335,38 @@ export async function image(
   return imageBytesFrom(res, timeoutMs);
 }
 
+/** Sniff image magic bytes; the image model returns WebP despite the
+ * png upload convention, and /images/edits rejects a wrongly declared
+ * MIME type. Unknown bytes fall back to png. Pure, tested. */
+export function sniffImageFormat(bytes: Uint8Array): {
+  mime: string;
+  ext: string;
+} {
+  if (
+    bytes.length >= 4 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  )
+    return { mime: 'image/png', ext: 'png' };
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff)
+    return { mime: 'image/jpeg', ext: 'jpg' };
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  )
+    return { mime: 'image/webp', ext: 'webp' };
+  return { mime: 'image/png', ext: 'png' };
+}
+
 export async function editImage(
   prompt: string,
   imageBytes: Uint8Array<ArrayBuffer>,
@@ -342,16 +374,13 @@ export async function editImage(
   timeoutMs = 120000,
 ): Promise<Uint8Array> {
   const cfg = config();
+  const { mime, ext } = sniffImageFormat(imageBytes);
   const form = new FormData();
   form.set('model', cfg.image);
   form.set('prompt', prompt);
   form.set('size', size);
   form.set('n', '1');
-  form.append(
-    'image',
-    new Blob([imageBytes], { type: 'image/png' }),
-    'source.png',
-  );
+  form.append('image', new Blob([imageBytes], { type: mime }), `source.${ext}`);
   const res = await postForm('/images/edits', form, timeoutMs);
   return imageBytesFrom(res, timeoutMs);
 }

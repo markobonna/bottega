@@ -1,8 +1,9 @@
-# Maria & Cole demo workshops
+# Maria & Cole guest Bottegas
 
-Source of truth for what the two demo template accounts contain (seeded by
-`scripts/seed-demo.ts`). No Classroom: visitors build their own 4th workshop
-in the demo. Every project is **working** (fitting spec + records) and sits
+Source of truth for what the two guest-Bottega template accounts contain
+(seeded by `scripts/seed-demo.ts`). No Classroom: visitors build their own
+4th workshop on their visit. Every project is **working** (fitting spec +
+records) and sits
 at the final stage, so visitors can click back through the steps (back
 buttons on every screen) and see how each one comes out.
 

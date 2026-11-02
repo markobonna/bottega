@@ -79,7 +79,7 @@ export default function TryAs() {
     <div className="mt-6">
       <div className="border-t-[1.5px] border-line pt-4">
         <p className="text-center text-sm text-muted">
-          Try an account before creating your own from scratch
+          Try a guest Bottega before creating your own from scratch
         </p>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">

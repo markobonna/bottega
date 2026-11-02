@@ -8,8 +8,15 @@ memory — update it when `BoardPanel.tsx` changes.
 
 - Title, tagline, "Back to {room}"; 5-step progress row (done = filled dot,
   current = half dot, todo = dashed).
-- The board: SVG drawing of the thing + numbered part callouts + caption.
-  Below it: Ink only / As built / Full render view switch.
+- The board: the generated art when it exists — B&W sketch at step 1,
+  color render after (caption "Sketch"/"Render · draft N", notes
+  unpinned), with a "Revise the sketch/render" form under it (a sketch
+  revise also regrows the portrait so the lineage holds). While art is
+  on its way: "Sketch/Render Being Created" with a 30-second countdown
+  (refreshes once at zero, then holds). Only with no model key or a
+  failed paint: template SVG drawing + numbered part callouts +
+  caption, with the Ink only / As built / Full render view switch
+  below it.
 - Tool toolbar (trade-specific, see below) + margin notes beside the board.
 - Portrait line (until the portrait paints), build-photos gallery.
 - Drafts on the wall: every version pinned, current one marked.
@@ -19,8 +26,8 @@ memory — update it when `BoardPanel.tsx` changes.
 
 | Step | Buttons | Status card | Board | Notes |
 |---|---|---|---|---|
-| 1 | "Looks good — {step 2}" | none | Wobbly ink sketch; all part callouts live | unlocked |
-| 2 | "← {step 1}" + "Next: {step 3}" | none | Full-color design; all callouts live | unlocked |
+| 1 | "Looks good — {step 2}" | none | B&W sketch photo; 30s countdown until it paints | unlocked |
+| 2 | "← {step 1}" + "Next: {step 3}" | none | Color render (grown from the sketch); sketch shown, countdown if neither painted | unlocked |
 | 3 | "← {step 2}" + big "Build and install" (software) or "Send it off" (rest) → send-off dialog | none (but "Your pack" files panel below the board) | Full render; all callouts live | unlocked |
 | 4 | "← {step 3}" + "It arrived" (inside the card) | Crate card: RFQ tracking (hardware/print) or "Finishing up" (rest) | Full render; only parts *with* notes stay clickable | **locked** |
 | 5 | "← {step 4}" + "See it in the room" + "Next project" (inside the card) | Green card: "{step 5} — vendors", arrival photo if any | Full render + stamped label (It arrived / Go live / …) | locked |
@@ -37,8 +44,8 @@ print) and, for software only, the "Need a hand running this?" help card.
 ### Hardware — Sketch · Design · Pack · Send RFQ · It arrived
 
 - Tools: Sketch, Measure, Parts, Materials, Stress test, Explode.
-- Step 2 board: the actual design in full color (same art as the
-  concept SVG in the pack).
+- Step 2 board: the color render, painted from the step-1 sketch
+  (same object and composition).
 - Step 3 "Your pack" panel: .scad, -envelope.stl, -brief.md, -fab-pack.zip
   with downloads — this is what the Pack step means.
 - Step 3 button: "Send it off" → RFQ dialog (vendors, message, send;

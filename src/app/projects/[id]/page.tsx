@@ -26,7 +26,7 @@ export default async function AppPage({
   const { data: app, error } = await supabase
     .from("apps")
     .select(
-      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, owner, photos, look_path, workshop_id, workshops ( name, type )",
+      "id, name, version, spec, private, kind, stage, arrive_at, arrival_seen, order_info, owner, photos, look_path, blueprint_path, workshop_id, workshops ( name, type )",
     )
     .eq("id", id)
     .single();
@@ -127,6 +127,16 @@ export default async function AppPage({
   const galleryPaths: string[] = app.photos ?? [];
   const gallerySigned = await signedUrls(supabase, galleryPaths);
   const photoUrls = galleryPaths.map((p) => gallerySigned[p] ?? "");
+  const artPaths = [app.look_path, app.blueprint_path].filter(
+    (p): p is string => !!p,
+  );
+  const artSigned = artPaths.length
+    ? await signedUrls(supabase, artPaths)
+    : ({} as Record<string, string>);
+  const lookUrl = app.look_path ? (artSigned[app.look_path] ?? null) : null;
+  const sketchUrl = app.blueprint_path
+    ? (artSigned[app.blueprint_path] ?? null)
+    : null;
 
   return (
     <ZoomMount depth={3}>
@@ -149,6 +159,9 @@ export default async function AppPage({
           photoUrls={photoUrls}
           photoPaths={galleryPaths}
           lookMissing={!app.look_path}
+          sketchMissing={!app.blueprint_path}
+          sketchUrl={sketchUrl}
+          lookUrl={lookUrl}
           version={`${app.id}@${app.version}@${app.stage ?? ""}`}
         />
       )}
