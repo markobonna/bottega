@@ -15,35 +15,46 @@ export async function wipeGuestData(
   db: SupabaseClient<Database>,
   guestUid: string,
 ): Promise<void> {
-  const { error: appsError } = await db
-    .from("apps")
-    .delete()
-    .eq("owner", guestUid);
-  if (appsError) throw new Error(`wipe apps: ${appsError.message}`);
-  const { error: wError } = await db
-    .from("workshops")
-    .delete()
-    .eq("owner", guestUid);
-  if (wError) throw new Error(`wipe workshops: ${wError.message}`);
-  const { error: fError } = await db
-    .from("photo_features")
-    .delete()
-    .eq("owner", guestUid);
-  if (fError) throw new Error(`wipe features: ${fError.message}`);
-  const { data: folders, error: lError } = await db.storage
-    .from("media")
-    .list(guestUid);
-  if (lError) throw new Error(`wipe storage: ${lError.message}`);
-  for (const folder of folders ?? []) {
-    const { data: files, error: flError } = await db.storage
-      .from("media")
-      .list(`${guestUid}/${folder.name}`);
-    if (flError) throw new Error(`wipe storage: ${flError.message}`);
-    if (files?.length) {
-      const { error: rError } = await db.storage
-        .from("media")
-        .remove(files.map((f) => `${guestUid}/${folder.name}/${f.name}`));
-      if (rError) throw new Error(`wipe storage: ${rError.message}`);
+  // Wave 1: independent deletes plus the top-level storage listing.
+  const [appsRes, featRes, topList] = await Promise.all([
+    db.from("apps").delete().eq("owner", guestUid),
+    db.from("photo_features").delete().eq("owner", guestUid),
+    db.storage.from("media").list(guestUid),
+  ]);
+  if (appsRes.error) throw new Error(`wipe apps: ${appsRes.error.message}`);
+  if (featRes.error)
+    throw new Error(`wipe features: ${featRes.error.message}`);
+  if (topList.error) throw new Error(`wipe storage: ${topList.error.message}`);
+  // Wave 2: workshops (after apps: FK) plus per-folder listings.
+  const folders = topList.data ?? [];
+  const [wRes, ...listings] = await Promise.all([
+    db.from("workshops").delete().eq("owner", guestUid),
+    ...folders.map((folder) =>
+      db.storage.from("media").list(`${guestUid}/${folder.name}`),
+    ),
+  ]);
+  if (wRes.error) throw new Error(`wipe workshops: ${wRes.error.message}`);
+  const removals: PromiseLike<{ error: unknown }>[] = [];
+  (folders ?? []).forEach((folder, i) => {
+    const listing = listings[i];
+    if (listing.error)
+      throw new Error(`wipe storage: ${listing.error.message}`);
+    if (listing.data?.length) {
+      removals.push(
+        db.storage.from("media").remove(
+          listing.data.map((f) => `${guestUid}/${folder.name}/${f.name}`),
+        ) as unknown as PromiseLike<{ error: unknown }>,
+      );
+    }
+  });
+  const removed = await Promise.all(removals);
+  for (const r of removed) {
+    if (r.error) {
+      const message =
+        r.error instanceof Error
+          ? r.error.message
+          : (r.error as { message?: string }).message;
+      throw new Error(`wipe storage: ${message}`);
     }
   }
 }

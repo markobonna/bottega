@@ -60,133 +60,166 @@ export async function POST(req: Request): Promise<Response> {
   // copies are owner-scoped. No secret needed — judges run this as-is.
   const db = auth.supabase;
 
-  const { data: apps, error: appsError } = await db
-    .from("apps")
-    .select("*")
-    .eq("owner", templateUid)
-    .order("created_at", { ascending: true });
-  if (appsError) {
-    return Response.json({ error: "Couldn't load the demo." }, { status: 502 });
-  }
-  if (!apps.length) {
-    return Response.json(
-      { error: "The demo template is empty. Run the seed first." },
-      { status: 404 },
-    );
-  }
-
+  // IDs are minted up front so every table copies in ONE bulk insert
+  // instead of row-by-row (~150 sequential round-trips was the slow part).
   try {
     // Clean room: a returning guest starts fresh instead of stacking copies.
     // Anonymous guests only — a signed-in user's own work is never touched.
+    // Fresh guests skip the wipe entirely (one count query proves it).
     if (auth.user.is_anonymous) {
-      await wipeGuestData(auth.supabase, guestUid);
+      const { count } = await db
+        .from("apps")
+        .select("id", { count: "exact", head: true })
+        .eq("owner", guestUid);
+      if ((count ?? 0) > 0) {
+        await wipeGuestData(auth.supabase, guestUid);
+      }
     }
-    const { data: workshops, error: wError } = await db
-      .from("workshops")
-      .select("*")
-      .eq("owner", templateUid);
-    if (wError) throw new Error(`load workshops: ${wError.message}`);
+    // ONE wave: every table by owner. Rows are filtered to the copied
+    // apps in JS below, so orphans can never poison the copy.
+    const [appsRes, wRes, vRes, rRes, mRes, eRes, fRes] = await Promise.all([
+      db
+        .from("apps")
+        .select("*")
+        .eq("owner", templateUid)
+        .order("created_at", { ascending: true }),
+      db.from("workshops").select("*").eq("owner", templateUid),
+      db.from("app_versions").select("*").eq("owner", templateUid),
+      db.from("records").select("*").eq("owner", templateUid),
+      db.from("models").select("*").eq("owner", templateUid),
+      db.from("examples").select("*").eq("owner", templateUid),
+      db.from("photo_features").select("*").eq("owner", templateUid),
+    ]);
+    if (appsRes.error) {
+      return Response.json({ error: "Couldn't load the demo." }, { status: 502 });
+    }
+    if (wRes.error) throw new Error(`load workshops: ${wRes.error.message}`);
+    if (vRes.error) throw new Error(`load versions: ${vRes.error.message}`);
+    if (rRes.error) throw new Error(`load records: ${rRes.error.message}`);
+    if (mRes.error) throw new Error(`load models: ${mRes.error.message}`);
+    if (eRes.error) throw new Error(`load examples: ${eRes.error.message}`);
+    if (fRes.error) throw new Error(`load features: ${fRes.error.message}`);
+    const apps = appsRes.data;
+    const workshops = wRes.data;
+    if (!apps.length) {
+      return Response.json(
+        { error: "The demo template is empty. Run the seed first." },
+        { status: 404 },
+      );
+    }
+
     const workshopMap = new Map<string, string>();
-    for (const w of workshops) {
-      const { data, error } = await db
-        .from("workshops")
-        .insert({ owner: guestUid, name: w.name, type: w.type })
-        .select("id")
-        .single();
-      if (error || !data) throw new Error(`copy workshop: ${error?.message}`);
-      workshopMap.set(w.id, data.id);
+    for (const w of workshops) workshopMap.set(w.id, crypto.randomUUID());
+    {
+      const { error } = await db.from("workshops").insert(
+        workshops.map((w) => ({
+          id: workshopMap.get(w.id)!,
+          owner: guestUid,
+          name: w.name,
+          type: w.type,
+        })),
+      );
+      if (error) throw new Error(`copy workshops: ${error.message}`);
     }
+
     const appMap = new Map<string, string>();
-    for (const app of apps) {
-      const workshopId = workshopMap.get(app.workshop_id);
-      if (!workshopId) throw new Error("copy app: workshop missing");
-      const { data, error } = await db
-        .from("apps")
-        .insert({
-          owner: guestUid,
-          name: app.name,
-          spec: app.spec,
-          version: app.version,
-          private: app.private,
-          kind: app.kind,
-          position: app.position,
-          workshop_id: workshopId,
-          stage: app.stage,
-          order_info: app.order_info,
-          arrive_at: app.arrive_at,
-          arrival_seen: app.arrival_seen,
-          room_x: app.room_x,
-          room_y: app.room_y,
-        })
-        .select("id")
-        .single();
-      if (error || !data) throw new Error(`copy app: ${error?.message}`);
-      appMap.set(app.id, data.id);
-    }
-    const rewrite = rewriter(templateUid, guestUid, appMap);
-    for (const app of apps) {
-      if (!app.look_path && !app.blueprint_path && !app.photos?.length)
-        continue;
-      const { error } = await db
-        .from("apps")
-        .update({
-          look_path: app.look_path ? rewrite(app.look_path) : null,
-          blueprint_path: app.blueprint_path
-            ? rewrite(app.blueprint_path)
-            : null,
-          photos: ((app.photos ?? []) as string[])
-            .map((p: string) => rewrite(p))
-            .filter((p): p is string => p !== null),
-        })
-        .eq("id", appMap.get(app.id)!);
-      if (error) throw new Error(`copy art paths: ${error.message}`);
-    }
-
-    for (const [oldApp, newApp] of appMap) {
-      const { data: versions, error: vError } = await db
-        .from("app_versions")
-        .select("*")
-        .eq("app_id", oldApp);
-      if (vError) throw new Error(`load versions: ${vError.message}`);
-      for (const v of versions) {
-        const { error } = await db.from("app_versions").insert({
-          owner: guestUid,
-          app_id: newApp,
-          version: v.version,
-          spec: v.spec,
-          ops: v.ops,
-          summary: v.summary,
-          source: v.source,
-        });
-        if (error) throw new Error(`copy version: ${error.message}`);
-      }
-
-      const { data: records, error: rError } = await db
-        .from("records")
-        .select("*")
-        .eq("app_id", oldApp);
-      if (rError) throw new Error(`load records: ${rError.message}`);
-      for (const r of records) {
-        const { error } = await db.from("records").insert({
-          owner: guestUid,
-          app_id: newApp,
-          collection: r.collection,
-          data: rewriteData(r.data, rewrite) as Record<string, never>,
-        });
-        if (error) throw new Error(`copy record: ${error.message}`);
-      }
-
-      const { data: models, error: mError } = await db
-        .from("models")
-        .select("*")
-        .eq("app_id", oldApp);
-      if (mError) throw new Error(`load models: ${mError.message}`);
-      for (const m of models) {
-        const { data: nm, error: nmError } = await db
-          .from("models")
-          .insert({
+    for (const app of apps) appMap.set(app.id, crypto.randomUUID());
+    {
+      const { error } = await db.from("apps").insert(
+        apps.map((app) => {
+          const workshopId = workshopMap.get(app.workshop_id);
+          if (!workshopId) throw new Error("copy app: workshop missing");
+          return {
+            id: appMap.get(app.id)!,
             owner: guestUid,
-            app_id: newApp,
+            name: app.name,
+            spec: app.spec,
+            version: app.version,
+            private: app.private,
+            kind: app.kind,
+            position: app.position,
+            workshop_id: workshopId,
+            stage: app.stage,
+            order_info: app.order_info,
+            arrive_at: app.arrive_at,
+            arrival_seen: app.arrival_seen,
+            room_x: app.room_x,
+            room_y: app.room_y,
+          };
+        }),
+      );
+      if (error) throw new Error(`copy apps: ${error.message}`);
+    }
+
+    const rewrite = rewriter(templateUid, guestUid, appMap);
+    const artUpdates = apps.filter(
+      (app) => app.look_path || app.blueprint_path || app.photos?.length,
+    );
+    await Promise.all(
+      artUpdates.map((app) =>
+        db
+          .from("apps")
+          .update({
+            look_path: app.look_path ? rewrite(app.look_path) : null,
+            blueprint_path: app.blueprint_path
+              ? rewrite(app.blueprint_path)
+              : null,
+            photos: ((app.photos ?? []) as string[])
+              .map((p: string) => rewrite(p))
+              .filter((p): p is string => p !== null),
+          })
+          .eq("id", appMap.get(app.id)!),
+      ),
+    ).then((results) => {
+      for (const r of results) {
+        if (r.error) throw new Error(`copy art paths: ${r.error.message}`);
+      }
+    });
+
+    const oldAppIds = apps.map((a) => a.id);
+    const versions = vRes.data.filter((v) => appMap.has(v.app_id));
+    const records = rRes.data.filter((r) => appMap.has(r.app_id));
+    const models = mRes.data.filter((m) => appMap.has(m.app_id));
+
+    const modelMap = new Map<string, string>();
+    for (const m of models) modelMap.set(m.id, crypto.randomUUID());
+    const examples = eRes.data.filter((e) => modelMap.has(e.model_id));
+
+    const inserts: PromiseLike<{ error: unknown }>[] = [];
+    if (versions.length > 0) {
+      inserts.push(
+        db.from("app_versions").insert(
+          versions.map((v) => ({
+            owner: guestUid,
+            app_id: appMap.get(v.app_id)!,
+            version: v.version,
+            spec: v.spec,
+            ops: v.ops,
+            summary: v.summary,
+            source: v.source,
+          })),
+        ) as unknown as PromiseLike<{ error: unknown }>,
+      );
+    }
+    if (records.length > 0) {
+      inserts.push(
+        db.from("records").insert(
+          records.map((r) => ({
+            owner: guestUid,
+            app_id: appMap.get(r.app_id)!,
+            collection: r.collection,
+            data: rewriteData(r.data, rewrite) as Record<string, never>,
+          })),
+        ) as unknown as PromiseLike<{ error: unknown }>,
+      );
+    }
+    if (models.length > 0) {
+      inserts.push(
+        db.from("models").insert(
+          models.map((m) => ({
+            id: modelMap.get(m.id)!,
+            owner: guestUid,
+            app_id: appMap.get(m.app_id)!,
             block_id: m.block_id,
             labels: m.labels,
             dims: m.dims,
@@ -195,78 +228,77 @@ export async function POST(req: Request): Promise<Response> {
             rounds: m.rounds,
             curve: m.curve,
             feature_source: m.feature_source,
-          })
-          .select("id")
-          .single();
-        if (nmError || !nm) throw new Error(`copy model: ${nmError?.message}`);
-        const { data: examples, error: eError } = await db
-          .from("examples")
-          .select("*")
-          .eq("model_id", m.id);
-        if (eError) throw new Error(`load examples: ${eError.message}`);
-        for (const e of examples) {
-          const photoPath = e.photo_path ? rewrite(e.photo_path) : null;
-          if (e.photo_path && !photoPath) continue;
-          const { error } = await db.from("examples").insert({
+          })),
+        ) as unknown as PromiseLike<{ error: unknown }>,
+      );
+    }
+    const rewritableExamples = examples.filter((e) => {
+      if (!e.photo_path) return true;
+      return rewrite(e.photo_path) !== null;
+    });
+    // Feature cache rows travel with the photos, so the copy scores identically.
+    const rewritableFeatures = fRes.data.filter(
+      (f) => rewrite(f.photo_path) !== null,
+    );
+    if (rewritableFeatures.length > 0) {
+      inserts.push(
+        db.from("photo_features").insert(
+          rewritableFeatures.map((f) => ({
             owner: guestUid,
-            model_id: nm.id,
-            photo_path: photoPath,
-            x: e.x,
-            y: e.y,
-          });
-          if (error) throw new Error(`copy example: ${error.message}`);
-        }
+            photo_path: rewrite(f.photo_path)!,
+            x: f.x,
+            source: f.source,
+          })),
+        ) as unknown as PromiseLike<{ error: unknown }>,
+      );
+    }
+    const insertResults = await Promise.all(inserts);
+    for (const r of insertResults) {
+      if (r.error) {
+        const message =
+          r.error instanceof Error
+            ? r.error.message
+            : (r.error as { message?: string }).message;
+        throw new Error(`copy rows: ${message}`);
       }
     }
-
-    // Feature cache rows travel with the photos, so the copy scores identically.
-    const { data: features, error: fError } = await db
-      .from("photo_features")
-      .select("*")
-      .eq("owner", templateUid);
-    if (fError) throw new Error(`load features: ${fError.message}`);
-    for (const f of features) {
-      const photoPath = rewrite(f.photo_path);
-      if (!photoPath) continue;
-      const { error } = await db.from("photo_features").insert({
-        owner: guestUid,
-        photo_path: photoPath,
-        x: f.x,
-        source: f.source,
-      });
-      if (error) throw new Error(`copy features: ${error.message}`);
+    // Examples last: they key to the models copied above.
+    if (rewritableExamples.length > 0) {
+      const { error: exError } = await db.from("examples").insert(
+        rewritableExamples.map((e) => ({
+          owner: guestUid,
+          model_id: modelMap.get(e.model_id)!,
+          photo_path: e.photo_path ? rewrite(e.photo_path) : null,
+          x: e.x,
+          y: e.y,
+        })),
+      );
+      if (exError) throw new Error(`copy examples: ${exError.message}`);
     }
 
-    // Storage files, folder by folder (folders are template app ids),
-    // copied in parallel: 13 sequential round-trips was the slow part.
-    const { data: folders, error: lError } = await db.storage
-      .from("media")
-      .list(templateUid);
-    if (lError) throw new Error(`list storage: ${lError.message}`);
+    // Storage files: folders are template app ids, so list them directly
+    // (one wave, no top-level listing), then server-side copy — the bytes
+    // never travel through this server.
+    const listings = await Promise.all(
+      oldAppIds.map((id) => db.storage.from("media").list(`${templateUid}/${id}`)),
+    );
     const jobs: [string, string][] = [];
-    for (const folder of folders) {
-      if (!appMap.has(folder.name)) continue;
-      const { data: files, error: flError } = await db.storage
-        .from("media")
-        .list(`${templateUid}/${folder.name}`);
-      if (flError) throw new Error(`list storage: ${flError.message}`);
-      for (const file of files) {
-        const from = `${templateUid}/${folder.name}/${file.name}`;
+    oldAppIds.forEach((id, i) => {
+      const listing = listings[i];
+      if (listing.error)
+        throw new Error(`list storage: ${listing.error.message}`);
+      for (const file of listing.data ?? []) {
+        const from = `${templateUid}/${id}/${file.name}`;
         const to = rewrite(from);
         if (to) jobs.push([from, to]);
       }
-    }
+    });
     await Promise.all(
       jobs.map(async ([from, to]) => {
-        const { data: blob, error: dError } = await db.storage
+        const { error: cError } = await db.storage
           .from("media")
-          .download(from);
-        if (dError || !blob)
-          throw new Error(`copy photo: ${dError?.message}`);
-        const { error: uError } = await db.storage
-          .from("media")
-          .upload(to, blob, { contentType: "image/jpeg", upsert: true });
-        if (uError) throw new Error(`copy photo: ${uError.message}`);
+          .copy(from, to);
+        if (cError) throw new Error(`copy photo: ${cError.message}`);
       }),
     );
 

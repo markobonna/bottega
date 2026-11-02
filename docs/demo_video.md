@@ -6,7 +6,7 @@
 
 SAY, to camera:
 
-> "I'm Mark, and this is Bottega — a workshop that builds real physical hardware and full stack software that can manage your real life ... all from a conversation. Describe the world you want to live in, and it builds it alongside you. Let me show you."
+> "I'm Mark, and this is Bottega — a workshop that builds real physical hardware and full stack software that can manage your real life ... all from a conversation. Describe the world you want to live in, and it builds it alongside you."
 
 ## B — Maria (0:25–0:50)
 
@@ -14,7 +14,7 @@ DO: sign-in page → Try as Maria. Jump-cut through her world,
 ~4 seconds each: Café → Dance Studio → Music Room, hold on a
 finished board (Espresso machine v2, "It arrived"). SAY:
 
-> "Before we build live, there are two guest accounts you can try. Maria runs a café — dance studio upstairs, music room out back. In the studio: a Reel dance, rehearsed and ready to post… and the cut she'll run as a Facebook ad for the café. Music is her hobby, where Bottega helped her come up with a new rendition of the Moonlight Sonata."
+> "Before we build for our own world,  there are two guest accounts you can try. Maria ... she runs a café  where she created specialty software tailered for her business and hardware like a one of one esspresso machine. In the dance studio: she creates and reses her instagram reel dances, ready to post… and the cut she'll run as a Facebook ad for the café. Music is her hobby, where Bottega helped her come up with a new rendition of the Moonlight Sonata."
 
 ## C — Cole (0:50–1:10)
 
@@ -22,40 +22,33 @@ DO: back to sign-in → Try as Cole. Jump-cut through his world,
 ~4 seconds each: Store → Garage → Kitchen, hold on a finished
 board (Restoration Bench, "It arrived"). SAY:
 
-> "And here's Cole — he restores furniture for a living. Same
-> platform, completely different world. That bench produces a
-> before-and-after page he drops straight into his Instagram DMs
-> to win the next client. And in the kitchen — grandma's recipes
-> from the old world, recreated… the recipe card that'll do the
-> rounds in the family WhatsApp. Every visit is a fresh
-> private copy. Nothing stacks, nothing lingers — exit and it resets."
+> "And here's Cole — he restores furniture for a living from his garage. That bench produces a before-and-after page he drops straight into his Instagram DMs to win the next customer that walks into his store. And in the kitchen — his grandma's recipes
+> from the old world, recreated with  recipes Bottega created that'll do the rounds in the family WhatsApp. Every guest account visit is a fresh copy. Nothing stacks, nothing lingers — exit and it resets."
 
 ## D — Build live: the price sign Hardware (1:10–2:40)
-
-One build, start to finish: a price sign for the founder's own
-market-stall side hustle, driven by his phone. WhatsApp is his stated
-plan, pinned to the board as a margin note — the voiceover says what
-the plan is, never that Bottega runs his messages. Jump cuts allowed
-at every advance; the edit keeps it under 90 seconds.
 
 DO: on the real account, "Build a workshop" picker → Garage. Room
 loads (instant). Upload a picture of the actual garage as the room
 photo. SAY:
 
-> "Now the live build — first, a new workshop. My garage, with a photo
-> of the real thing as the room. Say I run a market stall: every price
-> changed by hand, chalk in the rain. Let's build a hardware price sign
-> I'd configure from my phone."
+> "Now the live build — first, a new workshop. 
 
-DO: footer talk bar, type "I want a electric food truck menu sign i can attach to my food truck." 
+DO: footer talk bar, type 
 
-When Bottega asks hardware or software, SAY "Hardware"
+> "Build a garage workshop. ""
+>
+> Now lets add my real garage photo so it mirrorsmy world.  
+>
+> Now, Say I run a food truckl: every price is changed by hand so let's build a hardware price sign I can configure from my phone."
+
+DO: footer talk bar, type 
+
+> "I want a electric food truck menu sign i can attach to my food truck." 
+
+DO: When Bottega asks hardware or software, Click "Hardware"
 (point at the footer status):
 
-> "Every answer is a live Meta Muse model call — talk shows Asking
-> Muse Spark, voice shows Muse Voice transcribing, right in the
-> footer. Hardware starts as a validated spec, JSON the runtime
-> renders — software Spark designs and builds directly."
+> "Every answer is a live Meta Muse model call — voice shows Muse Voice transcribing, right in the footer what we say to muse spark. . Hardware starts as a validated spec, JSON the runtime renders"
 > "First sketch, drawn by Muse Image from that one sentence — and
 > behind it, the spec Spark wrote. Validated before it ever rendered."
 
@@ -90,33 +83,15 @@ Advance to It arrived — "It's here!" card, upload the arrival photo
 > Imagine that in every market from Guadalajara to Pune — each one a
 > small business Meta's tools helped start."
 
-
-
-
-
-IF-FAILS lines (say, smile, keep rolling; cut in edit):
-
-- Build stalls: "The model's thinking — the first of two live waits
-  in the video." (If >45s, cut; use the rehearsal take.)
-- Any error: "That's the honest error state — let me re-run it."
-- Sketch is wrong: "Not it — revise that." (Type the fix in "Revise
-  the sketch", cut the repaint.)
-- Mail client misbehaves: "The draft's ready — my mail app just
-  wants the spotlight." (Cut; pick up at "RFQs are out.")
-
-
-
 ## E — Build live: software for the stall the sign hangs on. (1:10–2:40)
 
 DO: go to create a new project
 
-> "Now the software — an app tracking my food truck sales."
+> "Now for software — an app tracking my food truck sales."
 
-DO: describe it — "an app tracking my food truck sales. I call in
-orders from the truck, customers' orders get logged." Say the
-WhatsApp notification idea out loud as the plan if you like, but
-never as a feature: the app logs and tracks; it does not send
-messages.
+DO: describe it — 
+
+> "an app tracking my food truck sales. I call in orders from the truck, customers' orders get logged." 
 
 DO: State Software
 
@@ -124,8 +99,7 @@ DO: Sketch step — pick mobile (the only question), the countdown
 holds while Spark designs the app — real screens, real styling,
 not boxes. SAY:
 
-> "One question first — mobile or desktop? Then Spark designs the
-> app itself — a real first pass, working."
+> "One question first — mobile or desktop? Then Muse Spark designs the app."
 
 DO: advance to Prototype — tap through the working app live in the
 board (add a sale, watch it save). One change-bar sentence
