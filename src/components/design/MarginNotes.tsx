@@ -6,7 +6,6 @@ import {
   addProjectNote,
   type ProjectNote,
 } from "@/app/projects/[id]/actions";
-import { askApprentice } from "@/lib/apprentice-client";
 import { topicLabel, type ToolEntry } from "@/lib/design/tools";
 
 import "@/vendor/bottega/core.js";
@@ -61,30 +60,14 @@ export default function MarginNotes({
       part: activePart,
       topic: topicId,
     });
+    setBusy(false);
     if (!mine.ok) {
-      setBusy(false);
       setProblem("Couldn't save that. Try again.");
       return;
     }
+    // Recorded, never answered: a reply here once fabricated completions.
     setNotes((ns) => [...ns, mine.note]);
-    try {
-      const data = await askApprentice(clean, [], { appId });
-      const say = data.say ?? "";
-      if (say) {
-        const theirs = await addProjectNote(appId, {
-          who: "apprentice",
-          text: say,
-          part: activePart,
-          topic: topicId,
-        });
-        if (theirs.ok) setNotes((ns) => [...ns, theirs.note]);
-      }
-    } catch {
-      setProblem("Saved. The apprentice didn't answer — try again.");
-    } finally {
-      setBusy(false);
-      router.refresh();
-    }
+    router.refresh();
   }
 
   const focusLabel = topicLabel(topics, topicId) ?? "General";
@@ -141,13 +124,8 @@ export default function MarginNotes({
           ))
         )}
         {busy && (
-          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="thinking" aria-label="Thinking">
-              <i />
-              <i />
-              <i />
-            </span>
-            <span className="small">Asking Muse Spark…</span>
+          <span className="small" aria-live="polite">
+            Saving…
           </span>
         )}
       </div>
