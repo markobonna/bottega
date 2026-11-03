@@ -30,7 +30,19 @@ export default function LookPainter({
     "sketch" | "portrait" | "done" | "failed" | "off" | null
   >(null);
   const [attempt, setAttempt] = useState(0);
+  const [problem, setProblem] = useState("");
   const firing = useRef(false);
+
+  async function readProblem(res: Response): Promise<string> {
+    try {
+      const data = (await res.json()) as { error?: unknown };
+      return typeof data.error === "string" && data.error
+        ? data.error
+        : "The art didn't paint.";
+    } catch {
+      return "The art didn't paint.";
+    }
+  }
 
   useEffect(() => {
     if ((!sketchMissing && !lookMissing) || firing.current) return;
@@ -50,6 +62,7 @@ export default function LookPainter({
     firing.current = true;
     (async () => {
       try {
+        setProblem("");
         if (wantSketch) {
           try {
             sessionStorage.setItem(sketchFlag, "1");
@@ -66,7 +79,10 @@ export default function LookPainter({
             setPhase("off");
             return;
           }
-          if (!res.ok) throw new Error("sketch failed");
+          if (!res.ok) {
+            setProblem(await readProblem(res));
+            throw new Error("sketch failed");
+          }
           router.refresh();
         }
         if (wantPortrait) {
@@ -85,7 +101,10 @@ export default function LookPainter({
             setPhase("off");
             return;
           }
-          if (!res.ok) throw new Error("portrait failed");
+          if (!res.ok) {
+            setProblem(await readProblem(res));
+            throw new Error("portrait failed");
+          }
           router.refresh();
         }
         setPhase("done");
@@ -135,7 +154,7 @@ export default function LookPainter({
   if (phase === "failed") {
     return (
       <p className="text-sm" role="status">
-        The art didn&apos;t paint.{" "}
+        {problem || "The art didn\u2019t paint."}{" "}
         <button type="button" className="underline" onClick={retry}>
           Try again
         </button>

@@ -29,7 +29,7 @@ Takes effect on the next `pnpm run seed:demo`.
 |---|---|---|---|---|
 | The Store | Neon Sign | print | Collect | 2 proofs, sign draws on demand |
 | The Store | Quick Repair Tips | software | Downloaded | 3 tips; a tips log, not a chatbot (no chatbot block in the catalog) |
-| The Garage | Restoration Bench | hardware | It arrived | 3 pieces, SAM damage counts, before/after photos |
+| The Garage | Restoration Bench | hardware | It arrived | 3 pieces, SAM damage counts, before/after photos; board art tells it too: damaged sketch → restored design |
 | The Garage | Bike wall rack | hardware | It arrived | 3 parts tracked |
 | The Garage | Workbench lamp | hardware | It arrived | 3 parts, lamp wired and lit |
 | The Kitchen | Grandma's Spaghetti | recipe | Cook | 3 batches of the 1920s recipe |

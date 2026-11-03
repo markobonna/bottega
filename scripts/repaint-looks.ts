@@ -1,24 +1,28 @@
-// Local only: repaint the template accounts' print/recipe/music/dance looks.
-// Usage: pnpm run repaint:looks
+// Local only: repaint the template accounts' looks without reseeding.
+// Usage: pnpm run repaint:looks [-- <kind>...]
 // Needs SUPABASE_SECRET_KEY (real, not redacted) and MODEL_API_KEY in .env.local.
 //
-// Background: the old look prompts only knew "hardware" vs "everything
-// else", so these four kinds got phone-app mockup art. The prompts are
-// fixed; this regenerates ONLY the art (look_path/blueprint_path) for
-// those kinds on maria/cole. Records, files, versions, notes and
-// polaroid positions are untouched — unlike a full reseed.
+// Regenerates ONLY the art (look_path/blueprint_path) for the given
+// kinds on maria/cole (default: all five); hardware rows also get
+// their seed brief, and the Restoration Bench design is revised to
+// the restored bench. Records, files, versions, notes and polaroid
+// positions are untouched — unlike a full reseed.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { MissingKeyError } from "@/lib/meta";
-import { renderLook } from "@/lib/project-look";
+import { renderLook, reviseArt } from "@/lib/project-look";
 import { retryAsync } from "@/lib/retry";
+import {
+  RESTORATION_RESTORE_INSTRUCTION,
+  SEED_HARDWARE_BRIEFS,
+} from "@/lib/seed-briefs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/types";
 
 type Client = SupabaseClient<Database>;
 
-const KINDS = ["print", "recipe", "music", "dance"];
+const KINDS = ["print", "recipe", "music", "dance", "hardware"];
 const EMAILS = ["maria@example.com", "cole@example.com"];
 
 function env(name: string): string {
@@ -64,22 +68,33 @@ async function main(): Promise<void> {
   env("SUPABASE_SECRET_KEY");
   env("MODEL_API_KEY");
   const admin = createAdminClient() as unknown as SupabaseClient;
+  const only = process.argv.slice(2).filter((a) => !a.startsWith("-"));
+  const kinds = only.length > 0 ? KINDS.filter((k) => only.includes(k)) : KINDS;
+  if (only.length > 0 && kinds.length === 0) {
+    console.error(`unknown kind(s): ${only.join(", ")} (want ${KINDS.join(", ")})`);
+    process.exit(1);
+  }
   let done = 0;
   for (const email of EMAILS) {
     const { client, uid } = await signInAs(admin, url, anonKey, email);
     const { data: apps, error } = await client
       .from("apps")
       .select("id, name, spec, kind")
-      .in("kind", KINDS)
+      .in("kind", kinds)
       .order("created_at", { ascending: true });
     if (error) throw new Error(`${email}: ${error.message}`);
     for (const app of apps ?? []) {
+      const brief =
+        app.kind === "hardware"
+          ? (SEED_HARDWARE_BRIEFS[app.name ?? ""] ?? null)
+          : null;
       const { lookPath, blueprintPath } = await retryAsync(
         () =>
           renderLook(client, uid, {
             id: app.id,
             spec: app.spec,
             kind: app.kind ?? "print",
+            brief,
           }),
         {
           label: `repaint ${app.name ?? app.id}`,
@@ -88,11 +103,32 @@ async function main(): Promise<void> {
       );
       const { error: upError } = await client
         .from("apps")
-        .update({ look_path: lookPath, blueprint_path: blueprintPath })
+        .update({
+          look_path: lookPath,
+          blueprint_path: blueprintPath,
+          ...(brief ? { brief } : {}),
+        })
         .eq("id", app.id);
       if (upError) throw new Error(`save ${app.id}: ${upError.message}`);
       done += 1;
       console.log(`repainted (${app.kind}): ${app.name ?? app.id}`);
+      if (app.kind === "hardware" && app.name === "Restoration Bench") {
+        await retryAsync(
+          () =>
+            reviseArt(
+              client,
+              "portrait",
+              lookPath,
+              RESTORATION_RESTORE_INSTRUCTION,
+              "hardware",
+            ),
+          {
+            label: `restore ${app.name}`,
+            fatal: (e) => e instanceof MissingKeyError,
+          },
+        );
+        console.log(`restored: ${app.name}`);
+      }
     }
   }
   console.log(`REPAINT PASS: ${done} project(s)`);

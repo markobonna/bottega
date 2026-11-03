@@ -30,6 +30,7 @@ export async function createApp(
     summary: string;
     workshopId: string;
     kind?: DesignMedium;
+    brief?: string;
   } & WithOwner,
 ): Promise<string> {
   const parsed = parseSpec(spec);
@@ -55,6 +56,7 @@ export async function createApp(
       workshop_id: opts.workshopId,
       position: (top?.position ?? -1) + 1,
       ...(opts.kind ? { kind: opts.kind } : {}),
+      ...(opts.brief ? { brief: opts.brief } : {}),
       ...owned,
     })
     .select("id")

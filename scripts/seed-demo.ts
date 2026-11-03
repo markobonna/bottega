@@ -11,7 +11,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { answer, createBrain, snapshot, train } from "@/lib/brain";
 import { MissingKeyError } from "@/lib/meta";
-import { renderLook } from "@/lib/project-look";
+import { renderLook, reviseArt } from "@/lib/project-look";
 import { addRecord } from "@/lib/records";
 import { retryAsync } from "@/lib/retry";
 import { segment } from "@/lib/sam";
@@ -27,6 +27,10 @@ import {
   saveModel,
   scorePhoto,
 } from "@/lib/teach";
+import {
+  RESTORATION_RESTORE_INSTRUCTION,
+  SEED_HARDWARE_BRIEFS,
+} from "@/lib/seed-briefs";
 import { createApp } from "@/lib/versions";
 
 type Client = SupabaseClient<Database>;
@@ -135,6 +139,8 @@ interface PendingLook {
   id: string;
   spec: unknown;
   kind: "hardware" | "software" | "music" | "dance" | "print" | "recipe";
+  brief?: string | null;
+  restoreDesign?: boolean;
 }
 
 /** Look renders are slow (sketch + portrait, sequential), so they queue
@@ -148,15 +154,17 @@ async function renderPendingLooks(): Promise<void> {
     if (!p) return;
     if (looksSkipped) continue;
     try {
+      const lookName = (p.spec as { name?: string }).name ?? p.id;
       const { lookPath, blueprintPath } = await retryAsync(
         () =>
           renderLook(p.client, p.uid, {
             id: p.id,
             spec: p.spec,
             kind: p.kind,
+            brief: p.brief,
           }),
         {
-          label: `look ${(p.spec as { name?: string }).name ?? p.id}`,
+          label: `look ${lookName}`,
           fatal: (e) => e instanceof MissingKeyError,
         },
       );
@@ -165,7 +173,24 @@ async function renderPendingLooks(): Promise<void> {
         .update({ look_path: lookPath, blueprint_path: blueprintPath })
         .eq("id", p.id);
       if (error) throw new Error(`look paths: ${error.message}`);
-      console.log(`look: ${(p.spec as { name?: string }).name ?? p.id}`);
+      console.log(`look: ${lookName}`);
+      if (p.restoreDesign) {
+        await retryAsync(
+          () =>
+            reviseArt(
+              p.client,
+              "portrait",
+              lookPath,
+              RESTORATION_RESTORE_INSTRUCTION,
+              p.kind,
+            ),
+          {
+            label: `restore ${lookName}`,
+            fatal: (e) => e instanceof MissingKeyError,
+          },
+        );
+        console.log(`restored: ${lookName}`);
+      }
     } catch (e) {
       if (e instanceof MissingKeyError) {
         looksSkipped = true;
@@ -188,6 +213,8 @@ async function createSeedApp(
     summary: string;
     workshopId: string;
     kind?: "hardware" | "software" | "music" | "dance" | "print" | "recipe";
+    brief?: string;
+    restoreDesign?: boolean;
   },
 ): Promise<string> {
   const parsed = parseSpec(spec);
@@ -197,7 +224,15 @@ async function createSeedApp(
     );
   }
   const id = await createApp(client, spec, opts);
-  pendingLooks.push({ client, uid, id, spec, kind: opts.kind ?? "software" });
+  pendingLooks.push({
+    client,
+    uid,
+    id,
+    spec,
+    kind: opts.kind ?? "software",
+    brief: opts.brief,
+    restoreDesign: opts.restoreDesign,
+  });
   return id;
 }
 
@@ -415,7 +450,10 @@ async function seedMaria(client: Client, uid: string): Promise<string> {
       "ochre",
       "🔧",
     ),
-    seedOpts(cafeId, "hardware"),
+    {
+      ...seedOpts(cafeId, "hardware"),
+      brief: SEED_HARDWARE_BRIEFS["Espresso machine v2"],
+    },
   );
   const registerId = await createSeedApp(
     client,
@@ -440,7 +478,10 @@ async function seedMaria(client: Client, uid: string): Promise<string> {
       statsTitle: "Costs",
       stats: [{ title: "Fix costs", field: "cost", agg: "sum" }],
     }),
-    seedOpts(cafeId, "hardware"),
+    {
+      ...seedOpts(cafeId, "hardware"),
+      brief: SEED_HARDWARE_BRIEFS["Register drawer fix"],
+    },
   );
   const loyaltyId = await createSeedApp(
     client,
@@ -746,6 +787,8 @@ async function seedCole(client: Client, uid: string): Promise<string> {
       summary: "Demo seed",
       workshopId: garageId,
       kind: "hardware",
+      brief: SEED_HARDWARE_BRIEFS["Restoration Bench"],
+      restoreDesign: true,
     },
   );
   const seedOpts = (workshopId: string, kind: "hardware" | "software" | "music" | "dance" | "print" | "recipe") => ({
@@ -763,7 +806,10 @@ async function seedCole(client: Client, uid: string): Promise<string> {
       "indigo",
       "🚲",
     ),
-    seedOpts(garageId, "hardware"),
+    {
+      ...seedOpts(garageId, "hardware"),
+      brief: SEED_HARDWARE_BRIEFS["Bike wall rack"],
+    },
   );
   const lampId = await createSeedApp(
     client,
@@ -774,7 +820,10 @@ async function seedCole(client: Client, uid: string): Promise<string> {
       "ochre",
       "🔦",
     ),
-    seedOpts(garageId, "hardware"),
+    {
+      ...seedOpts(garageId, "hardware"),
+      brief: SEED_HARDWARE_BRIEFS["Workbench lamp"],
+    },
   );
   const neonId = await createSeedApp(
     client,
@@ -865,7 +914,10 @@ async function seedCole(client: Client, uid: string): Promise<string> {
       "olive",
       "🪑",
     ),
-    seedOpts(kitchenId, "hardware"),
+    {
+      ...seedOpts(kitchenId, "hardware"),
+      brief: SEED_HARDWARE_BRIEFS["Movable Stool"],
+    },
   );
   const spec = coleFixture as AppSpec;
   const see = spec.screens
