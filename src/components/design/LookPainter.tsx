@@ -16,11 +16,14 @@ export default function LookPainter({
   sketchMissing,
   lookMissing,
   onPhase,
+  signal = 0,
 }: {
   appId: string;
   sketchMissing: boolean;
   lookMissing: boolean;
   onPhase?: (phase: "off" | "failed" | null) => void;
+  /** Bump to re-attempt still-missing art (e.g. stepping forward again). */
+  signal?: number;
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<
@@ -92,7 +95,7 @@ export default function LookPainter({
         firing.current = false;
       }
     })();
-  }, [appId, sketchMissing, lookMissing, attempt, router]);
+  }, [appId, sketchMissing, lookMissing, attempt, signal, router]);
 
   // Tell the board when art will never arrive (no key, or a failed
   // render), so it can fall back to the template drawing. Any other

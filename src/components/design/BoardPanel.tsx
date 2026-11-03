@@ -354,6 +354,7 @@ export default function BoardPanel({
   // here yet, a countdown holds the board; the template (with its pins)
   // appears only when art was proven unavailable (no key, failed paint).
   const [artFailed, setArtFailed] = useState(false);
+  const [paintSignal, setPaintSignal] = useState(0);
   const boardPhoto =
     project.stage === "sketch" ? sketchUrl : (lookUrl ?? sketchUrl);
   const photoKind =
@@ -417,6 +418,16 @@ export default function BoardPanel({
       setProblem("Couldn't move it forward. Try again.");
       return;
     }
+    // Stepping forward re-attempts still-missing art: without this the
+    // once-per-session paint guard eats every retry and the board just
+    // reshows the sketch. Only missing art refires.
+    try {
+      sessionStorage.removeItem(`bottega:sketch-${appId}`);
+      sessionStorage.removeItem(`bottega:portrait-${appId}`);
+    } catch {
+      /* private mode: bump anyway */
+    }
+    setPaintSignal((n) => n + 1);
     router.refresh();
   }
 
@@ -776,6 +787,7 @@ export default function BoardPanel({
           sketchMissing={sketchMissing}
           lookMissing={lookMissing}
           onPhase={(p) => setArtFailed(p === "off" || p === "failed")}
+          signal={paintSignal}
         />
       )}
       {project.medium !== "software" && (
