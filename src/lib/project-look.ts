@@ -49,16 +49,24 @@ export async function describePrototype(
   return seen.description;
 }
 
-function promptBase(spec: {
-  name: string;
-  tagline: string;
-  screens: { blocks: { type: string; title: string }[] }[];
-}): string {
-  const blocks = spec.screens
-    .flatMap((s) => s.blocks.map((b) => `${b.type}: ${b.title}`))
-    .join("; ")
-    .slice(0, 400);
-  return `${spec.name}: ${spec.tagline}. It has ${blocks}.`;
+/** The sketch subject: the THING's name, never the block list. Block
+ *  words ("stat", "price", "see") read as subject matter to the image
+ *  model and come back as gauges, calculators and checklists. Software
+ *  gets its screens separately via specScreenLine. Exported pure so
+ *  tests can lock the contract. */
+export function promptBase(spec: { name: string; tagline: string }): string {
+  return `${spec.name}: ${spec.tagline}`;
+}
+
+/** The art subject: the user's own words win. The brief is the raw
+ *  sentence they typed; the Spark-written name/tagline is only the
+ *  fallback for rows that predate the brief column (seeds). Exported
+ *  pure so tests can lock the contract. */
+export function artSubject(
+  spec: { name: string; tagline: string },
+  brief?: string | null,
+): string {
+  return brief?.trim() ? brief.trim().slice(0, 500) : promptBase(spec);
 }
 
 /** The app's real screens, so the wireframe draws this app — not four
@@ -102,7 +110,7 @@ export function sketchPrompt(
   screenCount = 0,
 ): string {
   if (kind !== "software") {
-    return `A black and white ${sketchSubject(kind, base)}, bare-bones, minimal lines, white background, ${SUFFIX}`;
+    return `A black and white ${sketchSubject(kind, base)}, a single object in one view, bare-bones, minimal lines, no panels, no collage, no icons, no charts, no diagrams, white background, ${SUFFIX}`;
   }
   const frames =
     screenCount === 1
@@ -185,12 +193,12 @@ async function uploadImage(
 export async function renderSketch(
   client: Client,
   uid: string,
-  app: { id: string; spec: unknown; kind: string },
+  app: { id: string; spec: unknown; kind: string; brief?: string | null },
   extra?: string,
 ): Promise<{ sketchPath: string; sketchBytes: Uint8Array }> {
   const parsed = parseSpec(app.spec);
   if (!parsed.ok) throw new Error("Bad project spec.");
-  let base = promptBase(parsed.spec) + (extra ?? "");
+  let base = artSubject(parsed.spec, app.brief) + (extra ?? "");
   if (app.kind === "software") {
     base += ` ${specScreenLine(parsed.spec)}`;
   }
@@ -261,7 +269,7 @@ export async function reviseArt(
 export async function renderLook(
   client: Client,
   uid: string,
-  app: { id: string; spec: unknown; kind: string },
+  app: { id: string; spec: unknown; kind: string; brief?: string | null },
   extra?: string,
 ): Promise<{ lookPath: string; blueprintPath: string | null }> {
   const { sketchPath, sketchBytes } = await renderSketch(

@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import {
+  artSubject,
   portraitPrompt,
+  promptBase,
   revisePortraitPrompt,
   reviseSketchPrompt,
   sketchPrompt,
@@ -25,6 +27,36 @@ describe("project look prompts", () => {
       expect(p).toContain("bare-bones");
       expect(p).toContain("Truck Price Sign");
       expect(p).toContain("no text");
+    }
+  });
+
+  it("sketch base is the thing's name, never the block list", () => {
+    const base = promptBase({
+      name: "Cafe Logo Sign",
+      tagline: "Design, price and hang your glowing cafe logo.",
+    });
+    expect(base).toContain("Cafe Logo Sign");
+    // No block words for the image model to illustrate as objects.
+    for (const word of ["stat", "price:", "see:", "hear:", "list:"]) {
+      expect(base).not.toContain(word);
+    }
+  });
+
+  it("art subject is the user's words, tagline only as fallback", () => {
+    const spec = { name: "Cafe Logo Sign", tagline: "Design, price and hang it." };
+    expect(
+      artSubject(spec, "An electric logo sign outside a cafe"),
+    ).toBe("An electric logo sign outside a cafe");
+    expect(artSubject(spec, null)).toBe(promptBase(spec));
+    expect(artSubject(spec, "   ")).toBe(promptBase(spec));
+  });
+
+  it("non-software sketch is one object, never a worksheet collage", () => {
+    for (const kind of ["hardware", "print", "recipe", "music", "dance"]) {
+      const p = sketchPrompt(kind, "Cafe Logo Sign");
+      expect(p).toContain("a single object in one view");
+      expect(p).toContain("no collage");
+      expect(p).toContain("no charts");
     }
   });
 

@@ -18,24 +18,20 @@ Project Description*
 
 Answer:
 
-Bottega is a workshop that builds each person a real, working app from
-Meta-powered blocks, shaped around their life. Tap "Build your own
-Bottega," describe your world ("I bake for cafés and take custom cake
-orders…"), and Bottega designs your app: a JSON spec of your data,
-screens, and blocks, written and edited by Muse Spark and rendered by
-our runtime — we never generate or run arbitrary code. Blocks cover
-everyday records (list, form, stat), seeing (SAM 3.1 counts objects in
-photos), hearing (voice fills forms), pricing, before/after sharing,
-drawing (AI pictures), and teaching — users train their own tiny
-quality-checker on their photos. The loop is describe → build → use →
-teach → grow: ask for changes in words or accept Muse Wonder
-suggestions; every change is a validated spec diff, never a rebuild.
-Hardware projects go further: a downloadable RFQ pack (brief, CAD,
-drawings) sent to real US shops, a promise-date countdown with overdue
-nudges, photo-proven arrival, and a human sourcing concierge when no
-supplier fits. Two guest Bottegas prove it — Maria's bakery and Cole's
-restoration bench — and every visitor gets a fresh private Try-as copy,
-no sign-up.
+Bottega is a workshop that builds your world with you: describe what
+you want to make and it designs it, specs it, and carries it to done —
+software you download and run, hardware a real shop can quote. Talk or
+type in the footer bar and the apprentice routes your project — six
+trades (hardware, software, print, music, dance, recipe), each walked
+from sketch to finished. Software: Muse Spark writes the actual app
+(HTML/CSS design, then JavaScript wired to it), previewed live in a
+sandboxed frame, revised in words via file-level diffs, downloaded as
+a zero-dependency zip that runs outside Bottega. Hardware: B&W sketch,
+color render grown from it, an RFQ pack (brief, CAD, drawings) sent
+to real named shops, a promise-date countdown, photo-proven arrival,
+and a human sourcing concierge when no supplier fits. Two guest
+worlds prove it — Maria's and Cole's — and every visitor gets a fresh
+private Try-as copy, no sign-up, wiped on exit.
 
 3-Minute Demo Video*
 
@@ -45,20 +41,24 @@ Describe your use of Meta products to build the submitted project*
 
 Answer:
 
-Muse Spark (muse-spark-1.3-contributor): designs app specs from
+Muse Spark (muse-spark-1.3-contributor): writes software outright —
+HTML/CSS design, then JavaScript wired to it — plus project specs from
 descriptions (structured output, Zod-validated with a repair pass);
-edits via spec-diff ops with preview/accept/undo; fills forms from
-voice transcripts; scores teach-block photos on user-defined qualities;
-powers the apprentice talk bar. Muse Wonder (muse-wonder-1.0): suggests
-up to 3 app improvements from anonymized usage events, as validated
-ops. SAM 3.1 (sam-3.1): the see block — outlines and counts objects per
-noun via @meta-sam/parser; counts are user-correctable and saved to
-records. Muse Voice Transcribe: the hear block, describe-screen
-dictation, and talk-bar mic. Muse Image: the draw block and project
-visuals. Muse Spark Open on Fireworks: private mode (build/edit/
-voice-fill on open weights, never Meta's API) plus automatic fallback
-on 429/5xx; a local Glimmer endpoint is also supported. Every photo,
-mic, and describe control carries a contributor-model data notice.
+edits via spec-diff ops or file-level diffs with preview/accept/undo;
+fills forms from voice transcripts; scores teach-block photos on
+user-defined qualities; routes the apprentice talk bar. Muse Wonder
+(muse-wonder-1.0): suggests up to 3 app improvements from anonymized
+usage events, as validated ops (spec-built apps; silent for
+generated-file apps). SAM 3.1 (sam-3.1): the see block — outlines and
+counts objects per noun via @meta-sam/parser; counts are
+user-correctable and saved to records. Muse Voice Transcribe: the hear
+block, describe-screen dictation, and talk-bar mic (hold to talk,
+voice in, voice out). Muse Image: every project's look — B&W sketch,
+then the color render grown from it — plus the draw block. Muse Spark
+Open on Fireworks (verified): private mode (build/edit/voice-fill on
+open weights, never Meta's API) plus automatic fallback on 429/5xx; a
+local Glimmer endpoint is also supported. Every photo, mic, and
+describe control carries a contributor-model data notice.
 
 Why are Meta's models important to your solution?*
 
@@ -66,9 +66,10 @@ Answer:
 
 One model family across text, vision, voice, and image means one
 integration instead of four vendors — and structured output is what
-makes machine-checked app specs reliable enough to render without human
-review. The open weights are the other half: private mode (Spark Open,
-Glimmer local) lets sensitive work stay on our own infrastructure while
+makes machine-checked specs and file-level diffs reliable enough to
+preview and accept in one tap. The open weights are the other half:
+private mode (Spark Open on Fireworks, Glimmer endpoint supported
+locally) lets sensitive work stay on our own infrastructure while
 keeping the same prompts and behavior. Without hosted-frontier-plus-
 open-weights from the same family, Bottega would be either less capable
 or less private.

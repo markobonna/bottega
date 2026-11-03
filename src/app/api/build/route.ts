@@ -117,6 +117,13 @@ export async function POST(req: Request): Promise<Response> {
         { status: 422 },
       );
     }
+    // No invented identity: the project carries the person's own words,
+    // trimmed at word boundaries like the software stub. Spark designs
+    // the structure (collections/screens/blocks) — the thing only a
+    // designer can do — but never the name on the door.
+    parsed.spec.name = shortTitle(body.description, 40) || "New project";
+    parsed.spec.tagline =
+      shortTitle(body.description, 80) || "Built with Bottega";
     const appId = await createApp(auth.supabase, parsed.spec, {
       source: "build",
       summary: "Built from your description",
@@ -124,6 +131,18 @@ export async function POST(req: Request): Promise<Response> {
       kind:
         body.kind ?? detectMedium(`${parsed.spec.name} ${body.description}`),
     });
+    // The raw sentence, so art prompts use the user's words, not the
+    // Spark-written tagline (same save as the software path above).
+    const { error: briefError } = await auth.supabase
+      .from("apps")
+      .update({ brief: body.description.slice(0, 1500) })
+      .eq("id", appId);
+    if (briefError) {
+      return Response.json(
+        { error: `Couldn't save the brief: ${briefError.message}` },
+        { status: 500 },
+      );
+    }
     return Response.json({
       appId,
       spec: parsed.spec,

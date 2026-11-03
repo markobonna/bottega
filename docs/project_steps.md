@@ -24,7 +24,8 @@ memory — update it when `BoardPanel.tsx` changes.
   this works" card on software (Blueprint = still look, Prototype =
   tap-through, Download = yours to wire up). Notes ship in every
   download (NOTES.txt in the software zip).
-- Portrait line (until the portrait paints), build-photos gallery.
+- Portrait line (until the portrait paints), build-photos gallery
+  (hidden on software — nothing physical to photograph).
 - Drafts on the wall: every version pinned, current one marked.
 - The working app itself (list/form/stat/see/… blocks) further down —
   except software step 2, where it renders in the board and the
@@ -46,6 +47,8 @@ memory — update it when `BoardPanel.tsx` changes.
 Every step except the first has a back button; going back never deletes
 versions or notes. (The half-ink "As built" look still exists in the
 Ink only / As built / Full render switcher, but no step defaults to it.)
+Steps 4–5 don't exist for software, which ends at Download (step 3
+stamps it done).
 
 Step 5 also shows: the arrival dialog (upload the real photo — hardware,
 print) and, for software only, the "Need a hand running this?" help card.
@@ -54,7 +57,7 @@ print) and, for software only, the "Need a hand running this?" help card.
 
 ### Hardware — Sketch · Design · Pack · Send RFQ · It arrived
 
-- Tools: Sketch, Measure, Parts, Materials, Stress test, Explode.
+- Tools: Sketch, Measure, Parts, Materials.
 - Step 2 board: the color render, painted from the step-1 sketch
   (same object and composition).
 - Step 3 "Your pack" panel: .scad, -envelope.stl, -brief.md, -fab-pack.zip
@@ -132,7 +135,7 @@ print) and, for software only, the "Need a hand running this?" help card.
 
 ### Recipe — Sketch · Develop · Cost · Recipe card · Cook
 
-- Tools: Ingredients, Steps, Cost, Taste test.
+- Tools: Ingredients, Method, Cost, Taste test.
 - Step 3 button: "Send it off" → send-off dialog.
 - Step 4 card: "Finishing up".
 - Step 5 card: "Cook"; board stamped "Cook".

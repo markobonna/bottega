@@ -5,36 +5,37 @@ live model key. Fresh entries were regenerated on 2026-10-31;
 historical entries were captured during the build (Oct 2026) and can
 be rerun with the commands shown.
 
-## Fresh: `pnpm test` (2026-10-31, no keys needed)
+## Fresh: `pnpm test` (2026-11-02, no keys needed)
 
-107 passed, 0 failed. Covers spec schema + fixtures, edit ops, brain
-math, WAV encoding, price math, shelf geometry, teach color features,
-spec diffs, CAD files + brief/pack grouping, fab-pack ZIP + CRC,
-concierge input validation, record value checks.
+179 passed, 0 failed, across 21 files. Covers spec schema + fixtures,
+edit ops, spec diffs, brain math, WAV encoding, price math, shelf
+geometry, CAD files + fab-pack ZIP + CRC, project art/wireframes/
+tools, codegen file validation, software-build prompts, project looks,
+retry, photo quality, concierge mail, API helpers, record value
+checks.
 
 Rerun: `pnpm test`
 
-## Fresh: `pnpm run typecheck` (2026-10-31, no keys needed)
+## Fresh: `pnpm run typecheck` (2026-11-02, no keys needed)
 
 `tsc --noEmit` exits clean.
 
 Rerun: `pnpm run typecheck`
 
-## Fresh: `pnpm run build` (2026-10-31, no keys needed)
+## Fresh: production build (Vercel builds every push; no keys needed)
 
-Production build passes. Route list (abridged):
+The production build passes continuously — bottega.vip deploys on
+every push to main. Route list (abridged, read 2026-11-02):
 
 ```
-/api/ask  /api/build  /api/draw  /api/edit  /api/edit/accept
-/api/edit/undo  /api/hear  /api/make  /api/nav  /api/project-look
-/api/see  /api/suggest  /api/teach/features  /api/try-as
-/auth/callback  /new  /projects/[id]  /s/[token]  /sign-in
-/workshops/[id]  + Proxy (Middleware)
+/api/ask  /api/build  /api/codegen  /api/draw  /api/edit
+/api/edit/accept  /api/edit/undo  /api/hear  /api/make  /api/nav
+/api/project-look  /api/project-portrait  /api/project-revise
+/api/see  /api/software-design  /api/suggest  /api/teach/features
+/api/try-as
+/  /new  /projects/[id]  /workshops/[id]  /sign-in  /s/[token]
+/auth/callback  + Proxy (Middleware)
 ```
-
-Note: in this sandbox the build runs as `next build --webpack`
-(Turbopack's worker can't bind a port here); plain `next build` is
-what Vercel runs and what judges should run.
 
 Rerun: `pnpm run build`
 

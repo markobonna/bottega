@@ -19,7 +19,7 @@ export async function POST(req: Request): Promise<Response> {
   if (body instanceof Response) return body;
   const { data: app } = await auth.supabase
     .from("apps")
-    .select("id, name, spec, kind, owner")
+    .select("id, name, spec, kind, owner, brief")
     .eq("id", body.appId)
     .maybeSingle();
   if (!app || app.owner !== auth.user.id)
@@ -48,7 +48,12 @@ export async function POST(req: Request): Promise<Response> {
     const { sketchPath } = await renderSketch(
       auth.supabase,
       auth.user.id,
-      { id: app.id, spec: app.spec, kind: app.kind ?? "software" },
+      {
+        id: app.id,
+        spec: app.spec,
+        kind: app.kind ?? "software",
+        brief: app.brief,
+      },
       extra,
     );
     const { error: upError } = await auth.supabase
