@@ -20,8 +20,8 @@ Answer:
 
 Bottega is a workshop that builds your world with you: describe what
 you want to make and it designs it, specs it, and carries it to done —
-software you download and run, hardware a real shop can quote. Talk or
-type in the footer bar and the apprentice routes your project — six
+custom software you download and run, custom hardware you can hve made by an American manufacturer. Talk or
+type in the footer bar and Bottega routes your project — six
 trades (hardware, software, print, music, dance, recipe), each walked
 from sketch to finished. Software: Muse Spark writes the actual app
 (HTML/CSS design, then JavaScript wired to it), previewed live in a

@@ -108,3 +108,18 @@ SAY, to camera:
 > can be built in Bottega. Let's see what you will build.
 
 Hold one beat on the world island. End.
+
+## Brand kit (same in both videos)
+
+- Logo: the divider-and-arc mark (ink legs + terracotta arc) with the
+  word "Bottega". Sources: `src/app/icon.svg` (favicon, same
+  geometry), header mark inline in `src/components/TopBar.tsx`.
+  Standalone edit-ready export: ask, don't trace it yourself.
+- Type: IM Fell English (titles, wordmark), Karla (body/captions),
+  Caveat (handwritten notes only). All Google Fonts.
+- Colors: paper `#f3e9d2`, card `#fbf4e4`, ink `#33261a`, muted
+  `#5e4a36`, line `#d3c5a3`, accent terracotta `#a23e25`, brass gold
+  `#c8963e`, ok green `#3f7a6e`. No dark mode — everything is the
+  warm paper look.
+- Rule: captions and end cards use these faces and colors — nothing
+  introduced that isn't in the app.

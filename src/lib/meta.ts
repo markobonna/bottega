@@ -116,7 +116,13 @@ function resolveTarget(opts: {
   };
 }
 
-async function request(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+async function request(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  label = "",
+): Promise<Response> {
+  const tag = label || url;
   let res: Response;
   try {
     res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
@@ -125,10 +131,13 @@ async function request(url: string, init: RequestInit, timeoutMs: number): Promi
     // AbortError. Wrap both so timeouts read — and fall back — like
     // any other 5xx.
     if (e instanceof Error && (e.name === 'AbortError' || e.name === 'TimeoutError'))
-      throw new ModelError(504, 'timed out');
+      throw new ModelError(504, `[${tag}] timed out`);
     throw e;
   }
-  if (!res.ok) throw new ModelError(res.status, await res.text());
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new ModelError(res.status, `[${tag}] ${detail}`);
+  }
   return res;
 }
 
@@ -159,6 +168,7 @@ export async function chat(
   const target = resolveTarget({ provider, private: priv, model });
   if (schema && schema.type !== 'object') throw new Error('schema root must be an object');
   const useSchema = schema && target.provider === 'meta';
+  const label = `chat/${target.provider} ${target.model} @ ${target.base}`;
   const res = await request(
     `${target.base}/chat/completions`,
     {
@@ -178,6 +188,7 @@ export async function chat(
       }),
     },
     timeoutMs,
+    label,
   );
   const json = (await res.json()) as {
     choices?: { message?: { content?: unknown }; finish_reason?: string }[];
@@ -235,9 +246,15 @@ export async function jsonWithFallback<T>(
       isOpenConfigured()
     ) {
       // The caller's model id is Meta's; drop it so OPEN_MODEL applies.
+      // If the fallback ALSO fails, the original Meta error is the one
+      // that matters — a fallback 404 must never masquerade as it.
       const { model: _ignored, ...openOpts } = opts;
-      const data = await json(messages, zodSchema, { ...openOpts, provider: 'open' });
-      return { data, via: 'open' };
+      try {
+        const data = await json(messages, zodSchema, { ...openOpts, provider: 'open' });
+        return { data, via: 'open' };
+      } catch {
+        throw e;
+      }
     }
     throw e;
   }
@@ -247,7 +264,7 @@ export async function postJson(
   path: string,
   body: unknown,
   timeoutMs = 30000,
-  _opts: { private?: boolean } = {},
+  _opts: { private?: boolean; label?: string } = {},
 ): Promise<Response> {
   const cfg = config();
   return request(
@@ -258,6 +275,7 @@ export async function postJson(
       body: JSON.stringify(body),
     },
     timeoutMs,
+    _opts.label ?? `${cfg.base}${path}`,
   );
 }
 
@@ -265,7 +283,7 @@ export async function postForm(
   path: string,
   form: FormData,
   timeoutMs = 30000,
-  _opts: { private?: boolean } = {},
+  _opts: { private?: boolean; label?: string } = {},
   headers: Record<string, string> = {},
 ): Promise<Response> {
   const cfg = config();
@@ -277,6 +295,7 @@ export async function postForm(
       body: form,
     },
     timeoutMs,
+    _opts.label ?? `${cfg.base}${path}`,
   );
 }
 
@@ -300,9 +319,15 @@ export async function transcribe(
     ),
   );
   form.append('audio', new Blob([wavBytes], { type: 'audio/wav' }), 'audio.wav');
-  const res = await postForm('/asr/transcribe', form, timeoutMs, {}, {
-    Accept: 'application/json',
-  });
+  const res = await postForm(
+    '/asr/transcribe',
+    form,
+    timeoutMs,
+    { label: `asr/transcribe ${cfg.voice} @ ${cfg.base}` },
+    {
+      Accept: 'application/json',
+    },
+  );
   const body = (await res.json()) as { transcript?: unknown };
   if (typeof body.transcript !== 'string' || body.transcript === '') {
     throw new ModelError(502, 'empty transcript');
@@ -340,6 +365,7 @@ export async function image(
       response_format: 'b64_json',
     },
     timeoutMs,
+    { label: `images/generations ${cfg.image} @ ${cfg.base}` },
   );
   return imageBytesFrom(res, timeoutMs);
 }
@@ -390,6 +416,8 @@ export async function editImage(
   form.set('size', size);
   form.set('n', '1');
   form.append('image', new Blob([imageBytes], { type: mime }), `source.${ext}`);
-  const res = await postForm('/images/edits', form, timeoutMs);
+  const res = await postForm('/images/edits', form, timeoutMs, {
+    label: `images/edits ${cfg.image} src=${mime} @ ${cfg.base}`,
+  });
   return imageBytesFrom(res, timeoutMs);
 }
