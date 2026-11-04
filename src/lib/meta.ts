@@ -123,17 +123,23 @@ async function request(
   label = "",
 ): Promise<Response> {
   const tag = label || url;
-  let res: Response;
-  try {
-    res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
-  } catch (e) {
-    // Node's AbortSignal.timeout() rejects with TimeoutError, not
-    // AbortError. Wrap both so timeouts read — and fall back — like
-    // any other 5xx.
-    if (e instanceof Error && (e.name === 'AbortError' || e.name === 'TimeoutError'))
-      throw new ModelError(504, `[${tag}] timed out`);
-    throw e;
-  }
+  const attemptOnce = async (): Promise<Response> => {
+    try {
+      return await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    } catch (e) {
+      // Node's AbortSignal.timeout() rejects with TimeoutError, not
+      // AbortError. Wrap both so timeouts read — and fall back — like
+      // any other 5xx.
+      if (e instanceof Error && (e.name === 'AbortError' || e.name === 'TimeoutError'))
+        throw new ModelError(504, `[${tag}] timed out`);
+      throw e;
+    }
+  };
+  let res = await attemptOnce();
+  // Meta's catalog flakes: a correct model id can 404 once and pass on
+  // retry. One immediate retry heals the flake; a truly wrong id still
+  // fails twice fast and surfaces. Only 404 retries (never timeouts).
+  if (!res.ok && res.status === 404) res = await attemptOnce();
   if (!res.ok) {
     const detail = await res.text();
     throw new ModelError(res.status, `[${tag}] ${detail}`);

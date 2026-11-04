@@ -133,6 +133,30 @@ describe('meta', () => {
     expect((err as ModelError).status).toBe(429);
   });
 
+  it('a first-attempt 404 is retried once and success is returned', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 404, text: async () => 'flaked' })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'hi' } }] }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    const out = await chat([{ role: 'user', content: 'hello' }]);
+    expect(out).toBe('hi');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('two 404s in a row throw ModelError 404', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: false, status: 404, text: async () => 'nope' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const err = await chat([{ role: 'user', content: 'hello' }]).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ModelError);
+    expect((err as ModelError).status).toBe(404);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('json() rejects content that fails the Zod schema', async () => {
     vi.stubGlobal('fetch', okFetch(JSON.stringify({ wrong: 'shape' })));
     const err = await json([{ role: 'user', content: 'x' }], z.object({ n: z.number() })).catch(
