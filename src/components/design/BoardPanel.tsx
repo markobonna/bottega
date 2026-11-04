@@ -82,6 +82,69 @@ function countdownTo(iso: string): string {
   return "very soon";
 }
 
+function PreviewFrame({
+  title,
+  doc,
+  height,
+  bordered = false,
+}: {
+  title: string;
+  doc: string;
+  height: number | string;
+  bordered?: boolean;
+}) {
+  const loads = useRef(0);
+  const resets = useRef(0);
+  const [nonce, setNonce] = useState(0);
+  const [escaped, setEscaped] = useState(false);
+  // A new build is a legitimate reload — only unexpected loads reset.
+  useEffect(() => {
+    loads.current = 0;
+    resets.current = 0;
+    setEscaped(false);
+  }, [doc]);
+  if (escaped) {
+    return (
+      <p className="small" style={{ margin: 0 }}>
+        This preview keeps trying to leave the page, so it was stopped.
+        The download is unaffected.
+      </p>
+    );
+  }
+  return (
+    <iframe
+      key={nonce}
+      title={title}
+      sandbox="allow-scripts"
+      srcDoc={doc}
+      onLoad={() => {
+        loads.current += 1;
+        // The injected guard traps link clicks and submits, but not
+        // JS-driven navigation (location.href in generated code). Any
+        // load past the first means the preview escaped to a real page,
+        // so remount it back to the app. Capped: a preview that flees on
+        // every load would flash forever.
+        if (loads.current > 1) {
+          loads.current = 0;
+          resets.current += 1;
+          if (resets.current > 3) {
+            setEscaped(true);
+            return;
+          }
+          setNonce((n) => n + 1);
+        }
+      }}
+      style={{
+        width: "100%",
+        height,
+        border: bordered ? "1px solid var(--line)" : "none",
+        borderRadius: 8,
+        background: "#fff",
+      }}
+    />
+  );
+}
+
 export default function BoardPanel({
   appId,
   project,
@@ -852,17 +915,10 @@ export default function BoardPanel({
                             : "device-mobile"
                         }
                       >
-                        <iframe
+                        <PreviewFrame
                           title={`${project.name} working prototype`}
-                          sandbox="allow-scripts"
-                          srcDoc={previewDoc}
-                          style={{
-                            width: "100%",
-                            height: formFactor === "desktop" ? 560 : 620,
-                            border: "none",
-                            borderRadius: 8,
-                            background: "#fff",
-                          }}
+                          doc={previewDoc}
+                          height={formFactor === "desktop" ? 560 : 620}
                         />
                       </div>
                       <div style={{ marginTop: 12 }}>
@@ -988,17 +1044,10 @@ export default function BoardPanel({
                       }
                       style={{ pointerEvents: "none" }}
                     >
-                      <iframe
+                      <PreviewFrame
                         title={`${project.name} design preview`}
-                        sandbox="allow-scripts"
-                        srcDoc={previewDoc}
-                        style={{
-                          width: "100%",
-                          height: formFactor === "desktop" ? 560 : 620,
-                          border: "none",
-                          borderRadius: 8,
-                          background: "#fff",
-                        }}
+                        doc={previewDoc}
+                        height={formFactor === "desktop" ? 560 : 620}
                       />
                     </div>
                   </div>
@@ -1439,17 +1488,11 @@ export default function BoardPanel({
             First pass, working — isolated preview, your Bottega data
             stays untouched.
           </p>
-          <iframe
+          <PreviewFrame
             title={`${project.name} fullscreen prototype`}
-            sandbox="allow-scripts"
-            srcDoc={previewDoc}
-            style={{
-              width: "100%",
-              height: "70vh",
-              border: "1px solid var(--line)",
-              borderRadius: 8,
-              background: "#fff",
-            }}
+            doc={previewDoc}
+            height="70vh"
+            bordered
           />
           <div className="dialog-actions">
             <button
